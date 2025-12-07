@@ -1,0 +1,226 @@
+# 🖨️ DrizaTx — Impresión silenciosa en modo kiosco (Windows + Chrome)
+
+Este documento explica, paso a paso, cómo configurar la **Terminal de Autoservicio** de DrizaTx para **imprimir tickets sin mostrar la vista previa** del navegador usando **Google Chrome en modo kiosco**.  
+La guía está pensada para ejecutarla **una única vez en la PC del cliente** y que luego sea **mantenible con el tiempo**.
+
+---
+
+## ⚡️ Resumen (si ya sabés qué hacés)
+
+1. Dejá la **impresora correcta como predeterminada** en Windows.  
+2. Asegurate de tener el **CSS de impresión** de ticket (ver sección [CSS de impresión](#-css-de-impresión)).  
+3. Activá `kioskPrintingEnabled = true` (desde settings del backend o con `localStorage`).  
+4. Creá un **acceso directo de Chrome** con flags:  
+   `--kiosk --kiosk-printing --disable-print-preview --no-first-run --no-default-browser-check --incognito`  
+   apuntando a `/terminal`.  
+5. (Opcional) Copiá el acceso directo a **Inicio de Windows** para autoarranque.
+
+---
+
+## 📋 Requisitos
+
+- **Windows 10 u 11**
+- **Google Chrome** (v110+)
+- **Impresora** conectada y reconocida por el sistema (térmica 80 mm o estándar)
+- **URL** de la Terminal DrizaTx (p. ej. ambiente de desarrollo en Vercel):
+
+https://drizatx-main.vercel.app/terminal
+
+
+> Chrome en kiosco **siempre imprime en la impresora predeterminada** del sistema.  
+> Configurala antes de continuar.
+
+---
+
+## 🧱 Paso 1 — Impresora predeterminada
+
+1. Abrí **Panel de control → Dispositivos e impresoras**.
+2. Clic derecho sobre la impresora deseada → **Establecer como predeterminada**.
+3. Revisá **Preferencias de impresión**:
+ - Tamaño: `80mm x rollo continuo` (si es térmica) o el que corresponda.
+ - Márgenes: **mínimos o 0**.
+ - Orientación: **vertical**.
+
+---
+
+## 🎨 CSS de impresión
+
+Asegurate de tener estas reglas (en `globals.css` o una hoja cargada globalmente):
+
+```css
+/* Solo se imprime el contenido marcado como ticket y se oculta el resto */
+@media print {
+[data-print-hidden="true"] {
+  display: none !important;
+}
+
+[data-print-only="true"],
+.terminal-print-ticket {
+  display: block !important;
+  visibility: visible !important;
+}
+
+@page {
+  size: 80mm auto; /* ancho 80mm, alto dinámico */
+  margin: 5mm;
+}
+
+.terminal-print-ticket {
+  width: 80mm;
+}
+}
+
+Esto asegura que en modo kiosco solo salga el ticket, no toda la UI.
+
+🧠 Paso 2 — Activar impresión kiosco en la UI
+
+La Terminal usa una bandera kioskPrintingEnabled para decidir si llama window.print() en automático al generar el ticket.
+
+Tenés dos formas de activarla:
+
+Opción A: Desde el backend (recomendada)
+
+En System Settings (NestJS), setear:
+
+kioskPrintingEnabled = true
+
+
+Key típica: terminal.kioskPrintingEnabled o la que uses en tu useSystemSettings.
+
+Opción B: Local (rápida)
+
+Abrí la consola del navegador en la Terminal (F12 → Console) y ejecutá:
+
+localStorage.setItem("kioskPrintingEnabled", "true");
+
+
+Esta opción persiste en el browser local y no afecta a otros equipos.
+
+🧭 Paso 3 — Crear acceso directo de Chrome (modo kiosco)
+🔹 Script PowerShell (automático)
+
+Copiá y pegá en PowerShell (no en CMD). Si Chrome está abierto, lo cierra y crea un acceso directo en el escritorio.
+
+# === Configurable ===
+$TerminalUrl = "https://drizatx-main.vercel.app/terminal"
+$ShortcutName = "DrizaTx Terminal.lnk"
+
+# 1) Detectar Chrome
+$chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+if (-not (Test-Path $chrome)) {
+  $chrome = "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+}
+if (-not (Test-Path $chrome)) {
+  Write-Error "No se encontró Chrome en las rutas estándar."
+  exit 1
+}
+
+# 2) Cerrar Chrome si está abierto (para evitar que ignore flags)
+Get-Process chrome -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# 3) Flags de kiosco
+$arguments = @(
+  "--kiosk", "`"$TerminalUrl`""
+  "--kiosk-printing"
+  "--disable-print-preview"
+  "--no-first-run"
+  "--no-default-browser-check"
+  "--incognito"
+) -join " "
+
+# 4) Crear acceso directo
+$WshShell = New-Object -ComObject WScript.Shell
+$shortcutPath = Join-Path $env:Public\Desktop $ShortcutName
+$Shortcut = $WshShell.CreateShortcut($shortcutPath)
+$Shortcut.TargetPath = $chrome
+$Shortcut.Arguments = $arguments
+$Shortcut.IconLocation = "$chrome,0"
+$Shortcut.WorkingDirectory = Split-Path $chrome
+$Shortcut.Save()
+
+Write-Host "✅ Atajo creado en: $shortcutPath"
+Write-Host "Para autoarranque, ejecutar: shell:startup y copiar el acceso directo."
+
+🔹 Alternativa: archivo .bat
+
+Guardá como drizatx-kiosk.bat (clic derecho → Ejecutar como administrador):
+
+@echo off
+set "URL=https://drizatx-main-git-develop-jimemena91s-projects.vercel.app/terminal"
+set "CHROME=C:\Program Files\Google\Chrome\Application\chrome.exe"
+if not exist "%CHROME%" set "CHROME=C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+if not exist "%CHROME%" (
+  echo No se encontro Chrome. Editar ruta en este BAT.
+  pause
+  exit /b 1
+)
+
+taskkill /IM chrome.exe /F >nul 2>nul
+
+start "" "%CHROME%" --kiosk "%URL%" --kiosk-printing --disable-print-preview --no-first-run --no-default-browser-check --incognito
+
+
+Podés arrastrar este BAT a shell:startup para autoarranque.
+
+🧪 Paso 4 — Prueba funcional
+
+Abrí la Terminal con el acceso directo (o corriendo el BAT).
+
+Generá un ticket → la UI hará window.print() y no debe verse la vista previa.
+
+Debe imprimirse en la impresora predeterminada y con el formato CSS definido.
+
+🧰 Troubleshooting
+Problema	Causa frecuente	Cómo se arregla
+Se abre la vista previa	Chrome ya estaba abierto sin flags	Cerrá todas las ventanas de Chrome y reabrí desde el acceso directo con flags
+Imprime en otra impresora	Predeterminada mal configurada	Cambiá la predeterminada en Dispositivos e impresoras
+No imprime	Driver, cable o permisos	Reinstalá driver, verificá cable/red, probá desde Notepad
+Ticket sale cortado	Tamaño de papel o márgenes	Ajustá tamaño 80 mm y @page{ margin:5mm }
+Aparece Unable to decode audio data	Sonido del browser	Es inofensivo; ignorar
+Vercel muestra CORS	Front configurado para prod	Para kiosco puro no dependés de APIs externas; si usás backend, habilitá CORS o usa tu dominio final
+🧼 Mantenimiento recomendado
+
+Usuario exclusivo de Windows para el kiosco (sin notificaciones ni apps extra).
+
+Desactivar suspensión, bloqueo y ahorro de energía.
+
+Mantener drivers y Chrome actualizados.
+
+Evitar extensiones y uso personal del navegador.
+
+Revisar periódicamente el papel y el estado de la impresora.
+
+❓FAQ
+
+¿Qué pasa si el usuario pulsa ESC o Alt+F4?
+Puede salir del modo kiosco. Recomendamos ocultar teclado o supervisar.
+
+¿Se puede elegir impresora en tiempo de ejecución?
+No en kiosco puro. Chrome usa siempre la predeterminada del sistema.
+
+¿Puedo ocultar por completo la UI y dejar solo ticket?
+Sí: usá el bloque .terminal-print-ticket como “plantilla” de ticket y marcá el resto con data-print-hidden="true".
+
+¿Cómo vuelvo a la pantalla inicial tras imprimir?
+Tu TerminalPage ya programa un redirect. Ajustá el timeout si lo necesitás (por ejemplo, 3–5 s).
+
+🧩 Referencias técnicas del proyecto
+
+Frontend: Next.js + TailwindCSS
+
+Pantalla: app/terminal/page.tsx (usa window.print() cuando kioskPrintingEnabled = true)
+
+CSS de impresión: global styles (globals.css)
+
+Backend (opcional): NestJS System Settings (terminal.kioskPrintingEnabled)
+
+👩‍💻 Contacto
+
+Driza Software — DrizaTx
+Implementación y soporte: Equipo Driza
+Última actualización: Octubre 2025
+
+
+---
+
+¿Querés que te agregue también un **.bat** que cree el acceso directo automáticamente (sin PowerShell) y otro script para **copiarlo al inicio** del sistema? Te los armo al toque.

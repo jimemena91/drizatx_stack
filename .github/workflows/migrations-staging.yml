@@ -1,0 +1,33 @@
+name: Run Migrations (Staging)
+
+on:
+  workflow_dispatch: {}   # permite ejecutarlo a mano
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend   # monorepo: el backend está en /backend
+    env:
+      DATABASE_URL: ${{ secrets.STAGING_DB_URL }}   # URL completa de tu MySQL de STAGING
+      NODE_ENV: staging
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build backend (compile to dist/)
+        run: npm run build
+
+      - name: Run TypeORM migrations
+        run: npm run migration:run:prod

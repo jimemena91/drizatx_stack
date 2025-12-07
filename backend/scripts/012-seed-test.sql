@@ -1,0 +1,15 @@
+-- 012-seed-test.sql
+-- Semilla mínima para entorno de pruebas.
+-- Nota: si ya posees backend/scripts/002-seed-data.sql, puedes reutilizarlo apuntando a `drizatx_test`.
+-- Este archivo deja ejemplos básicos que NO dependen de campos específicos.
+-- Ajusta los INSERT según tu esquema real (entities).
+
+-- USE drizatx_test;
+-- INSERT ejemplos (descomentar y adaptar a tu esquema real):
+-- INSERT INTO services (name, code, is_active) VALUES ('Atención General', 'GEN', 1), ('Cajas', 'CAJ', 1);
+-- INSERT INTO roles (name) VALUES ('ADMIN'), ('SUPERVISOR'), ('OPERADOR');
+-- INSERT INTO users (username, password_hash, role_id, is_active) VALUES
+--   ('admin',    '$2b$10$X0Hasheaqui...', 1, 1),
+--   ('supervisor','$2b$10$X0Hasheaqui...', 2, 1),
+--   ('operator', '$2b$10$X0Hasheaqui...', 3, 1);
+-- IMPORTANTE: reemplaza los password_hash por los generados por tu backend (bcrypt).

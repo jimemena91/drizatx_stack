@@ -1,0 +1,76 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: drizatx-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: DrizaRootPass_2025
+      MYSQL_DATABASE: drizatx
+      MYSQL_USER: driza
+      MYSQL_PASSWORD: DrizaDB_2025
+    ports:
+      - "3307:3306"
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --sql-mode=
+      - --innodb_strict_mode=0
+    volumes:
+      - drizatx-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -udriza -pDrizaDB_2025 || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: drizatx-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # En local usamos development para que las cookies no sean secure-only
+      NODE_ENV: development
+      PORT: 3001
+
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_USERNAME: driza
+      DATABASE_PASSWORD: DrizaDB_2025
+      DATABASE_NAME: drizatx
+
+      # Permitimos frontend en 3000 y 3010
+      FRONTEND_URLS: http://localhost:3000,http://localhost:3010
+
+      JWT_SECRET: driza-super-secret-2025
+    ports:
+      - "3001:3001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: drizatx-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+
+      NEXT_PUBLIC_API_MODE: "true"
+      NEXT_PUBLIC_API_URL: "http://localhost:3001"
+      NEXT_PUBLIC_BASE_URL: "http://localhost:3010"
+      NEXT_PUBLIC_SMS_ENABLED: "false"
+      NEXT_PUBLIC_PUSH_ENABLED: "false"
+    ports:
+      # Host 3010 → contenedor 3000
+      - "3010:3000"
+
+volumes:
+  drizatx-mysql-data:

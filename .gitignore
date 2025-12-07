@@ -1,0 +1,25 @@
+# Node / Next / Nest
+node_modules/
+.next/
+dist/
+out/
+coverage/
+.cache/
+.turbo/
+**/node_modules/
+**/.next/
+**/dist/
+
+# Env & runtime
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+
+# Sistemas / IDE
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

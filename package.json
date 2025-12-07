@@ -1,0 +1,38 @@
+{
+  "name": "drizatx-main",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "cd frontend && npm run dev",
+    "dev:api": "cd backend && npm run start:dev",
+    "dev:full": "concurrently \"npm run dev:api\" \"npm run dev\"",
+
+    "build": "cd frontend && npm run build",
+    "build:api": "cd backend && npm run build",
+    "build:full": "npm run build:api && npm run build",
+
+    "start": "cd frontend && npm run start",
+    "start:api": "cd backend && npm run start:prod",
+    "start:full": "concurrently \"npm run start:api\" \"npm run start\"",
+
+    "setup:full": "npm install && cd frontend && npm install && cd ../backend && npm install",
+
+    "db:init": "cd backend && mysql -u root -p < scripts/001-create-database.sql && mysql -u root -p drizatx < scripts/002-seed-data.sql",
+
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f --tail=100",
+    "docker:restart": "npm run docker:down && npm run docker:up",
+    "docker:ps": "docker compose ps",
+    "docker:rebuild": "docker compose build --no-cache && docker compose up -d",
+    "docker:backend-shell": "docker compose exec backend sh",
+    "docker:db-shell": "docker compose exec db mysql -udriza -pDrizaDB_2025 drizatx"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,33 @@
+# Etapa 1: dependencias
+FROM node:22-alpine AS deps
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+# Etapa 2: build de NestJS
+FROM node:22-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+COPY tsconfig*.json nest-cli.json ./
+COPY src ./src
+
+COPY --from=deps /app/node_modules ./node_modules
+
+RUN npm run build
+
+# Etapa 3: imagen final
+FROM node:22-alpine AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3001
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package*.json ./
+
+EXPOSE 3001
+
+CMD ["node", "dist/main.js"]

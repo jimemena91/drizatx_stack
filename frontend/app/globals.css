@@ -1,0 +1,668 @@
+/* frontend/app/globals.css */
+
+/* 1) Tailwind v4 */
+@import "tailwindcss";
+
+/* 2) Animaciones shadcn (opcional) */
+@import "tw-animate-css";
+
+/* 3) Rutas JIT */
+@source "./**/*.{ts,tsx,js,jsx}";
+@source "../components/**/*.{ts,tsx,js,jsx}";
+
+/* 4) Dark Mode por clase */
+@custom-variant dark (&:is(.dark *));
+
+/* =============== THEME (ATLITUDE) =============== */
+/* —— Light */
+:root {
+  --font-size: 16px;
+
+  /* Base */
+  --background: #fbfaff;
+  --foreground: #1a1525;
+
+  --card: rgba(255,255,255,.98);
+  --card-foreground: #1a1525;
+  --popover: rgba(255,255,255,.99);
+  --popover-foreground: #1a1525;
+
+  --primary: #6b1fff;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f5f1ff;
+  --secondary-foreground: #4a1acc;
+
+  --muted: #f8f6ff;
+  --muted-foreground: #5a4d7a;
+
+  --accent: #20d4d4;
+  --accent-foreground: #1a1525;
+
+  --destructive: #e63946;
+  --destructive-foreground: #ffffff;
+
+  --border: rgba(107,31,255,.12);
+  --input: transparent;
+  --input-background: rgba(245,241,255,.6);
+  --switch-background: #e8e1ff;
+  --ring: rgba(107,31,255,.25);
+
+  /* Gradients */
+  --gradient-1: linear-gradient(135deg, #f5f1ff 0%, #e63946 100%);
+  --gradient-2: linear-gradient(135deg, #e63946 0%, #6b1fff 100%);
+  --gradient-3: linear-gradient(135deg, #20d4d4 0%, #6b1fff 100%);
+  --gradient-4: linear-gradient(135deg, #6b1fff 0%, #1a1525 100%);
+
+  /* Charts */
+  --chart-1: #e63946;
+  --chart-2: #20d4d4;
+  --chart-3: #6b1fff;
+  --chart-4: #f5f1ff;
+  --chart-5: #1a1525;
+
+  /* Sidebar */
+  --radius: 16px;
+  --sidebar: linear-gradient(135deg, #6b1fff 0%, #8b3eff 25%, #20d4d4 75%, #f5f1ff 100%);
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #6b1fff;
+  --sidebar-accent: rgba(255,255,255,.2);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(255,255,255,.15);
+  --sidebar-ring: rgba(255,255,255,.35);
+
+  /* App surface (hero) */
+  --app-surface:
+    radial-gradient(1200px 700px at 15% -10%, #e7e0ff 0%, transparent 55%),
+    radial-gradient(1200px 700px at 95% 0%, #ffe1e7 0%, transparent 55%),
+    #fbfaff;
+}
+
+/* —— Dark */
+.dark {
+  --background: #0f1021;
+  --foreground: #fef9ff;
+
+  --card: rgba(28,24,58,.94);
+  --card-foreground: #fef9ff;
+  --popover: rgba(28,24,58,.97);
+  --popover-foreground: #fef9ff;
+
+  --primary: #9df5ff;
+  --primary-foreground: #02101a;
+
+  --secondary: rgba(86,66,142,.9);
+  --secondary-foreground: #fff9ff;
+
+  --muted: rgba(50,40,90,.86);
+  --muted-foreground: #e3dbff;
+
+  --accent: rgba(160,120,255,.48);
+  --accent-foreground: #ffffff;
+
+  --destructive: #ff6a9d;
+  --destructive-foreground: #150a21;
+
+  --border: rgba(157,245,255,.42);
+  --input: rgba(36,30,74,.9);
+  --input-background: rgba(24,20,52,.86);
+  --switch-background: rgba(157,245,255,.22);
+  --ring: rgba(157,245,255,.58);
+
+  --gradient-1: linear-gradient(135deg, rgba(255,229,241,.32) 0%, rgba(160,120,255,.6) 100%);
+  --gradient-2: linear-gradient(135deg, rgba(160,120,255,.6) 0%, rgba(86,50,148,.86) 100%);
+  --gradient-3: linear-gradient(135deg, rgba(157,245,255,.42) 0%, rgba(86,50,148,.72) 100%);
+  --gradient-4: linear-gradient(135deg, rgba(86,50,148,.72) 0%, #050613 100%);
+
+  --chart-1: #ff7ab0;
+  --chart-2: #9df5ff;
+  --chart-3: #b19bff;
+  --chart-4: #ffe9fa;
+  --chart-5: #46337e;
+
+  --sidebar: linear-gradient(135deg, #1b1740 0%, #292458 35%, #3c2f72 70%, #52418f 100%);
+  --sidebar-foreground: #f5f2ff;
+  --sidebar-primary: #9df5ff;
+  --sidebar-primary-foreground: #061220;
+  --sidebar-accent: rgba(157,245,255,.22);
+  --sidebar-accent-foreground: #f5f2ff;
+  --sidebar-border: rgba(157,245,255,.3);
+  --sidebar-ring: rgba(157,245,255,.54);
+
+  /* App surface (hero) */
+  --app-surface:
+    radial-gradient(1100px 650px at 50% -10%, #211a4a 0%, transparent 72%),
+    linear-gradient(180deg, #111233 0%, #050613 100%);
+}
+
+/* ===== Tailwind tokens (para shadcn/ui) ===== */
+@theme inline {
+  --font-sans: var(--font-inter);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-switch-background: var(--switch-background);
+  --color-ring: var(--ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  /* Sidebar tokens (AppSidebar shadcn) */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ================= Base ================= */
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html { font-size: var(--font-size); }
+  body {
+    @apply bg-background text-foreground antialiased;
+    background: var(--app-surface);
+  }
+}
+
+/* ============== Utilities (UI polish) ============== */
+@layer utilities {
+  .call-number-highlight {
+    position: relative;
+    isolation: isolate;
+    animation: call-number-glow 2.4s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.3);
+  }
+
+  .call-number-highlight::after {
+    content: "";
+    position: absolute;
+    inset: 6%;
+    border-radius: inherit;
+    background: radial-gradient(circle, rgba(253, 230, 138, 0.55) 0%, rgba(251, 191, 36, 0.2) 45%, transparent 75%);
+    opacity: 0.85;
+    z-index: -1;
+    animation: call-number-glow-bg 2.4s ease-in-out infinite;
+  }
+
+  .call-position-highlight {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .call-position-highlight::before {
+    content: "";
+    position: absolute;
+    inset: -25% -18%;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255, 251, 235, 0.92), rgba(253, 230, 138, 0.45));
+    box-shadow: 0 10px 22px rgba(251, 191, 36, 0.18), inset 0 0 0 1px rgba(245, 158, 11, 0.35);
+    opacity: 0.95;
+    z-index: -1;
+    animation: call-position-glow 3s ease-in-out infinite;
+  }
+
+  .call-position-highlight span:last-child {
+    color: #92400e;
+  }
+
+  /* Fondos hero compatibles con layout */
+  .bg-hero {
+    background:
+      radial-gradient(1200px 700px at 15% -10%, #e7e0ff 0%, transparent 55%),
+      radial-gradient(1200px 700px at 95% 0%, #ffe1e7 0%, transparent 55%),
+      var(--background);
+  }
+  .bg-hero-dark {
+    background:
+      radial-gradient(1100px 600px at 50% -10%, #201846 0%, transparent 70%),
+      linear-gradient(180deg, #0d0a1d 0%, #0a0818 100%);
+  }
+
+  /* Elevaciones para Cards */
+  .card-elev-1 { box-shadow: 0 6px 18px rgba(18,12,33,.06); }
+  .card-elev-2 { box-shadow: 0 10px 26px rgba(18,12,33,.08); }
+  .card-elev-3 { box-shadow: 0 14px 34px rgba(18,12,33,.10); }
+
+  /* Glass + bordes */
+  .glass { @apply bg-card border rounded-2xl; border-color: color-mix(in oklab, var(--border), #000 10%); }
+  .glass-soft { @apply bg-card/95 border rounded-2xl; box-shadow: 0 6px 18px rgba(18,12,33,.06); }
+  .panel-grad { background: var(--gradient-3); }
+
+  /* Botón premium (violeta→cian) */
+  .btn-premium {
+    background: linear-gradient(90deg, #6b1fff, #20d4d4);
+    @apply text-primary-foreground shadow-md hover:opacity-95 active:opacity-90 rounded-full;
+  }
+
+  /* Chips y badges */
+  .chip { @apply border rounded-full px-2 py-0.5 text-xs; background: var(--secondary); color: var(--secondary-foreground); }
+  .chip-success { background: color-mix(in oklab, var(--accent) 20%, white); color: #0f5132; }
+  .chip-free { background: color-mix(in oklab, var(--primary) 18%, white); color: color-mix(in oklab,#0a0818 80%, var(--primary) 20%); }
+
+  /* Tiles */
+  .tile {
+    @apply bg-card rounded-2xl border;
+    box-shadow: 0 10px 26px rgba(18,12,33,.06), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+
+  /* Focus visible */
+  .focus-lux:focus-visible {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring), white 40%);
+    outline: none;
+  }
+
+  /* Sidebar shadcn */
+  .app-sidebar,
+  [data-sidebar="sidebar"] {
+    background: var(--sidebar);
+    color: var(--sidebar-foreground);
+    border-right: 1px solid var(--sidebar-border);
+  }
+
+  /* Icono suavizado */
+  .icon-muted { @apply text-muted-foreground/70; }
+}
+
+@keyframes call-number-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.25);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow: 0 0 28px 0 rgba(251, 191, 36, 0.55);
+    filter: brightness(1.05);
+  }
+}
+
+@keyframes call-number-glow-bg {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes call-position-glow {
+  0%,
+  100% {
+    opacity: 0.7;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.05);
+  }
+}
+
+@keyframes callGlow {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes callNumberPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.28));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 32px rgba(255, 255, 255, 0.45));
+  }
+}
+
+@keyframes callBadge {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes badgePulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 35px rgba(245, 158, 11, 0.4);
+  }
+}
+
+@keyframes ticketEntrance {
+  0% {
+    opacity: 0;
+    transform: translateX(-24px) scale(0.97);
+  }
+  55% {
+    opacity: 1;
+    transform: translateX(3px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes callWave {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.75);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-50%, -50%) scale(1.15);
+  }
+}
+
+/* ============ Tipografía por defecto (suave) ============ */
+@layer base {
+  h1 { @apply text-3xl leading-tight font-bold; }
+  h2 { @apply text-2xl leading-snug font-semibold; }
+  h3 { @apply text-xl leading-snug font-semibold; }
+  p, label, input, button { @apply font-medium; }
+}
+
+/* ====== Impresión de tickets en terminal ====== */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  body.terminal-print-mode {
+    background: #ffffff !important;
+    color: #000000 !important;
+    font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    display: block !important;
+  }
+
+  body.terminal-print-mode * {
+    visibility: hidden !important;
+  }
+
+  body.terminal-print-mode .terminal-print-target,
+  body.terminal-print-mode .terminal-print-target * {
+    visibility: visible !important;
+  }
+
+  body.terminal-print-mode .terminal-print-target {
+    position: static !important;
+    inset: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 68mm !important;
+  }
+
+  body.terminal-print-mode .terminal-ticket-print-area {
+    margin: 0 !important;
+  }
+
+  body.terminal-print-mode .terminal-ticket-card {
+    box-shadow: none !important;
+    border: 1px solid #000000 !important;
+    background: #ffffff !important;
+    border-radius: 6px !important;
+    margin: 0 !important;
+  }
+
+  body.terminal-print-mode .terminal-ticket-card [data-slot="card-header"] {
+    display: none !important;
+  }
+
+  body.terminal-print-mode .terminal-ticket-card [data-slot="card-content"] {
+    padding: 0.65rem !important;
+    display: block !important;
+    text-align: left !important;
+    gap: 0 !important;
+  }
+
+  body.terminal-print-mode [data-print-hidden="true"] {
+    display: none !important;
+  }
+
+  body.terminal-print-mode [data-print-only="true"] {
+    display: block !important;
+  }
+
+  body.terminal-print-mode .terminal-print-ticket {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    text-align: left !important;
+    padding: 0 !important;
+  }
+
+  body.terminal-print-mode .terminal-print-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    font-weight: 600 !important;
+  }
+
+  body.terminal-print-mode .terminal-print-business {
+    color: #111827 !important;
+  }
+
+  body.terminal-print-mode .terminal-print-datetime {
+    color: #4b5563 !important;
+    text-align: right !important;
+  }
+
+  body.terminal-print-mode .terminal-print-number-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.2rem !important;
+    padding: 0.3rem 0 !important;
+    border-top: 1px dashed #d1d5db !important;
+    border-bottom: 1px dashed #d1d5db !important;
+  }
+
+  body.terminal-print-mode .terminal-print-number {
+    font-size: 2.6rem !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.08em !important;
+    text-align: center !important;
+  }
+
+  body.terminal-print-mode .terminal-print-number-label {
+    font-size: 0.65rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.14em !important;
+    font-weight: 600 !important;
+    color: #1f2937 !important;
+  }
+
+  body.terminal-print-mode .terminal-print-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.15rem !important;
+  }
+
+  body.terminal-print-mode .terminal-print-field-label {
+    font-size: 0.62rem !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    font-weight: 600 !important;
+    color: #4b5563 !important;
+  }
+
+  body.terminal-print-mode .terminal-print-field-value {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    color: #000000 !important;
+  }
+}
+
+/* ====== Estilo de ticket térmico - Casa Martínez ====== */
+@media print {
+  /* Mostrar solo el bloque del ticket */
+  [data-print-hidden="true"] {
+    display: none !important;
+  }
+
+  .terminal-ticket-print-area,
+  .terminal-ticket-card {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .terminal-print-ticket {
+    display: block !important;
+    width: 100% !important;
+    padding: 8mm 6mm 6mm 6mm;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+    color: #000 !important;
+  }
+
+  /* ---------- Encabezado ---------- */
+  .terminal-print-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 8mm;
+  }
+
+  /* Forzar nombre fijo "Casa Martínez" sin editar JSX */
+  .terminal-print-business {
+    position: relative;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: .2px;
+    color: transparent;
+  }
+  .terminal-print-business::before {
+    content: "Casa Martínez";
+    color: #000;
+  }
+
+  .terminal-print-datetime {
+    font-size: 11px;
+    opacity: 0.9;
+  }
+
+  /* ---------- Número de turno ---------- */
+  .terminal-print-number-wrapper {
+    text-align: center;
+    margin-bottom: 6mm;
+  }
+  .terminal-print-number {
+    display: block;
+    font-size: 50px; /* tamaño bien grande */
+    line-height: 1;
+    font-weight: 900;
+    letter-spacing: 1px;
+  }
+  .terminal-print-number-label {
+    display: block;
+    margin-top: 2mm;
+    font-size: 10px;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+
+  /* ---------- Campos de datos ---------- */
+  .terminal-print-field {
+    display: flex;
+    justify-content: space-between;
+    margin: 2mm 0;
+    font-size: 13px;
+  }
+  .terminal-print-field-label {
+    font-weight: 600;
+    opacity: 0.85;
+  }
+  .terminal-print-field-value {
+    font-weight: 700;
+  }
+
+  /* Mostrar el cliente solo si existe */
+  .terminal-print-field:has(.terminal-print-field-label:contains("Cliente")) {
+    display: flex !important;
+  }
+
+  /* ---------- Nota al pie ---------- */
+  .terminal-print-ticket::after {
+    content: "Esté atento a la pantalla, ahí lo llamarán.";
+    display: block;
+    margin-top: 8mm;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ---------- Página térmica ---------- */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
+
+/* En pantalla se oculta la versión de impresión */
+[data-print-only="true"] {
+  display: none;
+}
+
+
+
+
