@@ -1,0 +1,81 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: drizatx-martinez-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: DrizaRootPass_2025
+      MYSQL_DATABASE: drizatx_martinez
+      MYSQL_USER: driza_martinez
+      MYSQL_PASSWORD: DrizaMartinez_2025
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --sql-mode=
+      - --innodb_strict_mode=0
+    volumes:
+      - drizatx-martinez-mysql-data:/var/lib/mysql
+    # En MARTÍNEZ tampoco exponemos MySQL hacia afuera
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: drizatx-martinez-backend
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+
+      # DB interna MARTÍNEZ
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_USERNAME: driza_martinez
+      DATABASE_PASSWORD: DrizaMartinez_2025
+      DATABASE_NAME: drizatx_martinez
+
+      # JWT
+      JWT_SECRET: "driza-super-secret-2025"
+
+      # CORS: SOLO frontend de Martínez (3210) por ahora
+      FRONTEND_URLS: "http://77.42.23.51:3210"
+    ports:
+      # Backend MARTÍNEZ expuesto por 3201 en el host
+      - "3201:3001"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # URLs que Next.js necesita EN BUILD
+        BACKEND_URL: "http://drizatx-martinez-backend:3001"
+        NEXT_PUBLIC_API_MODE: "true"
+        NEXT_PUBLIC_API_URL: "http://77.42.23.51:3201"
+        NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3210"
+    container_name: drizatx-martinez-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: production
+
+      # URL ABSOLUTA hacia el backend desde el contenedor
+      BACKEND_URL: "http://drizatx-martinez-backend:3001"
+
+      # URLs que usa el navegador (cliente Martínez)
+      NEXT_PUBLIC_API_MODE: "true"
+      NEXT_PUBLIC_API_URL: "http://77.42.23.51:3201"
+      NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3210"
+
+      NEXT_PUBLIC_SMS_ENABLED: "false"
+      NEXT_PUBLIC_PUSH_ENABLED: "false"
+    ports:
+      # Frontend MARTÍNEZ expuesto por 3210 en el host
+      - "3210:3000"
+
+volumes:
+  drizatx-martinez-mysql-data:

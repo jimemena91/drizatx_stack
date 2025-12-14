@@ -1,7 +1,3 @@
-# docker-compose.staging.yml
-# Entorno STAGING (servidor online de pruebas)
-# Este archivo NO se usa en tu notebook, solo en el VPS de staging.
-
 services:
   db:
     image: mysql:8.0
@@ -20,10 +16,6 @@ services:
       - --innodb_strict_mode=0
     volumes:
       - drizatx-stg-mysql-data:/var/lib/mysql
-    # 👇 En STAGING, por seguridad NO exponemos MySQL hacia afuera.
-    # Si alguna vez necesitás entrar desde tu PC, podés descomentar:
-    # ports:
-    #   - "3307:3306"
 
   backend:
     build:
@@ -37,27 +29,31 @@ services:
       NODE_ENV: production
       PORT: 3001
 
-      # 🔗 Conexión interna a MySQL (nombre del servicio "db")
+      # DB interna
       DATABASE_HOST: db
       DATABASE_PORT: 3306
       DATABASE_USERNAME: driza
       DATABASE_PASSWORD: DrizaDB_2025
       DATABASE_NAME: drizatx
 
-      # 🔑 JWT para auth (mismo secreto que definimos en local)
+      # JWT
       JWT_SECRET: "driza-super-secret-2025"
 
-      # 🌐 CORS: orígenes permitidos (ajustar cuando tengas dominio)
-      # Por ahora dejamos el frontend escuchando en 3010
-      FRONTEND_URLS: "http://localhost:3010,http://127.0.0.1:3010"
+      # CORS: frontend prod (3010) + staging (3110)
+      FRONTEND_URLS: "http://77.42.23.51:3010,http://77.42.23.51:3110"
     ports:
-      # Backend accesible desde afuera del servidor
-      - "3001:3001"
+      - "3101:3001"   # backend staging
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # 👇 VALORES PARA EL BUILD DE NEXT
+        BACKEND_URL: "http://drizatx-stg-backend:3001"
+        NEXT_PUBLIC_API_MODE: "true"
+        NEXT_PUBLIC_API_URL: "http://77.42.23.51:3101"
+        NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3110"
     container_name: drizatx-stg-frontend
     restart: unless-stopped
     depends_on:
@@ -65,23 +61,16 @@ services:
     environment:
       NODE_ENV: production
 
-      # 👇 En staging queremos que SIEMPRE hable con el backend real
+      # 👇 VALORES EN RUNTIME (dentro del contenedor)
+      BACKEND_URL: "http://drizatx-stg-backend:3001"
       NEXT_PUBLIC_API_MODE: "true"
-
-      # ⚠️ IMPORTANTE:
-      # En el primer paso podemos probar conectándonos vía escritorio remoto
-      # al servidor y abrir el navegador ahí con http://localhost:3010.
-      # En ese caso, localhost sí apunta al backend (3001) en el mismo server,
-      # así que esta URL funciona bien.
-      NEXT_PUBLIC_API_URL: "http://localhost:3001"
-
-      NEXT_PUBLIC_BASE_URL: "http://localhost:3010"
+      NEXT_PUBLIC_API_URL: "http://77.42.23.51:3101"
+      NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3110"
 
       NEXT_PUBLIC_SMS_ENABLED: "false"
       NEXT_PUBLIC_PUSH_ENABLED: "false"
     ports:
-      # Frontend accesible desde afuera del servidor
-      - "3010:3000"
+      - "3110:3000"   # frontend staging
 
 volumes:
   drizatx-stg-mysql-data:

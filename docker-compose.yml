@@ -35,8 +35,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      # En local usamos development para que las cookies no sean secure-only
-      NODE_ENV: development
+      NODE_ENV: production
       PORT: 3001
 
       DATABASE_HOST: db
@@ -45,8 +44,8 @@ services:
       DATABASE_PASSWORD: DrizaDB_2025
       DATABASE_NAME: drizatx
 
-      # Permitimos frontend en 3000 y 3010
-      FRONTEND_URLS: http://localhost:3000,http://localhost:3010
+      FRONTEND_URLS: >-
+        http://localhost:3000,http://localhost:3010,http://77.42.23.51:3010
 
       JWT_SECRET: driza-super-secret-2025
     ports:
@@ -64,12 +63,11 @@ services:
       NODE_ENV: production
 
       NEXT_PUBLIC_API_MODE: "true"
-      NEXT_PUBLIC_API_URL: "http://localhost:3001"
-      NEXT_PUBLIC_BASE_URL: "http://localhost:3010"
+      NEXT_PUBLIC_API_URL: "http://77.42.23.51:3001"
+      NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3010"
       NEXT_PUBLIC_SMS_ENABLED: "false"
       NEXT_PUBLIC_PUSH_ENABLED: "false"
     ports:
-      # Host 3010 → contenedor 3000
       - "3010:3000"
 
 volumes:

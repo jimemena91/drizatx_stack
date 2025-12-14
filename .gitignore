@@ -23,3 +23,7 @@ Thumbs.db
 *.log
 .vscode/
 .idea/
+backups/
+*.sql
+*.bak
+*.save
