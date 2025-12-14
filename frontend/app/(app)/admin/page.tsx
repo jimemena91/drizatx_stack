@@ -452,7 +452,8 @@ export default function AdminPage() {
   const [operatorBeingDeletedId, setOperatorBeingDeletedId] = useState<number | null>(null)
 
   const DEFAULT_PROMOTION_DURATION = 30
-  const MAX_PROMOTION_MEDIA_BYTES = 10 * 1024 * 1024
+  const MAX_PROMOTION_MEDIA_MB = 20
+  const MAX_PROMOTION_MEDIA_BYTES = MAX_PROMOTION_MEDIA_MB * 1024 * 1024
   const [customMessages, setCustomMessages] = useState<CustomMessage[]>([])
   const [newMessage, setNewMessage] = useState({
     title: "",
@@ -1621,7 +1622,7 @@ export default function AdminPage() {
       }
 
       if (file.size > MAX_PROMOTION_MEDIA_BYTES) {
-        setMessageMediaError("El archivo supera el límite de 10 MB")
+        setMessageMediaError(`El archivo supera el límite de ${MAX_PROMOTION_MEDIA_MB} MB`)
         event.target.value = ""
         return
       }

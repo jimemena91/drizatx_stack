@@ -10,7 +10,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   // Permitir cargas más grandes para material promocional (videos/imágenes en data URI)
-  const MEDIA_PAYLOAD_LIMIT = "16mb"; // 10 MB de archivo ~ 13.3 MB base64; usamos un margen seguro
+  const MEDIA_PAYLOAD_LIMIT = "32mb"; // 20 MB de archivo ~ 26.7mb base64; usamos un margen seguro
   app.use(bodyParser.json({ limit: MEDIA_PAYLOAD_LIMIT }));
   app.use(bodyParser.urlencoded({ limit: MEDIA_PAYLOAD_LIMIT, extended: true }));
 
