@@ -39,7 +39,10 @@ function normalizeService(raw: any): Service {
           : null,
     prefix: String(raw.prefix ?? raw.codePrefix ?? "").toUpperCase(),
     active: toBoolFlag(raw.active),
-    priority: normalizePriorityLevel(raw.priority) ?? 1,
+    priority:
+      normalizePriorityLevel(
+        raw.priority ?? raw.priorityLevel ?? raw.priority_level ?? raw.prioritylevel,
+      ) ?? 1,
     estimatedTime: Number(raw.estimatedTime ?? raw.estimated_time ?? 10),
     maxAttentionTime: toNullableNumber(raw.maxAttentionTime ?? raw.max_attention_time),
     createdAt: raw.createdAt
