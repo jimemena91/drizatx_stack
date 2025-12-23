@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Printer, ArrowRight, Ticket, User, Search } from "lucide-react"
+import { Printer, ArrowRight, User, Search } from "lucide-react"
 import { getServiceIcon } from "@/lib/service-icons"
 import { useServices } from "@/hooks/use-services"
 import { useTickets } from "@/hooks/use-tickets"
@@ -85,6 +85,8 @@ export default function TerminalPage() {
   const [clientNotFound, setClientNotFound] = useState(false)
   const [clientLookupError, setClientLookupError] = useState<string | null>(null)
   const [showClientForm, setShowClientForm] = useState(false)
+
+  // Si querés habilitar lookup DNI, ponelo en true
   const isClientLookupEnabled = false
 
   // Impresión / feedback
@@ -107,7 +109,7 @@ export default function TerminalPage() {
   const { findByDni } = useClients({ publicMode: true })
   const { getSetting } = useSystemSettings({ publicMode: true })
 
-  // Bootstrap: si vienen ?bridge=...&token=... desde el .bat, guardarlos y limpiar URL
+  // ✅ Bootstrap: si vienen ?bridge=...&token=... desde el .bat, guardarlos y limpiar URL
   useEffect(() => {
     if (typeof window === "undefined") return
     const params = new URLSearchParams(window.location.search)
@@ -124,26 +126,22 @@ export default function TerminalPage() {
     }
   }, [])
 
-  // URL/TOKEN del bridge: primero System Settings, si faltan → localStorage
-  const printWebhookUrl = useMemo(
-    () =>
-      (
-        getSetting("terminal.printWebhookUrl", "") ||
-        (typeof window !== "undefined" ? localStorage.getItem("terminal.printWebhookUrl") : "") ||
-        ""
-      ).trim(),
-    [getSetting]
-  )
+  // ✅ IMPORTANTE: para kiosco SIN login, priorizamos localStorage
+  const { printWebhookUrl, printWebhookToken, bridgeSource } = useMemo(() => {
+    const lsUrl =
+      typeof window !== "undefined" ? (localStorage.getItem("terminal.printWebhookUrl") ?? "").trim() : ""
+    const lsToken =
+      typeof window !== "undefined" ? (localStorage.getItem("terminal.printWebhookToken") ?? "").trim() : ""
 
-  const printWebhookToken = useMemo(
-    () =>
-      (
-        getSetting("terminal.printWebhookToken", "") ||
-        (typeof window !== "undefined" ? localStorage.getItem("terminal.printWebhookToken") : "") ||
-        ""
-      ).trim(),
-    [getSetting]
-  )
+    if (lsUrl && lsToken) {
+      return { printWebhookUrl: lsUrl, printWebhookToken: lsToken, bridgeSource: "localStorage" as const }
+    }
+
+    const ssUrl = (getSetting("terminal.printWebhookUrl", "") ?? "").trim()
+    const ssToken = (getSetting("terminal.printWebhookToken", "") ?? "").trim()
+
+    return { printWebhookUrl: ssUrl, printWebhookToken: ssToken, bridgeSource: "systemSettings" as const }
+  }, [getSetting])
 
   // Datos derivados
   const services = getActiveServices()
@@ -151,13 +149,10 @@ export default function TerminalPage() {
     () => services.find((service) => service.id === selectedService) ?? null,
     [services, selectedService],
   )
+
   const generatedTicket = activeTicketInfo?.ticket
   const generatedService = activeTicketInfo?.service
   const GeneratedServiceIcon = getServiceIcon(generatedService?.icon)
-
-  const displayServiceName = activeTicketInfo?.service?.name ?? generatedService?.name ?? ""
-  const displayClientName = activeTicketInfo?.clientName?.trim() ?? ""
-  const displayTicketNumber = generatedTicket?.number ?? ""
 
   const kioskLocationName = useMemo(() => getSetting("kioskLocationName", "").trim(), [getSetting])
   const hasConfiguredLocation = kioskLocationName.length > 0
@@ -238,9 +233,9 @@ export default function TerminalPage() {
 
     try {
       const result = await sendTicketToPrinter({
-        ticket: activeTicketInfo.ticket,
-        service: activeTicketInfo.service,
-        clientName: activeTicketInfo.clientName ?? undefined,
+        ticket: { id: activeTicketInfo.ticket.id, number: activeTicketInfo.ticket.number },
+        service: { id: activeTicketInfo.service.id, name: activeTicketInfo.service.name },
+        client: activeTicketInfo.clientName ? { name: activeTicketInfo.clientName } : undefined,
         printWebhookUrl,
         printWebhookToken,
       })
@@ -255,7 +250,7 @@ export default function TerminalPage() {
       }
 
       setPrintTimestamp(new Date())
-      setPrintMessage("¡Gracias por su visita! El ticket se imprimió correctamente.")
+      setPrintMessage("Ticket impreso. Esté atentx a la pantalla: por ahí lo llamamos.")
       scheduleRedirect()
     } catch (error) {
       console.error("Error al imprimir el turno:", error)
@@ -326,17 +321,17 @@ export default function TerminalPage() {
     if (!selectedService || creating) return
     try {
       setCreating(true)
-      // Crea ticket (serviceId, channel=1: terminal, clientId opcional)
+
       const newTicket = await createTicket(
         selectedService,
         undefined,
         undefined,
         selectedClientId || undefined,
       )
+
       const ticketsWithRelations = getTicketsWithRelations()
       const ticketWithRelations = ticketsWithRelations.find((t) => t.id === newTicket.id)
 
-      const selectedServiceData = services.find((s) => s.id === selectedService) ?? null
       const normalizedNumber = (() => {
         const num = newTicket?.number
         const hasNumber = typeof num === "string" && num.trim().length > 0
@@ -385,10 +380,8 @@ export default function TerminalPage() {
       })
       setShowTicket(true)
 
-      const gratitudeMessage =
-        "¡Gracias por utilizar la terminal! Puede anotar su número; el ticket se imprimirá automáticamente."
-      setThankYouMessage(gratitudeMessage)
-      // scheduleRedirect después de imprimir OK
+      setThankYouMessage("Gracias por usar la terminal.")
+      // scheduleRedirect solo después de imprimir OK
     } catch (error) {
       console.error("Error al generar el turno:", error)
       alert("Error al generar el turno. Por favor intente nuevamente.")
@@ -397,7 +390,6 @@ export default function TerminalPage() {
     }
   }
 
-  // Overlay debug opcional
   const DebugOverlay = () =>
     !debug ? null : (
       <div
@@ -420,11 +412,12 @@ export default function TerminalPage() {
         <div>showTicket: <b>{String(showTicket)}</b></div>
         <div>isPrinting: <b>{String(isPrinting)}</b></div>
         <div>ticket: <b>{generatedTicket?.number ?? "—"}</b></div>
-        <div>bridge: <b>{printWebhookUrl || "(sin URL)"}{printWebhookUrl ? "" : ""}</b></div>
+        <div>bridgeSource: <b>{bridgeSource}</b></div>
+        <div>bridgeUrl: <b>{printWebhookUrl || "(sin URL)"}</b></div>
+        <div>token: <b>{printWebhookToken ? "OK" : "FALTA"}</b></div>
       </div>
     )
 
-  // --- UI ---
   return (
     <div className="flex-1 space-y-4">
       <div className="text-center">
@@ -433,18 +426,21 @@ export default function TerminalPage() {
       </div>
 
       {isPrinting && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-md p-3 text-sm mx-auto max-w-md" data-print-hidden="true">
+        <div
+          className="bg-blue-50 border border-blue-200 text-blue-800 rounded-md p-3 text-sm mx-auto max-w-md"
+          data-print-hidden="true"
+        >
           Enviando el ticket a la impresora…
         </div>
       )}
 
       {!selectedService ? (
-        // Lista de servicios
         <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
           {services.map((service) => {
             const ServiceIcon = getServiceIcon(service.icon)
             const isSelected = selectedService === service.id
             const priorityService = isPriorityService(service)
+
             return (
               <Card
                 key={service.id}
@@ -468,7 +464,6 @@ export default function TerminalPage() {
           })}
         </div>
       ) : showTicket ? (
-        // Ticket generado (vista post-creación)
         <div className="w-full">
           <Card className="max-w-md mx-auto">
             <CardHeader className="text-center" data-print-hidden="true">
@@ -492,22 +487,20 @@ export default function TerminalPage() {
                     <GeneratedServiceIcon className="h-5 w-5 text-blue-600" />
                     <p className="font-medium">Servicio: {generatedService?.name}</p>
                   </div>
-                  {isPriorityService(generatedService) && (
-                    <PriorityAudienceIcons size="sm" className="mt-1" />
-                  )}
+                  {isPriorityService(generatedService) && <PriorityAudienceIcons size="sm" className="mt-1" />}
                   {hasConfiguredLocation && <p className="text-sm text-gray-600">Lugar: {kioskLocationName}</p>}
-                  <p className="text-xs text-gray-500">Creado: {ticketCreatedDate}</p>
+                  <p className="text-xs text-gray-500">Fecha: {ticketCreatedDate}</p>
                 </div>
 
                 <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
-                  {brandDisplayName}: esté atentx a la pantalla; allí llamarán su turno en orden de llegada.
+                  {brandDisplayName}: esté atentx a la pantalla; por ahí lo llamamos.
                 </div>
 
                 {thankYouMessage && (
                   <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-md p-4 text-sm">
                     <p className="font-semibold">{thankYouMessage}</p>
                     <p className="mt-2 text-xs text-emerald-700">
-                      En 5 segundos volveremos a la pantalla principal para solicitar otro turno.
+                      Cuando se imprima, volveremos a inicio automáticamente.
                     </p>
                   </div>
                 )}
@@ -516,14 +509,21 @@ export default function TerminalPage() {
                   <div className="bg-green-50 border border-green-200 text-green-800 rounded-md p-4 text-sm">
                     <p className="font-semibold">{printMessage}</p>
                     {printTimestamp && (
-                      <p className="mt-1 text-xs text-green-700">Impreso a las {printTimestamp.toLocaleTimeString()}</p>
+                      <p className="mt-1 text-xs text-green-700">
+                        Impreso (sin hora en ticket) • {printTimestamp.toLocaleTimeString()}
+                      </p>
                     )}
                     <p className="mt-2 text-xs text-green-700">Redirigiendo a la pantalla inicial…</p>
                   </div>
                 )}
 
                 <div className="flex gap-2">
-                  <Button onClick={handleNewTicket} variant="outline" className="flex-1 bg-transparent" disabled={actionsDisabled}>
+                  <Button
+                    onClick={handleNewTicket}
+                    variant="outline"
+                    className="flex-1 bg-transparent"
+                    disabled={actionsDisabled}
+                  >
                     Nuevo Turno
                   </Button>
                   <Button onClick={handlePrint} className="flex-1" disabled={actionsDisabled}>
@@ -536,7 +536,6 @@ export default function TerminalPage() {
           </Card>
         </div>
       ) : (
-        // Confirmación de servicio
         <Card className="max-w-md mx-auto">
           <CardHeader>
             <CardTitle className="text-center">Confirmar Servicio</CardTitle>
@@ -544,12 +543,8 @@ export default function TerminalPage() {
           <CardContent className="space-y-6">
             <div className="text-center space-y-3">
               <h3 className="text-xl font-bold">{selectedServiceData?.name}</h3>
-              <p className="text-sm text-gray-600">
-                Confirmá el servicio para generar el ticket. La impresión será automática.
-              </p>
-              {isPriorityService(selectedServiceData) && (
-                <PriorityAudienceIcons size="sm" className="mt-1" />
-              )}
+              <p className="text-sm text-gray-600">Confirmá el servicio para generar el ticket.</p>
+              {isPriorityService(selectedServiceData) && <PriorityAudienceIcons size="sm" className="mt-1" />}
             </div>
 
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 shadow-sm">
@@ -559,9 +554,7 @@ export default function TerminalPage() {
                 </div>
                 <div>
                   <p className="font-semibold">Impresión automática</p>
-                  <p className="text-xs text-blue-900">
-                    Se envía al servicio local de impresión. Si falla, podrás reintentar.
-                  </p>
+                  <p className="text-xs text-blue-900">Se envía al servicio local de impresión.</p>
                 </div>
               </div>
             </div>
@@ -575,10 +568,10 @@ export default function TerminalPage() {
               >
                 Volver
               </Button>
+
               <Button
                 onClick={handleGetTicket}
                 className={cn(
-                  // Elegimos el estilo más visible (codex) y lo combinamos con el hint de main
                   "w-full group relative h-auto border-0 py-8 text-3xl font-semibold tracking-wide text-white",
                   "bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600",
                   "shadow-[0_18px_45px_-15px_rgba(37,99,235,0.75)] transition-transform duration-200 ease-out",
@@ -588,7 +581,7 @@ export default function TerminalPage() {
                 size="lg"
                 disabled={confirmDisabled}
               >
-                {creating ? "Generando..." : "Obtener Numero"}
+                {creating ? "Generando..." : "Obtener Número"}
                 <ArrowRight className="h-6 w-6 ml-4 transition-transform duration-200 group-hover:translate-x-1" />
               </Button>
             </div>
@@ -596,7 +589,6 @@ export default function TerminalPage() {
         </Card>
       )}
 
-      {/* Bloque buscar cliente */}
       {!showTicket && !selectedService && (
         <div className="text-center space-y-4">
           {isClientLookupEnabled && !showClientForm && (
@@ -634,7 +626,7 @@ export default function TerminalPage() {
                   {selectedClientId && <p className="text-sm text-green-700 mt-2">Cliente encontrado.</p>}
                   {clientNotFound && (
                     <p className="text-sm text-yellow-700 mt-2">
-                      No se encontró cliente con ese DNI. Puede continuar como invitado o cargarlo en Gestión {">"} Clientes.
+                      No se encontró cliente con ese DNI. Puede continuar como invitado.
                     </p>
                   )}
                   {clientLookupError && <p className="text-sm text-red-600 mt-2">{clientLookupError}</p>}
@@ -656,9 +648,6 @@ export default function TerminalPage() {
                     Continuar sin DNI
                   </Button>
                 </div>
-                <div className="md:col-span-3 text-sm text-gray-500">
-                  Sugerencia: Si es cliente VIP, el sistema podría priorizar su atención (configurable).
-                </div>
               </CardContent>
             </Card>
           )}
@@ -666,10 +655,9 @@ export default function TerminalPage() {
       )}
 
       <div className="text-center">
-        <p className="text-gray-500 text-sm">Para asistencia, presione el botón de ayuda o consulte con el personal</p>
+        <p className="text-gray-500 text-sm">Para asistencia, consulte con el personal</p>
       </div>
 
-      {/* Overlay de depuración (solo si ?debug=1) */}
       <DebugOverlay />
     </div>
   )
