@@ -27,3 +27,11 @@ backups/
 *.sql
 *.bak
 *.save
+
+# local scratch / debugging
+cookies*.txt
+
+# backups/temporales
+*.bak.*
+*.BAK.*
+*.save.*

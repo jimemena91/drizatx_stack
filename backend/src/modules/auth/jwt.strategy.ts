@@ -30,7 +30,10 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     @InjectRepository(PermissionEntity) private readonly permRepo: Repository<PermissionEntity>,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => req?.cookies?.['drizatx-token'] ?? null,
+      ]),
       ignoreExpiration: false,
       secretOrKey: process.env.JWT_SECRET,
     });
@@ -38,8 +41,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   async validate(payload: any) {
     const userId: number | undefined =
-      typeof payload?.sub === 'number' ? payload.sub :
-      payload?.sub ? Number(payload.sub) : undefined;
+      typeof payload?.sub === 'number'
+        ? payload.sub
+        : payload?.sub
+          ? Number(payload.sub)
+          : undefined;
 
     // Fallback seguro si no hay sub
     if (!userId || !Number.isFinite(userId)) {
@@ -54,6 +60,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       };
     }
 
+    // --- desde acá sigue tu lógica normal (roles, permisos, etc) ---
     // 1) Traer roles del operador (OperatorRole -> Role)
     const operatorRoles = await this.operatorRolesRepo.find({
       where: { operatorId: userId },
@@ -94,18 +101,15 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     }
 
     // 3) Fusionar con permisos del payload (si vinieran)
-    const payloadPerms = Array.isArray(payload?.permissions) ? payload.permissions.map((p: any) => String(p)) : [];
+    const payloadPerms = Array.isArray(payload?.permissions)
+      ? payload.permissions.map((p: any) => String(p))
+      : [];
     const merged = new Set<string>([...rolePermissions, ...payloadPerms]);
 
     // 4) Garantía de permiso base para operadores
-    //    El controlador protege endpoints de operador con @Permissions(SERVE_TICKETS),
-    //    así que si el rol más alto es OPERATOR, lo incluimos.
     if (highest === Role.OPERATOR) {
-      merged.add(Permission.SERVE_TICKETS); // <- clave para evitar 403 en /operators/:id/*
+      merged.add(Permission.SERVE_TICKETS);
     }
-
-    // Opcional: si querés que SUPERVISOR también sirva tickets:
-    // if (highest === Role.SUPERVISOR) merged.add(Permission.SERVE_TICKETS);
 
     // 5) Normalizar rol principal
     const primaryRole = normalizeRole(highest) ?? Role.OPERATOR;

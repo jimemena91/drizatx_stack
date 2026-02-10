@@ -8,7 +8,7 @@ import { isApiMode } from "@/lib/api-mode"
 import { apiClient, ApiError, type RoleWithPermissions, normalizePermissionArray } from "@/lib/api-client"
 
 // --- Flags de entorno
-const DEMO_MODE = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "") === "1"
+const DEMO_MODE = false
 
 // --- Público (no llamar API ni pedir permisos)
 const PUBLIC_PREFIXES = ["/terminal", "/display", "/mobile"]
@@ -159,6 +159,34 @@ function persistPermissions(permissions: Permission[] | null) {
     console.warn("[AuthProvider] persistPermissions falló", err)
   }
 }
+
+async function authFetch<T = any>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    cache: "no-store",
+    credentials: "same-origin",
+    ...init,
+    headers: {
+      ...(init?.headers ?? {}),
+      "Content-Type": "application/json",
+    },
+  })
+
+  const text = await res.text()
+  let data: any = null
+  try {
+    data = text ? JSON.parse(text) : null
+  } catch {
+    data = text
+  }
+
+  if (!res.ok) {
+    const msg = (data as any)?.message || `Auth error ${res.status}`
+    throw new Error(msg)
+  }
+
+  return data as T
+}
+
 
 function readPermissionsFromStorage(): Permission[] {
   try {
@@ -420,6 +448,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       })
     } else {
+  // 👇 Si no hay user en storage, probamos sesión por cookies (proxy /api en 3210)
+  const tryCookieSession = async () => {
+    try {
+      if (!isApiMode()) {
+        setAuthCookie(false)
+        persistPermissions(null)
+        dispatch({
+          type: "LOAD_FROM_STORAGE",
+          payload: { user: null, token: null, permissions: [], rolePermissions: {} },
+        })
+        return
+      }
+
+      const me = await authFetch<User>("/api/auth/me", { method: "GET" })
+
+      const role = normalizeRole((me as any)?.role) ?? Role.OPERATOR
+      const roles = normalizeRoles((me as any)?.roles, role)
+      const permissions = normalizePermissionArray((me as any)?.permissions)
+
+      const normalizedUser: User = {
+        ...(me as any),
+        role,
+        roles,
+        permissions,
+        createdAt: (me as any)?.createdAt ? new Date((me as any).createdAt) : new Date(),
+        updatedAt: (me as any)?.updatedAt ? new Date((me as any).updatedAt) : new Date(),
+      }
+
+      const persisted = persistUser(normalizedUser) ?? normalizedUser
+      persistToken(null) // sesión real vive en cookies HttpOnly
+      persistPermissions(permissions)
+      setAuthCookie(true, persisted.role)
+
+      dispatch({
+        type: "LOAD_FROM_STORAGE",
+        payload: { user: persisted, token: null, permissions, rolePermissions: {} },
+      })
+    } catch (e) {
       setAuthCookie(false)
       persistPermissions(null)
       dispatch({
@@ -427,6 +493,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         payload: { user: null, token: null, permissions: [], rolePermissions: {} },
       })
     }
+  }
+
+  void tryCookieSession()
+}
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname])
 
@@ -526,14 +596,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // Logout
-  const logout = () => {
-    persistUser(null)
-    persistToken(null)
-    persistPermissions(null)
-    // El efecto de token va a aplicar null; no lo llamamos directo aquí
-    setAuthCookie(false)
-    dispatch({ type: "LOGOUT" })
-  }
+    // Logout (server + client)
+    const logout = async () => {
+      try {
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+      } catch {
+        /* ignore */
+      }
+      persistUser(null)
+      persistToken(null)
+      persistPermissions(null)
+      setAuthCookie(false)
+      dispatch({ type: "LOGOUT" })
+      try {
+        window.location.href = "/login"
+      } catch {
+        /* ignore */
+      }
+    }
+
 
   // Sincronización de permisos (solo si autenticado y NO público)
   useEffect(() => {

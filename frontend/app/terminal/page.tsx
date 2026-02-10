@@ -221,11 +221,25 @@ export default function TerminalPage() {
   // --- Impresión directa al bridge local ---
   const handlePrint = useCallback(async () => {
     if (!activeTicketInfo) return
+if (!printWebhookUrl || !printWebhookToken) {
+  const missing = [
+    !printWebhookUrl ? "NEXT_PUBLIC_PRINT_WEBHOOK_URL" : null,
+    !printWebhookToken ? "NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN" : null,
+  ].filter(Boolean)
 
-    if (!printWebhookUrl || !printWebhookToken) {
-      alert("Servicio de impresión local no configurado en este equipo.")
-      return
-    }
+  alert(
+    `Servicio de impresión local no configurado en este equipo.\n` +
+      `Faltan variables: ${missing.join(", ")}.\n\n` +
+      `Asegurate de:\n` +
+      `1) Tener el bridge abierto (start-bridge.bat)\n` +
+      `2) Tener en el compose del frontend:\n` +
+      `   NEXT_PUBLIC_PRINT_WEBHOOK_URL=http://127.0.0.1:7080/print\n` +
+      `   NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN=mi_token_super_secreto_123\n` +
+      `3) Rebuild del frontend (--build)\n`
+  )
+  return
+}
+
 
     setIsPrinting(true)
     setPrintMessage(null)

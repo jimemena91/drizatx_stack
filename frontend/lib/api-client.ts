@@ -493,14 +493,15 @@ function warnIfApiMisconfigured(base: string, rawApiUrl: string | undefined) {
   if (connectivityCheckBase === base) return;
   connectivityCheckBase = base;
 
-  const target = `${base}${API_HEALTHCHECK_PATH}`;
+  const target = API_HEALTHCHECK_PATH;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_HEALTHCHECK_TIMEOUT_MS);
 
   fetch(target, {
+    credentials: "include",
     method: "GET",
-    mode: "cors",
-    credentials: "omit",
+    mode: "same-origin",
+    credentials: "same-origin",
     signal: controller.signal,
   })
     .then((res) => {
@@ -932,7 +933,7 @@ class ApiClient {
         ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
       },
       mode: "cors",
-      credentials: "omit",
+      credentials: "include",
       cache: "no-store",
       signal: signal ?? controller.signal,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -973,7 +974,7 @@ class ApiClient {
         ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
       },
       mode: "cors",
-      credentials: "omit",
+      credentials: "include",
       cache: "no-store",
       signal: signal ?? controller.signal,
     };
@@ -1925,7 +1926,7 @@ class ApiClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
         mode: "cors",
-        credentials: "omit",
+        credentials: "include",
         signal: controller.signal,
         cache: "no-store",
       });

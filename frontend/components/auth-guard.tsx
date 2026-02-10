@@ -10,11 +10,14 @@ import { Loader2, ShieldX } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
-const DEMO_MODE = typeof window !== "undefined" && process.env.NEXT_PUBLIC_DEMO_MODE === "1"
+const DEMO_MODE =false
+
 const PUBLIC_PREFIXES = ["/terminal", "/display", "/mobile"]
 
 function isPublicPath(pathname: string) {
-  return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(p))
+  return PUBLIC_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p)
+  )
 }
 
 interface AuthGuardProps {
@@ -22,54 +25,78 @@ interface AuthGuardProps {
   requiredPermissions?: Permission[]
 }
 
-export function AuthGuard({ children, requiredPermissions }: AuthGuardProps) {
+export function AuthGuard({
+  children,
+  requiredPermissions,
+}: AuthGuardProps) {
   const { state } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
-  // Público: no se exige auth ni permisos
-  if (DEMO_MODE || isPublicPath(pathname)) return <>{children}</>
+  // 🌍 Rutas públicas o demo
+  if (DEMO_MODE || isPublicPath(pathname)) {
+    return <>{children}</>
+  }
 
-  useEffect(() => {
-    if (state.isLoading) return
-
-    if (!state.isAuthenticated && pathname !== "/login") {
-      router.push("/login")
-      return
-    }
-
-    if (state.isAuthenticated && pathname === "/login") {
-      const target = getDefaultRouteForRole(state.user?.role)
-      router.push(target)
-      return
-    }
-
-    if (state.isAuthenticated && state.user?.role === "OPERATOR") {
-      const isOperatorPath = pathname?.startsWith("/operator")
-      if (!isOperatorPath) router.replace("/operator")
-      return
-    }
-  }, [state.isLoading, state.isAuthenticated, state.user?.role, pathname, router])
-
+  // ⏳ Mientras carga el estado de auth
   if (state.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="h-8 w-8 animate-spin mx-auto" />
-          <p className="text-muted-foreground">Verificando autenticación...</p>
+          <p className="text-muted-foreground">
+            Verificando autenticación...
+          </p>
         </div>
       </div>
     )
   }
 
-  if (!state.isAuthenticated && pathname !== "/login") return null
+  // 🚪 No autenticado → login
+  if (!state.isAuthenticated && pathname !== "/login") {
+    router.push("/login")
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="text-muted-foreground">
+            Redirigiendo al login...
+          </p>
+        </div>
+      </div>
+    )
+  }
 
+  // 🔁 Logueado y entra a /login
+  if (state.isAuthenticated && pathname === "/login") {
+    const target = getDefaultRouteForRole(state.user?.role)
+    router.replace(target)
+    return null
+  }
+
+  // 👷 OPERATOR siempre a /operator
+  if (state.isAuthenticated && state.user?.role === "OPERATOR") {
+    if (!pathname.startsWith("/operator")) {
+      router.replace("/operator")
+      return null
+    }
+  }
+
+  // 🔐 Permisos por ruta
   const lacksRoutePermission =
-    state.isAuthenticated && !canAccessRoute(state.permissions, pathname, state.user?.role)
+    state.isAuthenticated &&
+    !canAccessRoute(
+      state.permissions,
+      pathname,
+      state.user?.role
+    )
 
   const lacksRequiredPermission =
     state.isAuthenticated &&
-    requiredPermissions?.some((permission) => !hasPermission(state.permissions, permission))
+    requiredPermissions?.some(
+      (permission) =>
+        !hasPermission(state.permissions, permission)
+    )
 
   if (lacksRoutePermission || lacksRequiredPermission) {
     return (
@@ -78,12 +105,22 @@ export function AuthGuard({ children, requiredPermissions }: AuthGuardProps) {
           <Alert variant="destructive">
             <ShieldX className="h-4 w-4" />
             <AlertDescription>
-              No tiene permisos para acceder a esta página. Su rol actual ({state.user?.role ?? "desconocido"}) no
-              permite el acceso a esta funcionalidad.
+              No tiene permisos para acceder a esta página.
+              <br />
+              Rol actual:{" "}
+              <strong>{state.user?.role ?? "desconocido"}</strong>
             </AlertDescription>
           </Alert>
+
           <div className="flex justify-center">
-            <Button onClick={() => router.push(getDefaultRouteForRole(state.user?.role))} variant="outline">
+            <Button
+              variant="outline"
+              onClick={() =>
+                router.push(
+                  getDefaultRouteForRole(state.user?.role)
+                )
+              }
+            >
               Volver al inicio
             </Button>
           </div>
@@ -92,5 +129,6 @@ export function AuthGuard({ children, requiredPermissions }: AuthGuardProps) {
     )
   }
 
+  // ✅ Autorizado
   return <>{children}</>
 }

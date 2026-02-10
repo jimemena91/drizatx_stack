@@ -9,10 +9,11 @@ import {
   Logger,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { Request } from 'express';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import type { Request, Response as ExpressResponse } from 'express';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
@@ -32,7 +33,11 @@ export class AuthController {
   @ApiResponse({ status: 403, description: 'Usuario inactivo o sin permiso' })
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async login(@Body() dto: LoginDto, @Req() req: Request) {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ) {
     if ((!dto.email && !dto.username) || !dto.password) {
       throw new BadRequestException('Debes enviar email o username, y password.');
     }
@@ -44,12 +49,40 @@ export class AuthController {
       (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
       req.socket?.remoteAddress ||
       null;
+
     const userAgent = req.headers['user-agent'] as string | undefined;
 
-    return this.authService.login(dto, { ip, userAgent });
+    const result = await this.authService.login(dto, { ip, userAgent });
+
+    /**
+     * Cookies para que el middleware de Next permita navegar
+     * Importante: Secure SOLO si la request viene por HTTPS.
+     * Si estás en HTTP (sin SSL), el navegador NO guarda cookies Secure.
+     */
+    const xfp = String(req.headers['x-forwarded-proto'] ?? '');
+    const isHttps = xfp.includes('https');
+    const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
+    const cookieBase = {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: isHttps,
+      domain: cookieDomain,
+      path: '/',
+    };
+
+    res.cookie('drizatx-auth', '1', cookieBase);
+    res.cookie('drizatx-role', String(result?.user?.role ?? ''), cookieBase);
+
+    const token = result?.access_token ?? result?.token;
+    if (token) {
+      res.cookie('drizatx-token', token, cookieBase);
+    }
+
+    return result;
   }
 
-  // ========= Nuevo: perfil del usuario autenticado =========
+  // ========= Perfil del usuario autenticado =========
   @ApiOperation({ summary: 'Obtiene el perfil del usuario autenticado' })
   @ApiBearerAuth() // Swagger: requiere Authorization: Bearer <token>
   @ApiResponse({ status: 200, description: 'Perfil del usuario autenticado' })
@@ -61,9 +94,11 @@ export class AuthController {
     // Usamos `sub` como id del operador (así fue emitido en el token).
     const payload = req.user as { sub?: number } | undefined;
     const operatorId = payload?.sub;
+
     if (!operatorId) {
       throw new BadRequestException('No se pudo resolver el usuario del token.');
     }
+
     return this.authService.profile(operatorId);
   }
 
@@ -76,9 +111,11 @@ export class AuthController {
   async myPermissions(@Req() req: Request) {
     const payload = req.user as { sub?: number } | undefined;
     const operatorId = payload?.sub;
+
     if (!operatorId) {
       throw new BadRequestException('No se pudo resolver el usuario del token.');
     }
+
     return this.authService.myPermissions(operatorId);
   }
 }
