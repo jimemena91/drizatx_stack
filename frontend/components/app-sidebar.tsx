@@ -95,6 +95,13 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     [state.permissions],
   );
 
+  const handleLogout = React.useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
+    logout();
+    router.replace("/login");
+  }, [logout, router]);
+
   return (
     <Sidebar variant="inset" collapsible="offcanvas" {...props}>
       {/* Header con branding + estado API */}
@@ -178,10 +185,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton
               type="button"
-              onClick={() => {
-                logout();
-                router.replace("/login");
-              }}
+              onClick={handleLogout}
             >
               <LogOut className="h-4 w-4" />
               <span>Cerrar sesión</span>

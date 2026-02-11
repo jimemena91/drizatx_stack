@@ -1,6 +1,7 @@
 "use client"
 import { useAuth } from "@/contexts/auth-context"
 import { useRouter } from "next/navigation"
+import { useCallback, type MouseEvent } from "react"
 import { RoleBadge } from "@/components/role-badge"
 import {
   DropdownMenu,
@@ -23,10 +24,12 @@ export function UserMenu() {
 
   const isOperator = state.user.role === "OPERATOR"
 
-  const handleLogout = () => {
+  const handleLogout = useCallback((event?: MouseEvent<HTMLElement>) => {
+    event?.preventDefault()
+    event?.stopPropagation()
     logout()
     router.replace("/login")
-  }
+  }, [logout, router])
 
   const initials =
     state.user.name
@@ -41,6 +44,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
+          type="button"
           variant="ghost"
           className="relative flex items-center gap-3 px-4 py-2 rounded-xl border border-border/60 dark:border-border/40 backdrop-blur-sm transition-all duration-300 hover:shadow-lg"
           style={{ background: "var(--card)" }}
@@ -83,12 +87,10 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onSelect={(event) => {
-            event.preventDefault()
-            handleLogout()
+            handleLogout(event)
           }}
           onClick={(event) => {
-            event.preventDefault()
-            handleLogout()
+            handleLogout(event)
           }}
         >
           <LogOut className="mr-2 h-4 w-4" />
