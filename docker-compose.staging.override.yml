@@ -1,0 +1,8 @@
+# Override PRO: aisla staging (red propia) + reusa volumen DB existente
+volumes:
+  drizatx-stg-mysql-data:
+    external: true
+    name: drizatx_stack_drizatx-stg-mysql-data
+
+networks:
+  default: {}
