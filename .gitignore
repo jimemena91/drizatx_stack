@@ -27,3 +27,12 @@ backups/
 *.sql
 *.bak
 *.save
+
+# --- Local backups / editor saves (VPS) ---
+*.bak
+*.bak.*
+*.BAK.*
+*.save
+*.save.*
+*.swp
+*~
