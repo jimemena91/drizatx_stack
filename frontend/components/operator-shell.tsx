@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, type MouseEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
@@ -16,10 +16,12 @@ export function OperatorShell({ children }: { children: ReactNode }) {
     return state.user?.name?.trim() || state.user?.email || "Operador";
   }, [state.user?.email, state.user?.name]);
 
-  const handleLogout = () => {
+  const handleLogout = useCallback((event?: MouseEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    event?.stopPropagation();
     logout();
     router.replace("/login");
-  };
+  }, [logout, router]);
 
   return (
     <div className="min-h-svh w-full bg-hero dark:bg-hero-dark">
