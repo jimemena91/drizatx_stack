@@ -224,15 +224,8 @@ export default function TerminalPage() {
   // Si no hay variables públicas, usamos impresión centralizada vía backend (/api/terminal/print)
   const effectivePrintWebhookUrl = printWebhookUrl || "/api/terminal/print"
   const effectivePrintWebhookToken = printWebhookToken || ""
-<<<<<<< Updated upstream
-=======
 
->>>>>>> Stashed changes
 
-    if (!printWebhookUrl || !printWebhookToken) {
-      alert("Servicio de impresión local no configurado en este equipo.")
-      return
-    }
 
     setIsPrinting(true)
     setPrintMessage(null)
