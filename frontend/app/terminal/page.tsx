@@ -221,6 +221,13 @@ export default function TerminalPage() {
   // --- Impresión directa al bridge local ---
   const handlePrint = useCallback(async () => {
     if (!activeTicketInfo) return
+  // Si no hay variables públicas, usamos impresión centralizada vía backend (/api/terminal/print)
+  const effectivePrintWebhookUrl = printWebhookUrl || "/api/terminal/print"
+  const effectivePrintWebhookToken = printWebhookToken || ""
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
 
     if (!printWebhookUrl || !printWebhookToken) {
       alert("Servicio de impresión local no configurado en este equipo.")
@@ -236,8 +243,8 @@ export default function TerminalPage() {
         ticket: { id: activeTicketInfo.ticket.id, number: activeTicketInfo.ticket.number },
         service: { id: activeTicketInfo.service.id, name: activeTicketInfo.service.name },
         client: activeTicketInfo.clientName ? { name: activeTicketInfo.clientName } : undefined,
-        printWebhookUrl,
-        printWebhookToken,
+        printWebhookUrl: effectivePrintWebhookUrl,
+        printWebhookToken: effectivePrintWebhookToken,
       })
 
       if (!result?.success) {
