@@ -1,0 +1,6 @@
+deploy
+deploy/docker-compose.develop.yml
+deploy/docker-compose.develop.frontend.yml
+frontend/app/api/terminal
+frontend/app/api/terminal/print
+frontend/app/api/terminal/print/route.ts
