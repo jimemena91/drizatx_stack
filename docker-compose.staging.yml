@@ -40,7 +40,7 @@ services:
       JWT_SECRET: "driza-super-secret-2025"
 
       # CORS: frontend prod (3010) + staging (3110)
-      FRONTEND_URLS: "http://77.42.23.51:3010,http://77.42.23.51:3110"
+      FRONTEND_URLS: "http://77.42.23.51:3010,https://staging.app.drizatx.com"
     ports:
       - "3101:3001"   # backend staging
 
@@ -52,8 +52,8 @@ services:
         # 👇 VALORES PARA EL BUILD DE NEXT
         BACKEND_URL: "http://drizatx-stg-backend:3001"
         NEXT_PUBLIC_API_MODE: "true"
-        NEXT_PUBLIC_API_URL: "http://77.42.23.51:3101"
-        NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3110"
+        NEXT_PUBLIC_API_URL: "https://staging.api.drizatx.com"
+        NEXT_PUBLIC_BASE_URL: "https://staging.app.drizatx.com"
     container_name: drizatx-stg-frontend
     restart: unless-stopped
     depends_on:
@@ -64,8 +64,8 @@ services:
       # 👇 VALORES EN RUNTIME (dentro del contenedor)
       BACKEND_URL: "http://drizatx-stg-backend:3001"
       NEXT_PUBLIC_API_MODE: "true"
-      NEXT_PUBLIC_API_URL: "http://77.42.23.51:3101"
-      NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3110"
+      NEXT_PUBLIC_API_URL: "https://staging.api.drizatx.com"
+      NEXT_PUBLIC_BASE_URL: "https://staging.app.drizatx.com"
 
       NEXT_PUBLIC_SMS_ENABLED: "false"
       NEXT_PUBLIC_PUSH_ENABLED: "false"
