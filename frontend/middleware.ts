@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
  * Modo DEMO (solo build-time). Si querés alternarlo en runtime,
  * mejor usar una variable sin NEXT_PUBLIC_ y redeploy.
  */
-const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === "1";
+const IS_DEMO = false;
 
 /**
  * Rutas públicas: no requieren auth/sesión.
@@ -44,23 +44,9 @@ function defaultRouteForRole(roleRaw?: string | null) {
     case "SUPERVISOR":
     case "SUPERADMIN":
     default:
-      return "/"; // dashboard
+      return "/dashboard"; // ✅ dashboard real
   }
 }
-
-/**
- * Si más adelante usás JWT en cookie, podés decodificarlo acá.
- * (Dejo el stub para futura migración segura)
- */
-// function readJwtPayload(token: string): any | null {
-//   try {
-//     const base64 = token.split(".")[1];
-//     const json = Buffer.from(base64, "base64").toString("utf8");
-//     return JSON.parse(json);
-//   } catch {
-//     return null;
-//   }
-// }
 
 export function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
@@ -96,7 +82,6 @@ export function middleware(req: NextRequest) {
   if (!hasAuth) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    // Evitar redirect loop si por algún motivo pathname ya fuera /login
     if (pathname !== "/login") {
       url.searchParams.set("redirect", pathname + (search || ""));
     }
@@ -105,6 +90,14 @@ export function middleware(req: NextRequest) {
 
   // 5) Guard por rol (simple y efectivo)
   const role = req.cookies.get("drizatx-role")?.value?.toUpperCase() ?? "";
+
+  // ✅ Si está logueado y cae en "/" (welcome), lo mandamos al dashboard real
+  if (pathname === "/") {
+    const url = req.nextUrl.clone();
+    url.pathname = defaultRouteForRole(role);
+    url.search = "";
+    return NextResponse.redirect(url);
+  }
 
   // Si el usuario logueado intenta volver a /login, lo llevo a su home por rol
   if (pathname === "/login") {
@@ -116,8 +109,7 @@ export function middleware(req: NextRequest) {
 
   // OPERADOR: solo /operator* + públicas (ya permitidas arriba)
   if (role === "OPERATOR" || role === "OPERADOR") {
-    const isOperatorPath =
-      pathname === "/operator" || pathname.startsWith("/operator/");
+    const isOperatorPath = pathname === "/operator" || pathname.startsWith("/operator/");
     if (!isOperatorPath) {
       const url = req.nextUrl.clone();
       url.pathname = "/operator";
@@ -126,19 +118,13 @@ export function middleware(req: NextRequest) {
     }
   }
 
-  // Otros roles (ADMIN/SUPERVISOR/SUPERADMIN): por ahora se permite el resto;
-  // si querés blindar /admin estrictamente acá, podés agregar validación de permisos.
-
   return NextResponse.next();
 }
 
 /**
  * Matcher: excluimos assets estáticos y health.
- * Nota: no excluimos /api en el matcher porque ya lo tratamos arriba,
- * pero si querés, podés añadirlo acá también.
  */
 export const config = {
-  matcher: [
-    "/((?!_next|favicon.ico|assets|robots.txt|sitemap.xml|api/health).*)",
-  ],
+  matcher: ["/((?!_next|favicon.ico|assets|robots.txt|sitemap.xml|api/health).*)"],
 };
+
