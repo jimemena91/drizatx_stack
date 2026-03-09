@@ -1,77 +1,90 @@
 services:
+  db:
+    image: mysql:8.0
+    container_name: drizatx-martinez-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: DrizaRootPass_2025
+      MYSQL_DATABASE: drizatx_martinez
+      MYSQL_USER: driza_martinez
+      MYSQL_PASSWORD: DrizaMartinez_2025
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --sql-mode=
+      - --innodb_strict_mode=0
+    volumes:
+      - drizatx-martinez-mysql-data:/var/lib/mysql
+    # En MARTÍNEZ tampoco exponemos MySQL hacia afuera
+
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: drizatx-martinez-backend
-    restart: unless-stopped
-    ports:
-      - "3201:3001"
-
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+    depends_on:
+      - db
     environment:
       NODE_ENV: production
-      PORT: "3001"
-      COOKIE_DOMAIN: ".drizatx.com"
+      PORT: 3001
 
-      # Conectamos al MySQL EXISTENTE (ya creado fuera de este compose)
-      DATABASE_HOST: drizatx-martinez-mysql
-      DATABASE_PORT: "3306"
+      # DB interna MARTÍNEZ
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
       DATABASE_USERNAME: driza_martinez
       DATABASE_PASSWORD: DrizaMartinez_2025
       DATABASE_NAME: drizatx_martinez
 
+      # JWT
       JWT_SECRET: "driza-super-secret-2025"
+      TERMINAL_PRINT_WEBHOOK_URL: "http://host.docker.internal:17080/print"
+      TERMINAL_PRINT_WEBHOOK_TOKEN: ""
+      TERMINAL_KIOSK_PRINTING_ENABLED: "false"
 
-      # CORS: el front (3210) y el backend (3201) por si el browser lo necesita
+      # CORS: SOLO frontend de Martínez (3210) por ahora
       FRONTEND_URLS: "https://martinez.app.drizatx.com"
-      # === IMPRESION CENTRALIZADA (VIA TUNEL SSH) ===
-      PRINT_WEBHOOK_URL: "http://host.docker.internal:17080/print"
-      PRINT_WEBHOOK_TOKEN: "mi_token_super_secreto_123"
-      # === IMPRESION CENTRALIZADA (VIA TUNEL SSH) ===
-    networks:
-      - martinez-net
+    ports:
+      # Backend MARTÍNEZ expuesto por 3201 en el host
+      - "3201:3001"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # URL absoluta para next.config.mjs / rewrites
-        BACKEND_URL: "http://backend:3001"
-
-        # 0 = modo proxy por /api (misma origin) => evita 401 por cookies
-        NEXT_PUBLIC_API_MODE: "1"
-
-        # demo OFF (pero ojo: si tu Dockerfile no lo consume, lo agregamos en el paso siguiente)
-
-        # quedan por compatibilidad; en API_MODE=0 el front usa /api
+        NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN: "${NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN:-mi_token_super_secreto_123}"
+        NEXT_PUBLIC_PRINT_WEBHOOK_URL: "http://host.docker.internal:17080/print"
+        # URLs que Next.js necesita EN BUILD
+        BACKEND_URL: "http://drizatx-martinez-backend:3001"
+        NEXT_PUBLIC_API_MODE: "true"
         NEXT_PUBLIC_API_URL: "https://martinez.api.drizatx.com"
         NEXT_PUBLIC_BASE_URL: "https://martinez.app.drizatx.com"
-
-        NEXT_PUBLIC_SMS_ENABLED: "false"
-        NEXT_PUBLIC_PUSH_ENABLED: "false"
-
-    environment:
-      # Next.js también lo necesita en runtime para next.config.mjs
-      BACKEND_URL: "http://backend:3001"
-      NEXT_PUBLIC_API_MODE: "1"
-      NEXT_PUBLIC_API_URL: "https://martinez.api.drizatx.com"
-      NEXT_PUBLIC_BASE_URL: "https://martinez.app.drizatx.com"
-      NEXT_PUBLIC_SMS_ENABLED: "false"
-      NEXT_PUBLIC_PUSH_ENABLED: "false"
-
     container_name: drizatx-martinez-frontend
     restart: unless-stopped
     depends_on:
       - backend
-    ports:
-      - "3210:3000"
-    networks:
-      - martinez-net
+    environment:
+      NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN: "${NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN:-mi_token_super_secreto_123}"
+      NEXT_PUBLIC_PRINT_WEBHOOK_URL: "http://host.docker.internal:17080/print"
+      NODE_ENV: production
 
-networks:
-  martinez-net:
-    external: true
-    name: drizatx-martinez_drizatx-martinez-net
+      # URL ABSOLUTA hacia el backend desde el contenedor
+      BACKEND_URL: "http://drizatx-martinez-backend:3001"
+
+      # URLs que usa el navegador (cliente Martínez)
+      NEXT_PUBLIC_API_MODE: "true"
+      NEXT_PUBLIC_API_URL: "https://martinez.api.drizatx.com"
+      NEXT_PUBLIC_BASE_URL: "https://martinez.app.drizatx.com"
+
+      NEXT_PUBLIC_SMS_ENABLED: "false"
+      NEXT_PUBLIC_PUSH_ENABLED: "false"
+    ports:
+      # Frontend MARTÍNEZ expuesto por 3210 en el host
+      - "3210:3000"
+
+volumes:
+  drizatx-martinez-mysql-data:
