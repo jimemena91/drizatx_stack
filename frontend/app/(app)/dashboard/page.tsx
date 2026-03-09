@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { MetricCard } from "@/components/metric-card";
 
-import { Users, Clock, UserCheck, TrendingUp as TrendIcon, RefreshCw } from "lucide-react";
+import { Users, Clock, UserCheck, TrendingUp as TrendIcon } from "lucide-react";
 
 import { useQueueStatus } from "@/hooks/use-queue-status";
 import { useTickets } from "@/hooks/use-tickets";
@@ -21,9 +21,6 @@ import { OperatorsCard, type DashboardOperator } from "./components/operators-ca
 import { AbsentTicketsCard } from "./components/absent-tickets-card";
 import { CurrentTicketCard } from "./components/current-ticket-card";
 import { SystemAlertsCard } from "./components/system-alerts-card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const formatDuration = (seconds: number): string => {
   const minutes = Math.floor(seconds / 60);
@@ -56,7 +53,6 @@ export default function DashboardPage() {
   const [loadingOperatorId, setLoadingOperatorId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const [isAlertsPanelOpen, setAlertsPanelOpen] = useState(false);
   const { addToast } = useToast();
 
   const handleNewAlert = useCallback(
@@ -73,9 +69,12 @@ export default function DashboardPage() {
 
   const {
     alerts: attentionAlerts,
-    alertsByTicketId,
     refresh: refreshAttentionAlerts,
-  } = useAttentionAlerts({ onNewAlert: handleNewAlert, autoStart: false });
+  } = useAttentionAlerts({
+    onNewAlert: handleNewAlert,
+    autoStart: false,
+    notifyOnInitialLoad: false,
+  });
 
   // Tema
   const { theme, setTheme, systemTheme } = useTheme();
@@ -88,6 +87,7 @@ export default function DashboardPage() {
   // Refresh centralizado y antisolapamiento
   // =========================================
   const refreshingRef = useRef(false);
+  const alertsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const loadOperatorsNow = async () => {
     try {
@@ -136,12 +136,6 @@ export default function DashboardPage() {
   useEffect(() => {
     void refreshAttentionAlerts();
   }, [refreshAttentionAlerts]);
-
-  useEffect(() => {
-    if (isAlertsPanelOpen) {
-      void refreshAttentionAlerts();
-    }
-  }, [isAlertsPanelOpen, refreshAttentionAlerts]);
 
   // ------- Carga inicial -------
   useEffect(() => {
@@ -494,8 +488,6 @@ console.log(
     filteredAttentionAlerts.map((alert) => [alert.ticketId, alert]),
   );
 
-  const alertsCount = filteredAttentionAlerts.length;
-
   const absentTickets = absentTicketsAll.filter((ticket) => {
     const reference =
       toDate(ticket.absentAt) ?? toDate(ticket.calledAt) ?? toDate(ticket.createdAt) ?? null;
@@ -505,74 +497,19 @@ console.log(
 
   const historicalAbsentCount = Math.max(absentTicketsAll.length - absentTickets.length, 0);
 
+  const handleAlertsClick = () => {
+    alertsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <>
-      <Sheet open={isAlertsPanelOpen} onOpenChange={setAlertsPanelOpen}>
-        <SheetContent side="right" className="sm:max-w-md p-0">
-          <SheetHeader className="border-b border-border">
-            <SheetTitle className="text-lg">Alertas de atención</SheetTitle>
-            <SheetDescription>
-              Turnos que superaron el tiempo máximo de atención.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex-1 overflow-y-auto px-4 pb-6">
-            {alertsCount === 0 ? (
-              <p className="py-6 text-sm text-muted-foreground">
-                No hay alertas de atención activas en este momento.
-              </p>
-            ) : (
-              <ul className="space-y-3 py-4">
-                {filteredAttentionAlerts.map((alert) => (
-                  <li key={alert.ticketId} className="rounded-lg border border-border bg-muted/20 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">{alert.serviceName}</p>
-                        <p className="text-xs text-muted-foreground">Ticket asignado</p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs font-semibold uppercase tracking-wide">
-                        {alert.ticketNumber}
-                      </Badge>
-                    </div>
-                    <dl className="mt-3 grid grid-cols-1 gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide">Tiempo transcurrido</dt>
-                        <dd className="text-foreground">{formatDuration(alert.elapsedSeconds)}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs uppercase tracking-wide">Tiempo máximo</dt>
-                        <dd className="text-foreground">{formatDuration(alert.maxAttentionTime)}</dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <SheetFooter className="border-t border-border">
-            <Button
-              variant="outline"
-              onClick={() => {
-                void refreshAttentionAlerts();
-              }}
-              className="justify-start"
-            >
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Actualizar alertas
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
       <DashboardHeader>
         <DashboardTopControls
           mountedTheme={mountedTheme}
           isDarkTheme={isDark}
           onThemeToggle={toggleTheme}
           onRefresh={refreshNow}
-          alertsCount={alertsCount}
-          onAlertsClick={() => setAlertsPanelOpen(true)}
+          onAlertsClick={handleAlertsClick}
         />
       </DashboardHeader>
 
@@ -649,7 +586,9 @@ console.log(
 
         <CurrentTicketCard ticket={filteredCurrentTicket} />
 
-        <SystemAlertsCard />
+        <div ref={alertsSectionRef}>
+          <SystemAlertsCard />
+        </div>
       </div>
     </>
   );
