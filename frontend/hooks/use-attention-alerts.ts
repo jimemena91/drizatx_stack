@@ -8,6 +8,7 @@ type Options = {
   pollIntervalMs?: number;
   autoStart?: boolean;
   onNewAlert?: (alert: AttentionAlert) => void;
+  notifyOnInitialLoad?: boolean;
 };
 
 type UseAttentionAlertsResult = {
@@ -17,10 +18,11 @@ type UseAttentionAlertsResult = {
 };
 
 export function useAttentionAlerts(options: Options = {}): UseAttentionAlertsResult {
-  const { pollIntervalMs = 5000, autoStart = true, onNewAlert } = options;
+  const { pollIntervalMs = 5000, autoStart = true, onNewAlert, notifyOnInitialLoad = true } = options;
   const [alerts, setAlerts] = useState<AttentionAlert[]>([]);
   const seenRef = useRef<Map<number, boolean>>(new Map());
   const fetchInFlight = useRef(false);
+  const hasFetchedOnce = useRef(false);
 
   const fetchAlerts = useCallback(async () => {
     if (fetchInFlight.current) return;
@@ -42,7 +44,9 @@ export function useAttentionAlerts(options: Options = {}): UseAttentionAlertsRes
 
       seenRef.current = nextSeen;
 
-      if (newlyExceeded.length > 0) {
+      const canNotify = notifyOnInitialLoad || hasFetchedOnce.current;
+
+      if (newlyExceeded.length > 0 && canNotify) {
         void audioService.playAttentionAlert().catch((error) => {
           if (process.env.NODE_ENV !== "production") {
             console.warn("[useAttentionAlerts] audio alert failed", error);
@@ -52,12 +56,14 @@ export function useAttentionAlerts(options: Options = {}): UseAttentionAlertsRes
           newlyExceeded.forEach((alert) => onNewAlert(alert));
         }
       }
+
+      hasFetchedOnce.current = true;
     } catch (error) {
       console.error("[useAttentionAlerts] error fetching alerts", error);
     } finally {
       fetchInFlight.current = false;
     }
-  }, [onNewAlert]);
+  }, [notifyOnInitialLoad, onNewAlert]);
 
   useEffect(() => {
     if (!autoStart) return;
