@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,24 +9,23 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Eye, EyeOff } from "lucide-react"
-import { useAuth } from "@/contexts/auth-context"
 import { Logo } from "@/components/logo"
 import { DEFAULT_CREDENTIALS, getDefaultRouteForRole } from "@/lib/auth-utils"
 
-/**
- * Login por USUARIO (username) + password.
- * - Se reemplaza el campo Email por Usuario.
- * - La función login del auth-context debe aceptar { username, password }.
- * - Botones de demo rellenan username/password. Si DEFAULT_CREDENTIALS aún trae email,
- *   se deriva el username tomando la parte previa al '@'.
- */
+type LoginResponse = {
+  access_token?: string
+  token?: string
+  user?: { role?: string } & Record<string, any>
+  message?: string
+}
+
 export default function LoginPage() {
-  const isDemoMode = (process.env.NEXT_PUBLIC_DEMO_MODE ?? "") === "1"
+  const isDemoMode = false
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState("")
-  const { state, login } = useAuth()
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,26 +38,54 @@ export default function LoginPage() {
       return
     }
 
+    setIsLoading(true)
     try {
-      // IMPORTANTE: login ahora espera { username, password }
-      const user = await login({ username: u, password })
-      if (user) {
-        const target = getDefaultRouteForRole(user.role)
-        router.push(target)
-      } else {
-        setError("Credenciales incorrectas. Verifique su usuario y contraseña.")
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
+        method: "POST",
+          credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: u, password }),
+      })
+
+      // Si el backend manda JSON de error, lo intentamos leer igual
+      let data: LoginResponse | null = null
+      try {
+        data = (await res.json()) as LoginResponse
+      } catch {
+        data = null
       }
+
+      if (!res.ok) {
+        setError(data?.message ?? "Credenciales incorrectas. Verifique su usuario y contraseña.")
+        return
+      }
+
+      const token = data?.access_token || data?.token
+      const user = data?.user
+
+      if (!token || !user) {
+        setError("Login respondió 200 pero faltan token/user. Revisar auth-context / proxy.")
+        return
+      }
+
+      // Guardamos como esperan la mayoría de pantallas/hook
+      localStorage.setItem("access_token", token)
+      localStorage.setItem("token", token)
+      localStorage.setItem("user", JSON.stringify(user))
+
+      const target = getDefaultRouteForRole((user as any).role)
+      router.push(target || "/")
     } catch (err: any) {
       setError(err?.message ?? "No se pudo iniciar sesión. Intente nuevamente.")
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleDemoLogin = (role: keyof typeof DEFAULT_CREDENTIALS) => {
     const cred = DEFAULT_CREDENTIALS[role]
-    // Soporta estructuras viejas (email) y nuevas (username)
     const derivedUsername =
-      (cred as any).username ??
-      ((cred as any).email ? String((cred as any).email).split("@")[0] : "")
+      (cred as any).username ?? ((cred as any).email ? String((cred as any).email).split("@")[0] : "")
 
     setUsername(derivedUsername || "")
     setPassword((cred as any).password || "")
@@ -89,7 +115,7 @@ export default function LoginPage() {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                disabled={state.isLoading}
+                disabled={isLoading}
                 autoComplete="username"
               />
             </div>
@@ -104,7 +130,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  disabled={state.isLoading}
+                  disabled={isLoading}
                   autoComplete="current-password"
                 />
                 <Button
@@ -113,7 +139,7 @@ export default function LoginPage() {
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={state.isLoading}
+                  disabled={isLoading}
                   aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -127,8 +153,8 @@ export default function LoginPage() {
               </Alert>
             )}
 
-            <Button type="submit" className="w-full" disabled={state.isLoading}>
-              {state.isLoading ? (
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Iniciando sesión...
@@ -151,34 +177,13 @@ export default function LoginPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin("admin")}
-                  disabled={state.isLoading}
-                  className="text-xs"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => handleDemoLogin("admin")} disabled={isLoading} className="text-xs">
                   Administrador
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin("supervisor")}
-                  disabled={state.isLoading}
-                  className="text-xs"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => handleDemoLogin("supervisor")} disabled={isLoading} className="text-xs">
                   Supervisor
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleDemoLogin("operator")}
-                  disabled={state.isLoading}
-                  className="text-xs"
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => handleDemoLogin("operator")} disabled={isLoading} className="text-xs">
                   Operador
                 </Button>
               </div>

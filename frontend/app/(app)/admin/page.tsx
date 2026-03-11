@@ -324,22 +324,27 @@ export default function AdminPage() {
   const isAdmin = normalizedCurrentRole === Role.ADMIN || normalizedCurrentRole === Role.SUPERADMIN
   const isSuperAdminUser = normalizedCurrentRole === Role.SUPERADMIN
 
-  // ===== DEBUG: fetch crudo =====
-  useEffect(() => {
-    if (!SHOW_DEBUG_UI) return; // ⬅️ evita ejecutar en prod
-    const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-    const url = `${BASE}/api/operators`;
-    fetch(url)
-      .then((r) => r.text())
-      .then((t) => {
-        try {
-          console.log("[AdminPage] operadores crudos:", JSON.parse(t));
-        } catch {
-          console.log("[AdminPage] operadores crudos (texto):", t);
-        }
-      })
-      .catch((e) => console.error("[AdminPage] error fetch crudo /operators", e));
-  }, []);
+// ===== DEBUG: fetch crudo =====
+useEffect(() => {
+  if (!SHOW_DEBUG_UI) return; // ⬅️ evita ejecutar en prod
+
+  // Importante: pegamos a la API del FRONT (proxy Next), no al backend directo
+  const url = "/api/operators";
+
+  fetch(url, {
+    method: "GET",
+    credentials: "include", // ⬅️ por las dudas, asegura cookies en el request al front
+  })
+    .then((r) => r.text())
+    .then((t) => {
+      try {
+        console.log("[AdminPage] operadores crudos:", JSON.parse(t));
+      } catch {
+        console.log("[AdminPage] operadores crudos (texto):", t);
+      }
+    })
+    .catch((e) => console.error("[AdminPage] error fetch crudo /api/operators", e));
+}, []);
 
   const nativeDirectoryInputRef = useRef<HTMLInputElement | null>(null)
 
