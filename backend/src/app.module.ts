@@ -17,6 +17,7 @@ import { BackupsModule } from "./modules/backups/backups.module";
 import { AuditLogsModule } from "./modules/audit/audit-logs.module";
 import { DisplayModule } from "./modules/display/display.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
+import { PrintModule } from './modules/print/print.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { TerminalModule } from "./modules/terminal/terminal.module";
     AuditLogsModule,
     DisplayModule,
     TerminalModule,
+    PrintModule,
   ],
   providers: [DatabaseConfig],
 })
