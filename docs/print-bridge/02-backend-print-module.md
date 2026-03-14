@@ -119,3 +119,44 @@ docker run --rm \
   -w /app \
   node:20-bullseye \
   bash -lc "npm install && npm run build"
+```
+
+Resultado:
+
+- compilación exitosa
+- sin errores de TypeScript
+
+## Problemas encontrados y resolución
+
+### 1. Faltaban dependencias WebSocket
+
+Error inicial:
+
+- `Cannot find module '@nestjs/websockets'`
+- `Cannot find module 'socket.io'`
+
+Resolución:
+
+Se agregaron dependencias compatibles con Nest 10.
+
+### 2. Conflicto de versión con Nest 11
+
+Al instalar sin versión, npm intentó resolver `@nestjs/websockets` versión 11, incompatible con el proyecto actual.
+
+Resolución:
+
+Se instalaron versiones alineadas con `@nestjs/common@10.4.22`.
+
+## Resultado final del paso
+
+El backend ya tiene una base funcional para aceptar conexiones WebSocket del futuro Print Bridge.
+
+Este paso habilita la siguiente etapa:
+
+- levantar backend y probar conexión real
+- crear un cliente bridge mínimo
+- validar `hello`, `heartbeat` y `list-bridges`
+
+## Próximo paso
+
+Crear y probar un cliente bridge mínimo que se conecte al gateway WebSocket del backend de staging y valide el ciclo de vida básico de conexión.
