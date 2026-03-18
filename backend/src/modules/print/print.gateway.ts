@@ -20,6 +20,13 @@ interface BridgeHeartbeatMessage {
   bridgeId: string;
 }
 
+interface PrintJobAckMessage {
+  bridgeId: string;
+  jobId: string;
+  status: 'RECEIVED' | 'PRINTED' | 'FAILED';
+  error?: string;
+}
+
 @WebSocketGateway({
   cors: {
     origin: '*',
@@ -66,6 +73,8 @@ export class PrintGateway
       body.bridgeId,
       client.id,
     );
+
+    client.join(`bridge:${body.bridgeId}`);
 
     this.logger.log(
       `Bridge registered | bridgeId=${body.bridgeId} | socketId=${client.id}`,
@@ -123,5 +132,34 @@ export class PrintGateway
         bridges: this.printBridgeService.listConnectedBridges(),
       },
     };
+  }
+
+  @SubscribeMessage('print:job:ack')
+  onPrintJobAck(@MessageBody() body: PrintJobAckMessage) {
+    this.logger.log(
+      `print:job:ack | bridgeId=${body.bridgeId} | jobId=${body.jobId} | status=${body.status}${body.error ? ` | error=${body.error}` : ''}`,
+    );
+
+    return {
+      event: 'print:job:ack:server',
+      data: {
+        ok: true,
+      },
+    };
+  }
+
+  emitPrintJobToBridge(
+    bridgeId: string,
+    data: {
+      jobId: string;
+      createdAt: string;
+      payload: {
+        ticketNumber: string;
+        serviceName?: string;
+        clientName?: string;
+      };
+    },
+  ) {
+    this.server.to(`bridge:${bridgeId}`).emit('print:job', data);
   }
 }
