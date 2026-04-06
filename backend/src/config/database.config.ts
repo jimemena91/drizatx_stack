@@ -21,6 +21,7 @@ import { OperatorShift } from '../entities/operator-shift.entity';
 import { OperatorAvailability } from '../entities/operator-availability.entity';
 import { RolePermission } from '../entities/role-permission.entity';
 import { AuditLog } from '../entities/audit-log.entity';
+import { PrintJob } from '../modules/print/print.entity';
 
 @Injectable()
 export class DatabaseConfig implements TypeOrmOptionsFactory {
@@ -49,6 +50,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         ReportSnapshot,
         CustomMessage,
         AuditLog,
+        PrintJob,
       ],
       // Nunca autogenerar schema en staging/prod
       synchronize: false,
