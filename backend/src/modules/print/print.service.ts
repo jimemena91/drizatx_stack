@@ -60,6 +60,7 @@ export class PrintService {
     job.status = 'printed'
     job.printedAt = new Date()
     job.lastError = null
+    job.lockedAt = null
 
     return await this.printJobRepository.save(job)
   }
