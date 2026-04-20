@@ -61,7 +61,7 @@ services:
       - backend
     environment:
       NODE_ENV: production
-
+      BACKEND_URL: "http://backend:3001"
       NEXT_PUBLIC_API_MODE: "true"
       NEXT_PUBLIC_API_URL: "http://77.42.23.51:3001"
       NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3010"
@@ -69,6 +69,5 @@ services:
       NEXT_PUBLIC_PUSH_ENABLED: "false"
     ports:
       - "3010:3000"
-
 volumes:
   drizatx-mysql-data:
