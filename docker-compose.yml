@@ -1,7 +1,7 @@
 services:
   db:
     image: mysql:8.0
-    container_name: drizatx-mysql
+    container_name: drizatx-stg-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: DrizaRootPass_2025
@@ -9,7 +9,7 @@ services:
       MYSQL_USER: driza
       MYSQL_PASSWORD: DrizaDB_2025
     ports:
-      - "3307:3306"
+      - "3308:3306"
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4
@@ -29,7 +29,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: drizatx-backend
+    container_name: drizatx-stg-backend
     restart: unless-stopped
     depends_on:
       db:
@@ -49,20 +49,13 @@ services:
 
       JWT_SECRET: driza-super-secret-2025
     ports:
-      - "3001:3001"
+      - "3101:3001"
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      args:
-        BACKEND_URL: "http://backend:3001"
-        NEXT_PUBLIC_API_MODE: "true"
-        NEXT_PUBLIC_API_URL: "http://77.42.23.51:3001"
-        NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3010"
-        NEXT_PUBLIC_SMS_ENABLED: "false"
-        NEXT_PUBLIC_PUSH_ENABLED: "false"
-    container_name: drizatx-frontend
+    container_name: drizatx-stg-frontend
     restart: unless-stopped
     depends_on:
       - backend
