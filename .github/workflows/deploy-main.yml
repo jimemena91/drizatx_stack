@@ -1,0 +1,48 @@
+name: Deploy MAIN
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy en VPS via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            echo "🚀 Deploy MAIN iniciado"
+
+            cd /opt/drizatx_worktrees/main
+
+            echo "📥 Pull últimos cambios"
+            git pull origin main
+
+            echo "🛑 Bajando contenedores (solo app, no DB)"
+            docker compose -f docker-compose.yml stop backend frontend || true
+
+            echo "🟢 Levantando DB"
+            docker compose -f docker-compose.yml up -d db
+
+            echo "⏳ Esperando DB..."
+            sleep 5
+
+            echo "🧠 Ejecutando migraciones + seed"
+            docker compose -f docker-compose.yml run --rm backend npm run deploy:prepare
+
+            echo "🏗️ Levantando app completa"
+            docker compose -f docker-compose.yml up -d --build
+
+            echo "📊 Estado final"
+            docker compose -f docker-compose.yml ps
+
+            echo "✅ Deploy MAIN finalizado"
+
