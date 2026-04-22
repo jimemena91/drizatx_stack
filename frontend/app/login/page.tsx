@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { Logo } from "@/components/logo"
 import { DEFAULT_CREDENTIALS, getDefaultRouteForRole } from "@/lib/auth-utils"
+import { useAuth } from "@/contexts/auth-context"
 
 type LoginResponse = {
   access_token?: string
@@ -27,6 +28,7 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { login } = useAuth()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,41 +42,19 @@ export default function LoginPage() {
 
     setIsLoading(true)
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`, {
-        method: "POST",
-          credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username: u, password }),
-      })
+const user = await login({ username: u, password })
 
-      // Si el backend manda JSON de error, lo intentamos leer igual
-      let data: LoginResponse | null = null
-      try {
-        data = (await res.json()) as LoginResponse
-      } catch {
-        data = null
-      }
+if (!user) {
+  setError("Credenciales incorrectas. Verifique su usuario y contraseña.")
+  return
+}
 
-      if (!res.ok) {
-        setError(data?.message ?? "Credenciales incorrectas. Verifique su usuario y contraseña.")
-        return
-      }
+document.cookie = "drizatx-auth=1; path=/; secure; samesite=lax";
+document.cookie = `drizatx-role=${user.role}; path=/; secure; samesite=lax`;
 
-      const token = data?.access_token || data?.token
-      const user = data?.user
-
-      if (!token || !user) {
-        setError("Login respondió 200 pero faltan token/user. Revisar auth-context / proxy.")
-        return
-      }
-
-      // Guardamos como esperan la mayoría de pantallas/hook
-      localStorage.setItem("access_token", token)
-      localStorage.setItem("token", token)
-      localStorage.setItem("user", JSON.stringify(user))
-
-      const target = getDefaultRouteForRole((user as any).role)
-      router.push(target || "/")
+const target = getDefaultRouteForRole((user as any).role)
+router.replace(target || "/")
+router.refresh()
     } catch (err: any) {
       setError(err?.message ?? "No se pudo iniciar sesión. Intente nuevamente.")
     } finally {

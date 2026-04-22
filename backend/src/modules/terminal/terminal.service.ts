@@ -98,7 +98,7 @@ export class TerminalService {
 
     // 3) POST al bridge con timeout
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 7000) // 7s
+    const timeout = setTimeout(() => controller.abort(), 15000) // 7s
 
     try {
       const response = await fetch(webhookUrl, {

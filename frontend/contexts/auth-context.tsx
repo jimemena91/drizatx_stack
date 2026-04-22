@@ -161,6 +161,8 @@ function persistPermissions(permissions: Permission[] | null) {
 }
 
 async function authFetch<T = any>(path: string, init?: RequestInit): Promise<T> {
+  const token = readTokenFromStorage()
+
   const res = await fetch(path, {
     cache: "no-store",
     credentials: "same-origin",
@@ -168,6 +170,7 @@ async function authFetch<T = any>(path: string, init?: RequestInit): Promise<T> 
     headers: {
       ...(init?.headers ?? {}),
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   })
 
@@ -186,7 +189,6 @@ async function authFetch<T = any>(path: string, init?: RequestInit): Promise<T> 
 
   return data as T
 }
-
 
 function readPermissionsFromStorage(): Permission[] {
   try {
@@ -357,9 +359,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { permissions: normalizedFallback, rolePermissions: {} }
     }
     try {
-      const permissionsList = await apiClient.getCurrentUserPermissions()
+      let permissionsList: Permission[] = []
+
+      try {
+        permissionsList = await apiClient.getCurrentUserPermissions()
+      } catch (err) {
+        console.warn("[AuthProvider] usando permisos del login por fallback", err)
+      }
+
       const normalizedFromApi = normalizePermissionArray(permissionsList)
-      const permissions = normalizedFromApi.length > 0 ? normalizedFromApi : normalizedFallback
+      const permissions =
+        normalizedFromApi.length > 0
+          ? normalizedFromApi
+          : normalizedFallback.length > 0
+            ? normalizedFallback
+            : state.user?.permissions ?? []
       const apiHasAdminCapability = hasAdminCapability(normalizedFromApi)
       const fallbackHasAdminCapability =
         normalizedFromApi.length === 0 && hasAdminCapability(normalizedFallback)
@@ -477,13 +491,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       const persisted = persistUser(normalizedUser) ?? normalizedUser
-      persistToken(null) // sesión real vive en cookies HttpOnly
+      const token = readTokenFromStorage();
+      persistToken(token);
+      apiClient.setAuthToken(token);
       persistPermissions(permissions)
       setAuthCookie(true, persisted.role)
 
       dispatch({
         type: "LOAD_FROM_STORAGE",
-        payload: { user: persisted, token: null, permissions, rolePermissions: {} },
+        payload: { user: persisted, token, permissions, rolePermissions: {} },
       })
     } catch (e) {
       setAuthCookie(false)
