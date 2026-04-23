@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common'
 import { SystemSettingsService } from '../system-settings/system-settings.service'
 import { PrintTicketDto } from './dto/print-ticket.dto'
+import { PrintService } from '../print/print.service'
 
 /** Valida que sea http(s) */
 const isHttpUrl = (value: string): boolean => {
@@ -29,7 +30,10 @@ export class TerminalService {
   private hasWarnedAboutInvalidWebhook = false
   private hasLoggedBrowserDelegation = false
 
-  constructor(private readonly systemSettings: SystemSettingsService) {
+constructor(
+  private readonly systemSettings: SystemSettingsService,
+  private readonly printService: PrintService,
+) {
     // URL del webhook (env)
     const rawUrl = process.env.TERMINAL_PRINT_WEBHOOK_URL?.trim() ?? ''
     if (rawUrl && !isHttpUrl(rawUrl)) {
@@ -63,6 +67,29 @@ export class TerminalService {
    * 3) Si no hay config → simula impresión (no rompe experiencia).
    */
   async sendTicketToPrinter(payload: PrintTicketDto): Promise<void> {
+    await this.printService.createJob({
+      source: 'terminal',
+      sourceReference: payload.ticketId != null ? `ticket:${payload.ticketId}` : null,
+      ticketId: payload.ticketId ?? null,
+      serviceId: payload.serviceId ?? null,
+      ticketNumber: payload.ticketNumber,
+      serviceName: payload.serviceName,
+      clientName: payload.clientName ?? null,
+      payloadJson: {
+        requestedAt: new Date().toISOString(),
+        origin: 'terminal',
+        ticketId: payload.ticketId ?? null,
+        serviceId: payload.serviceId ?? null,
+        ticketNumber: payload.ticketNumber,
+        serviceName: payload.serviceName,
+        clientName: payload.clientName ?? null,
+      },
+    })
+
+    this.logger.log(
+      `[terminal] Job de impresión encolado para ticket ${payload.ticketNumber} (${payload.serviceName}).`,
+    )
+    return
     // 1) ¿Delegamos al navegador?
     if (await this.shouldDelegateToBrowserPrinting()) {
       if (!this.hasLoggedBrowserDelegation) {
