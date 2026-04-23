@@ -1,0 +1,68 @@
+name: Deploy Martinez Prod
+
+on:
+  push:
+    branches:
+      - martinez/prod
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-martinez-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy Martinez en VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+
+            echo "🚀 Deploy MARTINEZ iniciado"
+
+            APP_DIR="/opt/drizatx_worktrees/martinez-prod"
+            COMPOSE_FILE="docker-compose.yml"
+            HEALTH_URL="http://127.0.0.1:3001/api/health"
+
+            cd "$APP_DIR"
+
+            echo "📥 Actualizando código"
+            git fetch origin
+            git pull --ff-only origin martinez/prod
+
+            echo "🏗️ Rebuild y deploy"
+            docker compose -f "$COMPOSE_FILE" up -d --build
+
+            echo "⏳ Esperando backend"
+            sleep 12
+
+            echo "🩺 Healthcheck"
+            if ! curl -fsS "$HEALTH_URL" > /tmp/martinez-health.json; then
+              echo "❌ Healthcheck falló"
+              echo "===== docker compose ps ====="
+              docker compose -f "$COMPOSE_FILE" ps || true
+              echo "===== backend logs ====="
+              docker logs --tail 200 martinez-prod-backend-1 || true
+              echo "===== frontend logs ====="
+              docker logs --tail 200 martinez-prod-frontend-1 || true
+              exit 1
+            fi
+
+            echo "✅ Healthcheck OK"
+            cat /tmp/martinez-health.json
+
+            echo "📊 Estado final"
+            docker compose -f "$COMPOSE_FILE" ps
+
+            echo "✅ Deploy MARTINEZ finalizado"
