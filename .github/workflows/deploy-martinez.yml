@@ -41,6 +41,10 @@ jobs:
             git fetch origin
             git pull --ff-only origin martinez/prod
 
+            echo "🧹 Bajando contenedores previos de Martínez (si existen)"
+            docker rm -f drizatx-martinez-backend || true
+            docker rm -f drizatx-martinez-frontend || true
+
             echo "🏗️ Rebuild y deploy"
             docker compose -f "$COMPOSE_FILE" up -d --build
 
