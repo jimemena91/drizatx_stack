@@ -32,8 +32,8 @@ jobs:
             echo "🚀 Deploy MARTINEZ iniciado"
 
             APP_DIR="/opt/drizatx_worktrees/martinez-prod"
-            COMPOSE_FILE="docker-compose.yml"
-            HEALTH_URL="http://127.0.0.1:3001/api/health"
+            COMPOSE_FILE="docker-compose.martinez.yml"
+            HEALTH_URL="http://127.0.0.1:3201/api/health"
 
             cd "$APP_DIR"
 
@@ -53,9 +53,9 @@ jobs:
               echo "===== docker compose ps ====="
               docker compose -f "$COMPOSE_FILE" ps || true
               echo "===== backend logs ====="
-              docker logs --tail 200 martinez-prod-backend-1 || true
+              docker logs --tail 200 drizatx-martinez-backend || true
               echo "===== frontend logs ====="
-              docker logs --tail 200 martinez-prod-frontend-1 || true
+              docker logs --tail 200 drizatx-martinez-frontend || true
               exit 1
             fi
 
