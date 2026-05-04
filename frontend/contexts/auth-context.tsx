@@ -100,12 +100,28 @@ const defaultUsers: (User & { password: string })[] = [
 
 // --- Helpers cookies/localStorage
 function setAuthCookie(isOn: boolean, role?: Role | string | null) {
-  document.cookie = `drizatx-auth=${isOn ? "1" : ""}; Path=/; SameSite=Lax${isOn ? "" : "; Max-Age=0"}`
+  const expired = "Expires=Thu, 01 Jan 1970 00:00:00 GMT; Max-Age=0"
   const normalizedRole = normalizeRole(role ?? null)
-  if (isOn && normalizedRole) {
-    document.cookie = `drizatx-role=${normalizedRole}; Path=/; SameSite=Lax`
-  } else {
-    document.cookie = "drizatx-role=; Path=/; SameSite=Lax; Max-Age=0"
+
+  if (isOn) {
+    document.cookie = "drizatx-auth=1; Path=/; SameSite=Lax"
+    if (normalizedRole) {
+      document.cookie = `drizatx-role=${normalizedRole}; Path=/; SameSite=Lax`
+    } else {
+      document.cookie = `drizatx-role=; Path=/; SameSite=Lax; ${expired}`
+    }
+    return
+  }
+
+  const clearVariants = [
+    `drizatx-auth=; Path=/; SameSite=Lax; ${expired}`,
+    `drizatx-role=; Path=/; SameSite=Lax; ${expired}`,
+    `drizatx-auth=; Path=/; Domain=.drizatx.com; SameSite=Lax; ${expired}`,
+    `drizatx-role=; Path=/; Domain=.drizatx.com; SameSite=Lax; ${expired}`,
+  ]
+
+  for (const cookie of clearVariants) {
+    document.cookie = cookie
   }
 }
 
@@ -332,7 +348,7 @@ function reducer(state: AuthState, action: Action): AuthState {
 type AuthContextType = {
   state: AuthState
   login: (credentials: LoginCredentials) => Promise<User | null>
-  logout: () => void
+  logout: () => Promise<void>
   hasPermission: (permission: Permission) => boolean
 }
 
@@ -599,17 +615,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Logout (server + client)
     const logout = async () => {
       try {
-        await fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+        await fetch("/api/auth/logout", { method: "POST", credentials: "include", cache: "no-store" })
       } catch {
         /* ignore */
       }
+
+      try {
+        apiClient.setAuthToken(null)
+      } catch {
+        /* ignore */
+      }
+
       persistUser(null)
       persistToken(null)
       persistPermissions(null)
+
+      try {
+        localStorage.removeItem("token")
+        localStorage.removeItem("access_token")
+        sessionStorage.clear()
+      } catch {
+        /* ignore */
+      }
+
       setAuthCookie(false)
       dispatch({ type: "LOGOUT" })
+
       try {
-        window.location.href = "/login"
+        window.location.replace("/login")
       } catch {
         /* ignore */
       }

@@ -16,12 +16,11 @@ export function OperatorShell({ children }: { children: ReactNode }) {
     return state.user?.name?.trim() || state.user?.email || "Operador";
   }, [state.user?.email, state.user?.name]);
 
-  const handleLogout = useCallback((event?: MouseEvent<HTMLButtonElement>) => {
+  const handleLogout = useCallback(async (event?: MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
-    logout();
-    router.replace("/login");
-  }, [logout, router]);
+    await logout();
+  }, [logout]);
 
   return (
     <div className="min-h-svh w-full bg-hero dark:bg-hero-dark">

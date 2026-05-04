@@ -95,12 +95,11 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
     [state.permissions],
   );
 
-  const handleLogout = React.useCallback((event?: React.MouseEvent<HTMLButtonElement>) => {
+  const handleLogout = React.useCallback(async (event?: React.MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
-    logout();
-    router.replace("/login");
-  }, [logout, router]);
+    await logout();
+  }, [logout]);
 
   return (
     <Sidebar variant="inset" collapsible="offcanvas" {...props}>
