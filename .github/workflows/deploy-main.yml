@@ -1,0 +1,70 @@
+name: Deploy MAIN
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy MAIN en VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+
+            echo "🚀 Deploy MAIN iniciado"
+
+            APP_DIR="/opt/drizatx_worktrees/main"
+            COMPOSE_FILE="docker-compose.yml"
+            HEALTH_URL="http://127.0.0.1:3401/api/health"
+
+            cd "$APP_DIR"
+
+            echo "📥 Actualizando código"
+            git fetch origin
+            git pull --ff-only origin main
+
+            echo "🟢 Levantando base"
+            docker compose -f "$COMPOSE_FILE" up -d db
+
+            echo "⏳ Esperando DB"
+            sleep 5
+
+            echo "🧠 Ejecutando migraciones + seed"
+            docker compose -f "$COMPOSE_FILE" run --rm backend npm run deploy:prepare
+
+            echo "🏗️ Levantando aplicación"
+            docker compose -f "$COMPOSE_FILE" up -d --build
+
+            echo "⏳ Esperando backend"
+            sleep 10
+
+            echo "🩺 Healthcheck"
+            if ! curl -fsS "$HEALTH_URL" > /tmp/main-health.json; then
+              echo "❌ Healthcheck falló"
+              echo "===== docker compose ps ====="
+              docker compose -f "$COMPOSE_FILE" ps || true
+              echo "===== backend logs ====="
+              docker logs --tail 200 drizatx-main-backend || true
+              echo "===== frontend logs ====="
+              docker logs --tail 200 drizatx-main-frontend || true
+              exit 1
+            fi
+
+            echo "✅ Healthcheck OK"
+            cat /tmp/main-health.json
+
+            echo "📊 Estado final"
+            docker compose -f "$COMPOSE_FILE" ps
+
+            echo "✅ Deploy MAIN finalizado"

@@ -1,74 +1,66 @@
 services:
-  db:
-    image: mysql:8.0
-    container_name: drizatx-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_ROOT_PASSWORD: DrizaRootPass_2025
-      MYSQL_DATABASE: drizatx
-      MYSQL_USER: driza
-      MYSQL_PASSWORD: DrizaDB_2025
-    ports:
-      - "3307:3306"
-    command:
-      - --default-authentication-plugin=mysql_native_password
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-      - --sql-mode=
-      - --innodb_strict_mode=0
-    volumes:
-      - drizatx-mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -udriza -pDrizaDB_2025 || exit 1"]
-      interval: 5s
-      timeout: 10s
-      retries: 10
-      start_period: 20s
-
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: drizatx-backend
+    container_name: drizatx-main-backend
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 3001
-
       DATABASE_HOST: db
       DATABASE_PORT: 3306
-      DATABASE_USERNAME: driza
-      DATABASE_PASSWORD: DrizaDB_2025
+      DATABASE_USER: root
+      DATABASE_PASSWORD: root
       DATABASE_NAME: drizatx
-
-      FRONTEND_URLS: >-
-        http://localhost:3000,http://localhost:3010,http://77.42.23.51:3010
-
-      JWT_SECRET: driza-super-secret-2025
+      FRONTEND_URLS: "https://app.drizatx.com"
+      JWT_SECRET: "driza-super-secret-2025"
     ports:
-      - "3001:3001"
+      - "3401:3001"
+    depends_on:
+      - db
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: drizatx-frontend
+      args:
+        BACKEND_URL: "https://api.drizatx.com"
+        NEXT_PUBLIC_API_MODE: "true"
+        NEXT_PUBLIC_API_URL: "https://api.drizatx.com"
+        NEXT_PUBLIC_API_BASE_URL: "https://api.drizatx.com"
+        NEXT_PUBLIC_BASE_URL: "https://app.drizatx.com"
+        NEXT_PUBLIC_PRINT_WEBHOOK_URL: ""
+        NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN: ""
+        NEXT_PUBLIC_SMS_ENABLED: "false"
+        NEXT_PUBLIC_PUSH_ENABLED: "false"
+    container_name: drizatx-main-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
       NODE_ENV: production
-
+      BACKEND_URL: "https://api.drizatx.com"
       NEXT_PUBLIC_API_MODE: "true"
-      NEXT_PUBLIC_API_URL: "http://77.42.23.51:3001"
-      NEXT_PUBLIC_BASE_URL: "http://77.42.23.51:3010"
+      NEXT_PUBLIC_API_URL: "https://api.drizatx.com"
+      NEXT_PUBLIC_API_BASE_URL: "https://api.drizatx.com"
+      NEXT_PUBLIC_BASE_URL: "https://app.drizatx.com"
+      NEXT_PUBLIC_PRINT_WEBHOOK_URL: ""
+      NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN: ""
       NEXT_PUBLIC_SMS_ENABLED: "false"
       NEXT_PUBLIC_PUSH_ENABLED: "false"
     ports:
-      - "3010:3000"
+      - "3410:3000"
+
+  db:
+    image: mysql:8
+    container_name: drizatx-main-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: drizatx
+    volumes:
+      - db_data:/var/lib/mysql
 
 volumes:
-  drizatx-mysql-data:
+  db_data:
