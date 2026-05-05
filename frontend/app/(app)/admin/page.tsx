@@ -2157,6 +2157,7 @@ useEffect(() => {
                                   <SelectItem value={Role.OPERATOR}>Operador</SelectItem>
                                   <SelectItem value={Role.SUPERVISOR}>Supervisor</SelectItem>
                                   <SelectItem value={Role.ADMIN}>Administrador</SelectItem>
+                                  <SelectItem value={Role.DISPLAY}>Display</SelectItem>
                                   <SelectItem value={Role.SUPERADMIN} disabled={!isSuperAdminUser}>
                                     Super Admin
                                   </SelectItem>
@@ -2303,7 +2304,9 @@ useEffect(() => {
                                     ? "Admin"
                                     : operatorRole === Role.SUPERVISOR
                                       ? "Supervisor"
-                                      : "Operador"}
+                                      : operatorRole === Role.DISPLAY
+                                        ? "Display"
+                                        : "Operador"}
                               </Badge>
                               <Badge variant={operator.active ? "default" : "secondary"}>
                                 {operator.active ? "Activo" : "Inactivo"}
