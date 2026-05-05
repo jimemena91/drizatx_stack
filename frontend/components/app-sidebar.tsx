@@ -86,6 +86,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { state, logout } = useAuth();
   const role = state.user?.role;
   const isOperatorRole = role === "OPERATOR";
+  const isDisplayRole = role === "DISPLAY";
 
   const canSee = React.useCallback(
     (perm: NavItem["permission"]) => {
@@ -112,7 +113,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
       <SidebarSeparator className="bg-white/15" />
 
       <SidebarContent>
-        {isOperatorRole
+        {isOperatorRole || isDisplayRole
           ? null
           : data.navMain.map((group) => {
               const visible = group.items.filter((item) => {
