@@ -37,6 +37,8 @@ function isPublicPath(pathname: string) {
 function defaultRouteForRole(roleRaw?: string | null) {
   const role = (roleRaw ?? "").toUpperCase();
   switch (role) {
+    case "DISPLAY":
+      return "/display";
     case "OPERATOR":
     case "OPERADOR":
       return "/operator";
@@ -117,6 +119,15 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(url);
     }
   }
+  if (role === "DISPLAY") {
+    const isDisplayPath = pathname === "/display" || pathname.startsWith("/display/");
+    if (!isDisplayPath) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/display";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
 
   return NextResponse.next();
 }
@@ -127,4 +138,3 @@ export function middleware(req: NextRequest) {
 export const config = {
   matcher: ["/((?!_next|favicon.ico|assets|robots.txt|sitemap.xml|api/health).*)"],
 };
-

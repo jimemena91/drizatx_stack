@@ -44,6 +44,8 @@ const demoRolePermissions: Record<Role, Permission[]> = {
   ],
   SUPERVISOR: ["view_dashboard", "view_reports", "manage_clients", "call_tickets"],
   OPERATOR: ["view_dashboard", "call_tickets"],
+  USER: [],
+  DISPLAY: [],
 }
 
 // --- Usuarios demo
@@ -93,6 +95,18 @@ const defaultUsers: (User & { password: string })[] = [
     role: "SUPERVISOR" as Role,
     active: true,
     position: "Supervisión",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  },
+  {
+    id: 5,
+    username: "display",
+    email: "display@drizatx.com",
+    password: "display123",
+    name: "Pantalla Display",
+    role: "DISPLAY" as Role,
+    active: true,
+    position: "Cartelería",
     createdAt: new Date(),
     updatedAt: new Date(),
   },

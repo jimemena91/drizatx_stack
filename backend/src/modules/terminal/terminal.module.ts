@@ -4,10 +4,11 @@ import { SystemSettingsModule } from '../system-settings/system-settings.module'
 
 import { TerminalController } from './terminal.controller';
 import { TerminalService } from './terminal.service';
+import { RolesGuard } from '../../common/guards/roles.guard';
 
 @Module({
   imports: [SystemSettingsModule, PrintModule],
   controllers: [TerminalController],
-  providers: [TerminalService],
+  providers: [TerminalService, RolesGuard],
 })
 export class TerminalModule {}
