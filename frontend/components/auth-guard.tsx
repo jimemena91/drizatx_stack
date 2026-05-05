@@ -82,6 +82,14 @@ export function AuthGuard({
     }
   }
 
+  // 📺 DISPLAY siempre a /display
+  if (state.isAuthenticated && state.user?.role === "DISPLAY") {
+    if (!pathname.startsWith("/display")) {
+      router.replace("/display")
+      return null
+    }
+  }
+
   // 🔐 Permisos por ruta
   const lacksRoutePermission =
     state.isAuthenticated &&
