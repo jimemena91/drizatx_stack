@@ -410,8 +410,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedPermissions = normalizePermissionArray(storedPermissionsRaw)
     const isLoginRoute = pathname === "/login"
 
-    // Si estoy en público → no cargar sesión ni pedir ACL (el efecto de token lo dejará en null)
-    if (isPublicPath(pathname)) {
+    // Rutas públicas:
+    // - Si NO hay sesión persistida, se permite navegar sin cargar ACL.
+    // - Si SÍ hay sesión persistida, NO debemos borrar user/token,
+    //   porque después del login el redirect puede pasar por rutas públicas
+    //   como /login, /display, /terminal o /mobile.
+    if (isPublicPath(pathname) && !storedUser && !storedToken) {
       dispatch({
         type: "LOAD_FROM_STORAGE",
         payload: { user: null, token: null, permissions: [], rolePermissions: {} },
