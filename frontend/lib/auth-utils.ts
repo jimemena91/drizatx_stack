@@ -128,11 +128,6 @@ export function canAccessRoute(
     if (isPublicPath(pathname)) return true; // públicas
     return false; // bloquea el resto
   }
-  if (normalizedRole === Role.DISPLAY) {
-    if (/^\/display(\/.*)?$/.test(pathname)) return true;
-    if (/^\/login$/.test(pathname)) return true;
-    return false;
-  }
 
   // Resto de roles (ADMIN/SUPERVISOR/SUPERADMIN)
   const match = matchRouteRule(pathname);
@@ -154,8 +149,6 @@ export function getDefaultRouteForRole(
 ): string {
   const normalized = normalizeRole(role) ?? Role.OPERATOR;
   switch (normalized) {
-    case "DISPLAY":
-      return "/display";
     case "OPERATOR":
       return "/operator";
     case "ADMIN":

@@ -44,8 +44,6 @@ const demoRolePermissions: Record<Role, Permission[]> = {
   ],
   SUPERVISOR: ["view_dashboard", "view_reports", "manage_clients", "call_tickets"],
   OPERATOR: ["view_dashboard", "call_tickets"],
-  USER: [],
-  DISPLAY: [],
 }
 
 // --- Usuarios demo
@@ -95,18 +93,6 @@ const defaultUsers: (User & { password: string })[] = [
     role: "SUPERVISOR" as Role,
     active: true,
     position: "Supervisión",
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: 5,
-    username: "display",
-    email: "display@drizatx.com",
-    password: "display123",
-    name: "Pantalla Display",
-    role: "DISPLAY" as Role,
-    active: true,
-    position: "Cartelería",
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -410,12 +396,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedPermissions = normalizePermissionArray(storedPermissionsRaw)
     const isLoginRoute = pathname === "/login"
 
-    // Rutas públicas:
-    // - Si NO hay sesión persistida, se permite navegar sin cargar ACL.
-    // - Si SÍ hay sesión persistida, NO debemos borrar user/token,
-    //   porque después del login el redirect puede pasar por rutas públicas
-    //   como /login, /display, /terminal o /mobile.
-    if (isPublicPath(pathname) && !storedUser && !storedToken) {
+    // Si estoy en público → no cargar sesión ni pedir ACL (el efecto de token lo dejará en null)
+    if (isPublicPath(pathname)) {
       dispatch({
         type: "LOAD_FROM_STORAGE",
         payload: { user: null, token: null, permissions: [], rolePermissions: {} },
