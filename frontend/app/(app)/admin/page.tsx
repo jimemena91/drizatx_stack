@@ -1358,8 +1358,8 @@ useEffect(() => {
       showOperatorValidationError("El usuario debe tener al menos 3 caracteres")
       return
     }
-    if (!password?.trim() || password.trim().length < 4) {
-      showOperatorValidationError("La contraseña debe tener al menos 4 caracteres")
+    if (!password?.trim() || password.trim().length < 1) {
+      showOperatorValidationError("La contraseña es requerida")
       return
     }
 
