@@ -337,8 +337,8 @@ export class OperatorsService {
     if (typeof body.position === 'string') op.position = body.position;
     if (typeof body.active === 'boolean') op.active = body.active;
 
-    // ✅ Ajustado a mínimo 3 caracteres
-    if (body.password && body.password.length >= 3) {
+    // ✅ Permite contraseñas de al menos 1 carácter
+    if (body.password && body.password.length >= 1) {
       op.passwordHash = await bcrypt.hash(body.password, 10);
     }
 
