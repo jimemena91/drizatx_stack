@@ -161,9 +161,15 @@ function persistPermissions(permissions: Permission[] | null) {
 }
 
 async function authFetch<T = any>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
+  const base = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL)
+  const url = path.startsWith("http")
+    ? path
+    : `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`
+
+  const res = await fetch(url, {
     cache: "no-store",
-    credentials: "same-origin",
+    credentials: "include",
+    mode: "cors",
     ...init,
     headers: {
       ...(init?.headers ?? {}),
