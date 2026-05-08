@@ -5,6 +5,8 @@ const ROLE_RANK: Record<Role, number> = {
   [Role.OPERATOR]: 1,
   [Role.SUPERVISOR]: 2,
   [Role.ADMIN]: 3,
+  [Role.USER]: 1,
+  [Role.DISPLAY]: 0,
 };
 
 export const normalizeRole = (role?: string | Role | null): Role | undefined => {

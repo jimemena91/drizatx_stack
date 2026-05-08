@@ -1358,8 +1358,8 @@ useEffect(() => {
       showOperatorValidationError("El usuario debe tener al menos 3 caracteres")
       return
     }
-    if (!password?.trim() || password.trim().length < 4) {
-      showOperatorValidationError("La contraseña debe tener al menos 4 caracteres")
+    if (!password?.trim() || password.trim().length < 1) {
+      showOperatorValidationError("La contraseña es requerida")
       return
     }
 
@@ -2157,6 +2157,7 @@ useEffect(() => {
                                   <SelectItem value={Role.OPERATOR}>Operador</SelectItem>
                                   <SelectItem value={Role.SUPERVISOR}>Supervisor</SelectItem>
                                   <SelectItem value={Role.ADMIN}>Administrador</SelectItem>
+                                  <SelectItem value={Role.DISPLAY}>Display</SelectItem>
                                   <SelectItem value={Role.SUPERADMIN} disabled={!isSuperAdminUser}>
                                     Super Admin
                                   </SelectItem>
@@ -2303,7 +2304,9 @@ useEffect(() => {
                                     ? "Admin"
                                     : operatorRole === Role.SUPERVISOR
                                       ? "Supervisor"
-                                      : "Operador"}
+                                      : operatorRole === Role.DISPLAY
+                                        ? "Display"
+                                        : "Operador"}
                               </Badge>
                               <Badge variant={operator.active ? "default" : "secondary"}>
                                 {operator.active ? "Activo" : "Inactivo"}
