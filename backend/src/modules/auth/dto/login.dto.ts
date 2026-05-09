@@ -69,7 +69,7 @@ export class LoginDto {
     typeof value === 'string' ? value.trim() : value,
   )
   @IsString()
-  @MinLength(3) // 👈 ahora coincide con el mínimo que dijiste
+  @MinLength(1)
   @OneOfEmailOrUsername()
   password!: string
 }

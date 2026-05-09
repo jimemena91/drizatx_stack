@@ -53,7 +53,18 @@ export function AuthGuard({
   }
 
   // 🚪 No autenticado → login
-  if (!state.isAuthenticated && pathname !== "/login") {
+  // Esperamos hidratación completa antes de redirigir.
+  const hasBrowserSession =
+    typeof window !== "undefined" &&
+    (localStorage.getItem("drizatx-user") ||
+      localStorage.getItem("drizatx-token"))
+
+  if (
+    !state.isLoading &&
+    !state.isAuthenticated &&
+    !hasBrowserSession &&
+    pathname !== "/login"
+  ) {
     router.push("/login")
     return (
       <div className="min-h-screen flex items-center justify-center">
