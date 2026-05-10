@@ -49,7 +49,7 @@ function normalizeMessage(raw: any): CustomMessage {
     title: String(raw.title ?? ""),
     content: String(raw.content ?? ""),
     type: (raw.type ?? "info") as CustomMessage["type"],
-    active: !!raw.active,
+    active: raw.active == null && raw.isActive == null ? true : Boolean(raw.active ?? raw.isActive),
     priority: normalizePriorityLevel(raw.priority) ?? 1,
     // en runtime trabajamos con Date, aunque el tipo original use string
     // @ts-expect-error: startDate/endDate pueden ser string en el tipo
