@@ -167,7 +167,7 @@ function RealTimeFlowGrid({
       {columns.map((column) => (
         <div
           key={column.key}
-          className="rounded-xl border border-border/40 bg-card/70 p-4"
+          className="flex min-h-0 flex-col rounded-xl border border-border/40 bg-card/70 p-4"
         >
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2 font-semibold">
@@ -177,7 +177,14 @@ function RealTimeFlowGrid({
               {column.items.length}
             </Badge>
           </div>
-          <ScrollArea className={cn("max-h-64 pr-3", scrollAreaClassName)}>
+          <ScrollArea
+            className={cn(
+              column.key === "waiting"
+                ? "min-h-0 flex-1 overflow-y-auto pr-1 max-h-[45vh]"
+                : "max-h-64 pr-3",
+              scrollAreaClassName,
+            )}
+          >
             {column.items.length > 0 ? (
               <ul className="space-y-3">
                 {column.items.map((ticket) => {
