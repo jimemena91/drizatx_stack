@@ -82,6 +82,33 @@ export class AuthController {
     return result;
   }
 
+
+  @ApiOperation({ summary: 'Logout y limpieza de cookies de sesión' })
+  @HttpCode(HttpStatus.OK)
+  @Post('logout')
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: ExpressResponse,
+  ) {
+    const xfp = String(req.headers['x-forwarded-proto'] ?? '');
+    const isHttps = xfp.includes('https');
+    const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
+    const cookieBase = {
+      httpOnly: true,
+      sameSite: 'lax' as const,
+      secure: isHttps,
+      domain: cookieDomain,
+      path: '/',
+    };
+
+    res.clearCookie('drizatx-auth', cookieBase);
+    res.clearCookie('drizatx-role', cookieBase);
+    res.clearCookie('drizatx-token', cookieBase);
+
+    return { success: true };
+  }
+
   // ========= Perfil del usuario autenticado =========
   @ApiOperation({ summary: 'Obtiene el perfil del usuario autenticado' })
   @ApiBearerAuth() // Swagger: requiere Authorization: Bearer <token>

@@ -264,7 +264,7 @@ export default function DisplayPage() {
   /** estado/config */
   const { getQueueStatus, currentTime, refetch } = useQueueStatus()
   const { state } = useQueue()
-  const { settings: systemSettings } = useSystemSettings()
+  const { settings: systemSettings } = useSystemSettings({ publicMode: true })
   const settingsSource = systemSettings.length > 0 ? systemSettings : state.settings
 
   const brandLogoUrl = getSettingValue(settingsSource, "brandLogoUrl", "")
@@ -292,7 +292,7 @@ export default function DisplayPage() {
   }, [displayTimeoutSetting])
   const rotationMs = rotationSeconds * 1000
 
-  const { getActiveMessages = () => [], getMessagesByType = (_type?: string) => [] } = useCustomMessages()
+  const { getActiveMessages = () => [], getMessagesByType = (_type?: string) => [] } = useCustomMessages({ publicMode: true })
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
   const [lastAnnouncedTicket, setLastAnnouncedTicket] = useState<string | null>(null)
@@ -577,32 +577,51 @@ export default function DisplayPage() {
   }, [queueStatus.inProgressTickets, queueStatus.recentlyCompletedTickets])
 
   const renderPromotionMedia = (promotion?: any) => {
-    if (!promotion?.mediaUrl) return null
-    const mediaType = String(promotion.mediaType ?? "").toLowerCase()
-    const isVideo = mediaType.startsWith("video/") || promotion.mediaUrl.toLowerCase().endsWith(".mp4")
-    const altText = promotion.title || "Promoción"
+    const mediaUrl = typeof promotion?.mediaUrl === "string" ? promotion.mediaUrl.trim() : ""
+    if (!mediaUrl) return null
+
+    const mediaType = String(promotion?.mediaType ?? "").toLowerCase()
+    const isSafeImage =
+      mediaUrl.startsWith("data:image/") ||
+      mediaUrl.startsWith("https://") ||
+      mediaUrl.startsWith("http://")
+
+    const isVideo =
+      mediaType.startsWith("video/") ||
+      mediaUrl.toLowerCase().endsWith(".mp4") ||
+      mediaUrl.startsWith("data:video/")
+
+    if (!isSafeImage && !isVideo) return null
+
+    const altText = String(promotion?.title || "Promoción")
 
     return (
-      <div className="relative flex h-full min-h-[45vh] w-full items-center justify-center overflow-hidden rounded-xl border border-slate-800/60 bg-slate-950/70">
+      <div
+        key={`promotion-media-${promotion?.id ?? activeCarouselIndex}`}
+        className="relative flex h-full min-h-[45vh] w-full items-center justify-center overflow-hidden rounded-xl border border-slate-800/60 bg-slate-950/70"
+      >
         {isVideo ? (
           <video
+            key={`promotion-video-${promotion?.id ?? activeCarouselIndex}`}
             className="h-full max-h-full w-full max-w-full object-contain"
-            src={promotion.mediaUrl}
+            src={mediaUrl}
             controls
             muted
             loop
             autoPlay
             playsInline
           >
-            <source src={promotion.mediaUrl} type={mediaType || "video/mp4"} />
             Tu navegador no soporta la reproducción de video.
           </video>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={promotion.mediaUrl}
+            key={`promotion-image-${promotion?.id ?? activeCarouselIndex}`}
+            src={mediaUrl}
             alt={altText}
             className="h-full max-h-full w-full max-w-full object-contain"
+            loading="eager"
+            decoding="async"
           />
         )}
       </div>
