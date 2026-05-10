@@ -602,23 +602,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // Logout
-    // Logout (server + client)
+    // Logout: limpia cookies del backend y estado local
     const logout = async () => {
       try {
-        await fetch("/api/auth/logout", { method: "POST", credentials: "include" })
+        const base = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL)
+        await fetch(`${base.replace(/\/$/, "")}/api/auth/logout`, {
+          method: "POST",
+          credentials: "include",
+          mode: "cors",
+          cache: "no-store",
+        })
       } catch {
         /* ignore */
       }
+
       persistUser(null)
       persistToken(null)
       persistPermissions(null)
+
+      try {
+        apiClient.setAuthToken(null)
+        localStorage.removeItem(USER_STORAGE_KEY)
+        localStorage.removeItem(TOKEN_STORAGE_KEY)
+        localStorage.removeItem(PERMISSIONS_STORAGE_KEY)
+        localStorage.removeItem("access_token")
+        localStorage.removeItem("token")
+        localStorage.removeItem("user")
+        sessionStorage.clear()
+      } catch {}
+
+      document.cookie = "drizatx-auth=; Max-Age=0; Path=/; SameSite=Lax"
+      document.cookie = "drizatx-role=; Max-Age=0; Path=/; SameSite=Lax"
+
       setAuthCookie(false)
       dispatch({ type: "LOGOUT" })
-      try {
-        window.location.href = "/login"
-      } catch {
-        /* ignore */
-      }
+
+      window.location.replace("/login")
     }
 
 
