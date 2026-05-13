@@ -105,17 +105,20 @@ export function useTickets(opts: UseTicketsOptions = {}) {
   const [loading, setLoading] = useState(!skipInitialFetch)
   const [error, setError] = useState<string | null>(null)
 
-  const toWithRelations = (ts: Ticket[]): TicketWithRelations[] =>
-    ts.map((ticket) => ({
-      ...ticket,
-      service: state.services.find((s) => s.id === ticket.serviceId)!,
-      operator: ticket.operatorId
-        ? state.operators.find((o) => o.id === ticket.operatorId) ?? null
-        : null,
-      client: ticket.clientId
-        ? state.clients.find((c) => c.id === ticket.clientId) ?? null
-        : null,
-    }))
+  const toWithRelations = useCallback(
+    (ts: Ticket[]): TicketWithRelations[] =>
+      ts.map((ticket) => ({
+        ...ticket,
+        service: state.services.find((s) => s.id === ticket.serviceId)!,
+        operator: ticket.operatorId
+          ? state.operators.find((o) => o.id === ticket.operatorId) ?? null
+          : null,
+        client: ticket.clientId
+          ? state.clients.find((c) => c.id === ticket.clientId) ?? null
+          : null,
+      })),
+    [state.services, state.operators, state.clients],
+  )
 
   const fetchTickets = async () => {
     try {
@@ -878,8 +881,10 @@ export function useTickets(opts: UseTicketsOptions = {}) {
     }
   }
 
-  const getTicketsWithRelations = (): TicketWithRelations[] =>
-    toWithRelations(state.tickets)
+  const getTicketsWithRelations = useCallback(
+    (): TicketWithRelations[] => toWithRelations(state.tickets),
+    [state.tickets, toWithRelations],
+  )
 
   const getTicketsByStatus = (status: Status) =>
     getTicketsWithRelations().filter((ticket) => ticket.status === status)
