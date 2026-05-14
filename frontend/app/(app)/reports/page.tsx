@@ -22,13 +22,6 @@ import {
 import { TrendingUp, TrendingDown, Users, Clock, Target, Download, Calendar, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 // === NUEVO: hook conectado a backend /reports
 import { useReports, type ReportsFilters } from "@/hooks/use-reports";
@@ -457,74 +450,67 @@ export default function ReportsPage() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div className="space-y-2">
                   <Label htmlFor="report-service">Servicio</Label>
-                  <Select
+                  <select
+                    id="report-service"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={filters.serviceId ? String(filters.serviceId) : "all"}
-                    onValueChange={(value) =>
+                    onChange={(event) => {
+                      const value = event.target.value
                       setFilters((prev) => ({
                         ...prev,
                         serviceId: value === "all" ? undefined : Number(value),
                       }))
-                    }
+                    }}
                   >
-                    <SelectTrigger id="report-service">
-                      <SelectValue placeholder="Todos los servicios" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {activeServices.map((service) => (
-                        <SelectItem key={service.id} value={String(service.id)}>
-                          {service.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="all">Todos</option>
+                    {activeServices.map((service) => (
+                      <option key={service.id} value={String(service.id)}>
+                        {service.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="report-operator">Operador</Label>
-                  <Select
+                  <select
+                    id="report-operator"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={filters.operatorId ? String(filters.operatorId) : "all"}
-                    onValueChange={(value) =>
+                    onChange={(event) => {
+                      const value = event.target.value
                       setFilters((prev) => ({
                         ...prev,
                         operatorId: value === "all" ? undefined : Number(value),
                       }))
-                    }
+                    }}
                   >
-                    <SelectTrigger id="report-operator">
-                      <SelectValue placeholder="Todos los operadores" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {operators.map((operator) => (
-                        <SelectItem key={operator.id} value={String(operator.id)}>
-                          {operator.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <option value="all">Todos</option>
+                    {operators.map((operator) => (
+                      <option key={operator.id} value={String(operator.id)}>
+                        {operator.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="report-tz">Zona horaria</Label>
-                  <Select
+                  <select
+                    id="report-tz"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={(filters.tz ?? DEFAULT_TZ) as string}
-                    onValueChange={(value) =>
+                    onChange={(event) =>
                       setFilters((prev) => ({
                         ...prev,
-                        tz: value as ReportsFilters["tz"],
+                        tz: event.target.value as ReportsFilters["tz"],
                       }))
                     }
                   >
-                    <SelectTrigger id="report-tz">
-                      <SelectValue placeholder="Zona horaria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIMEZONE_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {TIMEZONE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
