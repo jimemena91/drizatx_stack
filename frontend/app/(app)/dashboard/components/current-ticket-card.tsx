@@ -18,14 +18,14 @@ export function CurrentTicketCard({ ticket }: CurrentTicketCardProps) {
         <CardTitle className="text-primary-foreground">🔊 Turno en Atención</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-4xl font-bold mb-2">{ticket.number}</div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 text-3xl font-bold sm:text-4xl">{ticket.number}</div>
             <p className="text-sm text-primary-foreground/80">
               {ticket.service.name} - {ticket.operator?.position}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-left sm:text-right">
             <p className="text-sm text-primary-foreground/80">Operador:</p>
             <p className="font-medium">{ticket.operator?.name}</p>
           </div>
