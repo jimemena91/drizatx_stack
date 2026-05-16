@@ -4,6 +4,7 @@
 import type { ReactNode } from "react"
 
 import { UserMenu } from "@/components/user-menu"
+import { SidebarTrigger } from "@/components/ui/sidebar"
 
 type DashboardHeaderProps = {
   children?: ReactNode
@@ -24,10 +25,13 @@ export function DashboardHeader({ children }: DashboardHeaderProps) {
       </div>
 
       <div className="relative z-10">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-3 sm:items-center">
+          <div className="min-w-0">
+            <div className="mb-2 md:hidden">
+              <SidebarTrigger className="size-9 border border-border/50 bg-card/80 hover:bg-accent" />
+            </div>
             <h1
-              className="text-3xl font-bold mb-1"
+              className="mb-1 text-2xl font-bold sm:text-3xl"
               style={{
                 background: "var(--gradient-3)",
                 WebkitBackgroundClip: "text",
@@ -36,7 +40,7 @@ export function DashboardHeader({ children }: DashboardHeaderProps) {
             >
               Dashboard Operativo
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground sm:text-sm">
               Control de flujo en tiempo real con tecnología ATLITUDE
             </p>
           </div>
