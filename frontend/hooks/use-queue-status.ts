@@ -127,7 +127,14 @@ export function useQueueStatus() {
 
     const mapLocalTicket = (ticket: typeof currentState.tickets[number]): TicketWithRelations => ({
       ...ticket,
-      priority: normalizePriorityLevel(ticket.priority) ?? 0,
+      priority:
+            normalizePriorityLevel(
+              ticket.priority ??
+                (ticket as any)?.priorityLevel ??
+                (ticket as any)?.priority_level ??
+                ticket.service?.priority ??
+                ticket.service?.priorityLevel
+            ) ?? 0,
       service: currentState.services.find((s) => s.id === ticket.serviceId)!,
       operator: ticket.operatorId
         ? currentState.operators.find((o) => o.id === ticket.operatorId) ?? null
@@ -340,7 +347,14 @@ export function useQueueStatus() {
           name: "",
           prefix: "",
           active: true,
-          priority: normalizePriorityLevel(ticket.service?.priority ?? (ticket as any)?.priority) ?? 0,
+          priority:
+            normalizePriorityLevel(
+              (ticket as any)?.priority ??
+                (ticket as any)?.priorityLevel ??
+                (ticket as any)?.priority_level ??
+                ticket.service?.priority ??
+                ticket.service?.priorityLevel
+            ) ?? 0,
           estimatedTime: ticket.estimatedWaitTime ?? 0,
           maxAttentionTime: null,
           createdAt: updatedAt,
@@ -356,7 +370,14 @@ export function useQueueStatus() {
 
         return {
           ...ticket,
-          priority: normalizePriorityLevel(ticket.priority) ?? 0,
+          priority:
+            normalizePriorityLevel(
+              ticket.priority ??
+                (ticket as any)?.priorityLevel ??
+                (ticket as any)?.priority_level ??
+                ticket.service?.priority ??
+                ticket.service?.priorityLevel
+            ) ?? 0,
           createdAt: toDate(ticket.createdAt) ?? updatedAt,
           calledAt: toDate(ticket.calledAt),
           startedAt: toDate(rawStartedAt),
