@@ -15,7 +15,7 @@ type QueueStatusCardProps = {
 export function QueueStatusCard({ queues }: QueueStatusCardProps) {
   return (
     <Card
-      className="group relative p-6 border-2 border-border/60 dark:border-border/40 shadow-xl hover:shadow-2xl dark:shadow-2xl transition-all duration-500 overflow-hidden"
+      className="group relative overflow-hidden border-2 border-border/60 p-4 shadow-xl transition-all duration-500 hover:shadow-2xl dark:border-border/40 dark:shadow-2xl sm:p-5 lg:p-6"
       style={{ background: "var(--card)", backdropFilter: "blur(12px)" }}
     >
       <div
@@ -26,8 +26,8 @@ export function QueueStatusCard({ queues }: QueueStatusCardProps) {
       </div>
 
       <div className="relative z-10">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:mb-6">
+          <div className="flex items-start gap-3 sm:items-center sm:space-x-4">
             <div
               className="w-12 h-12 rounded-2xl flex items-center justify-center text-white"
               style={{ background: "var(--gradient-2)" }}
@@ -40,7 +40,7 @@ export function QueueStatusCard({ queues }: QueueStatusCardProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             <Badge
               variant="secondary"
               className="border-0 font-semibold px-4 py-2 rounded-xl"
@@ -50,7 +50,7 @@ export function QueueStatusCard({ queues }: QueueStatusCardProps) {
             </Badge>
 
             <Link href="/dashboard/queues">
-              <Button variant="outline" className="hover:bg-accent hover:text-accent-foreground">
+              <Button variant="outline" className="w-full hover:bg-accent hover:text-accent-foreground sm:w-auto">
                 Ver detalle
               </Button>
             </Link>
@@ -66,10 +66,10 @@ export function QueueStatusCard({ queues }: QueueStatusCardProps) {
             return (
               <div
                 key={queue.id}
-                className="flex items-center justify-between p-4 rounded-2xl border border-border/30 backdrop-blur-sm transition-all duration-300 hover:shadow-lg"
+                className="flex flex-col gap-3 rounded-2xl border border-border/30 p-3 backdrop-blur-sm transition-all duration-300 hover:shadow-lg sm:flex-row sm:items-center sm:justify-between sm:p-4"
                 style={{ background: "var(--muted)" }}
               >
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-wrap items-center gap-2 sm:space-x-4">
                   <Badge
                     variant="secondary"
                     className={`${chipClasses} border-0 font-semibold px-4 py-2 rounded-xl`}
@@ -82,7 +82,7 @@ export function QueueStatusCard({ queues }: QueueStatusCardProps) {
                   </div>
                 </div>
                 <div
-                  className="text-3xl font-bold"
+                  className="text-2xl font-bold sm:text-3xl"
                   style={{
                     background: "var(--gradient-4)",
                     WebkitBackgroundClip: "text",

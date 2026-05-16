@@ -46,7 +46,7 @@ export function OperatorsCard({
 }: OperatorsCardProps) {
   return (
     <Card
-      className="group relative p-6 border-2 border-border/60 dark:border-border/40 shadow-xl hover:shadow-2xl dark:shadow-2xl transition-all duration-500 overflow-hidden"
+      className="group relative overflow-hidden border-2 border-border/60 p-4 shadow-xl transition-all duration-500 hover:shadow-2xl dark:border-border/40 dark:shadow-2xl sm:p-5 lg:p-6"
       style={{ background: "var(--card)", backdropFilter: "blur(12px)" }}
     >
       <div
@@ -185,7 +185,7 @@ export function OperatorsCard({
                     </Badge>
                   )}
 
-                  <div className="ml-auto flex w-full flex-col gap-1 sm:w-auto sm:flex-row md:ml-2 md:flex-col">
+                  <div className="ml-auto flex w-full flex-col gap-1 sm:w-auto sm:flex-row md:ml-2 md:flex-row lg:flex-col">
                     {derived === "AVAILABLE" && (
                       <Button
                         size="sm"
