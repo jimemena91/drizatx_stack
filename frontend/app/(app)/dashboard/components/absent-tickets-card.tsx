@@ -31,17 +31,17 @@ export function AbsentTicketsCard({ tickets, historicalCount = 0, onReintegrate 
       </CardHeader>
       <CardContent>
         {hasTickets ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4">
             {tickets.map((ticket) => (
-              <div key={ticket.id} className="flex items-center justify-between p-4 border border-border rounded-lg bg-card/60">
-                <div>
+              <div key={ticket.id} className="flex flex-col gap-3 rounded-lg border border-border bg-card/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <div className="text-lg font-bold text-primary mb-1">{ticket.number}</div>
-                  <p className="text-sm text-muted-foreground">{ticket.service.name}</p>
+                  <p className="truncate text-sm text-muted-foreground">{ticket.service.name}</p>
                   {ticket.client && (
-                    <p className="text-xs text-muted-foreground/80">{ticket.client.name}</p>
+                    <p className="truncate text-xs text-muted-foreground/80">{ticket.client.name}</p>
                   )}
                 </div>
-                <Button size="sm" variant="outline" onClick={() => onReintegrate(ticket.id)} className="text-xs">
+                <Button size="sm" variant="outline" onClick={() => onReintegrate(ticket.id)} className="w-full text-xs sm:w-auto">
                   <RotateCcw className="h-3 w-3 mr-1" />
                   Reintegrar
                 </Button>
