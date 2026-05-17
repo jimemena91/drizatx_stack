@@ -286,8 +286,84 @@ export default function TerminalPage() {
   useEffect(() => () => clearRedirectTimeout(), [clearRedirectTimeout])
 
   // --- Acciones de UI ---
-  const handleServiceSelect = (serviceId: number) => {
+  const handleServiceSelect = async (serviceId: number) => {
+    if (creating || selectedService) return
+
     setSelectedService(serviceId)
+
+    try {
+      setCreating(true)
+
+      const newTicket = await createTicket(
+        serviceId,
+        undefined,
+        undefined,
+        selectedClientId || undefined,
+      )
+
+      const ticketsWithRelations = getTicketsWithRelations()
+      const ticketWithRelations = ticketsWithRelations.find((t) => t.id === newTicket.id)
+
+      const selectedServiceFromList = services.find((s) => s.id === serviceId)
+
+      const normalizedNumber = (() => {
+        const num = newTicket?.number
+        const hasNumber = typeof num === "string" && num.trim().length > 0
+        if (hasNumber) return num.trim()
+
+        const prefix =
+          selectedServiceFromList?.prefix ??
+          ticketWithRelations?.service?.prefix ??
+          ""
+
+        return `${prefix}${String(newTicket?.id ?? 1).padStart(3, "0")}`
+      })()
+
+      const fallbackService: Service = (() => {
+        if (ticketWithRelations?.service) return ticketWithRelations.service
+        if (selectedServiceFromList) return selectedServiceFromList
+
+        return {
+          id: serviceId,
+          name: `Servicio ${serviceId}`,
+          prefix: normalizedNumber.replace(/\d+/g, "").slice(0, 3),
+          active: true,
+          priority: 1,
+          estimatedTime: 10,
+          maxAttentionTime: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      })()
+
+      const normalizedTicket: TicketType = {
+        ...newTicket,
+        number: normalizedNumber,
+        serviceId: newTicket?.serviceId ?? serviceId,
+        mobilePhone: null,
+      }
+
+      const normalizedClientName = (() => {
+        const nameFromTicket = ticketWithRelations?.client?.name?.trim()
+        if (nameFromTicket) return nameFromTicket
+        return selectedClientName?.trim() ?? null
+      })()
+
+      setActiveTicketInfo({
+        ticket: normalizedTicket,
+        service: fallbackService,
+        clientName: normalizedClientName,
+      })
+
+      setShowTicket(true)
+
+      setThankYouMessage("Gracias por usar la terminal.")
+    } catch (error) {
+      console.error("Error al generar el turno:", error)
+      alert("Error al generar el turno. Por favor intente nuevamente.")
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleFindClient = async () => {
@@ -435,7 +511,24 @@ export default function TerminalPage() {
       )}
 
       {!selectedService ? (
-        <div className="grid gap-6" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+        <div className="relative">
+          {creating && (
+            <div
+              className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm"
+              data-print-hidden="true"
+            >
+              <div className="rounded-lg bg-blue-600 px-6 py-4 text-white shadow-lg">
+                <div className="text-lg font-semibold">Generando turno...</div>
+              </div>
+            </div>
+          )}
+
+          <div
+            className={`grid gap-6 transition-opacity duration-200 ${
+              creating ? "pointer-events-none opacity-40" : ""
+            }`}
+            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+          >
           {services.map((service) => {
             const ServiceIcon = getServiceIcon(service.icon)
             const isSelected = selectedService === service.id
@@ -462,6 +555,7 @@ export default function TerminalPage() {
               </Card>
             )
           })}
+          </div>
         </div>
       ) : showTicket ? (
         <div className="w-full">
