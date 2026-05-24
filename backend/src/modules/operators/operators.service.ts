@@ -463,7 +463,7 @@ export class OperatorsService {
     const today = new Date();
     const issuedForDate = today.toISOString().slice(0, 10);
 
-    const [activeTickets, availabilityRows, openShifts, lastCompletedRows] = await Promise.all([
+    const [activeTickets, lastCompletedRows] = await Promise.all([
       this.ticketRepo.find({
         where: {
           operatorId: In(opIds) as any,
@@ -471,11 +471,6 @@ export class OperatorsService {
         },
         relations: { service: true, operator: true, client: true },
         order: { startedAt: 'ASC', calledAt: 'ASC', id: 'ASC' },
-      }),
-      this.availabilityRepo.find({ where: { operatorId: In(opIds) as any } }),
-      this.shiftRepo.find({
-        where: { operatorId: In(opIds) as any, endedAt: IsNull() },
-        order: { startedAt: 'DESC' },
       }),
       this.ticketRepo
         .createQueryBuilder('ticket')
@@ -487,6 +482,14 @@ export class OperatorsService {
         .andWhere('ticket.completedAt IS NOT NULL')
         .groupBy('ticket.operatorId')
         .getRawMany<{ operatorId: number | string; lastAttentionEndedAt: Date | string | null }>(),
+    ]);
+
+    const [availabilityRows, openShifts] = await Promise.all([
+      this.availabilityRepo.find({ where: { operatorId: In(opIds) as any } }).catch(() => []),
+      this.shiftRepo.find({
+        where: { operatorId: In(opIds) as any, endedAt: IsNull() },
+        order: { startedAt: 'DESC' },
+      }).catch(() => []),
     ]);
 
     const byOp = new Map<number, Ticket[]>();
