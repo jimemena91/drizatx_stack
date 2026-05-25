@@ -1049,7 +1049,7 @@ export default function ReportsPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-3 xl:grid-cols-6">
+                          <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4 xl:grid-cols-8">
                             <div>
                               <div className="font-bold">{formatPercentage(operator.attendanceRatePct)}</div>
                               <div className="text-xs text-gray-600">Tasa finalización</div>
@@ -1067,9 +1067,24 @@ export default function ReportsPage() {
                               <div className="text-xs text-gray-600">Ciclo total</div>
                             </div>
                             <div>
+                              <div className="font-bold">
+                                {formatSecondsAsDuration(operator.avgIdleBetweenTicketsSec)}
+                              </div>
+                              <div className="text-xs text-gray-600">Idle prom.</div>
+                            </div>
+
+                            <div>
+                              <div className="font-bold">
+                                {formatSecondsAsDuration(operator.totalIdleBetweenTicketsSec)}
+                              </div>
+                              <div className="text-xs text-gray-600">Idle total</div>
+                            </div>
+
+                            <div>
                               <div className="font-bold">{formatTicketsPerHour(operator.throughputPerHour)}</div>
                               <div className="text-xs text-gray-600">Tickets por hora</div>
                             </div>
+
                             <div>
                               <div className="font-bold">{formatPercentage(operator.occupancyPct)}</div>
                               <div className="text-xs text-gray-600">Ocupación</div>

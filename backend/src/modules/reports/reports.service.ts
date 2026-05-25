@@ -296,6 +296,66 @@ export class ReportsService {
     if (!rows.length) return [];
 
     const ids = rows.map((r) => Number(r.operatorId)).filter((id) => Number.isFinite(id));
+
+    const idleByOperator = new Map<number, { totalIdleSec: number; intervals: number }>();
+
+    if (hasAttended && hasClosed && ids.length > 0) {
+      const idleQb = this.ticketsRepo.createQueryBuilder('t')
+        .select(`${operatorId}`, 'operatorId')
+        .addSelect(`${attended}`, 'startedAt')
+        .addSelect(`${closed}`, 'completedAt')
+        .where(`${operatorId} IN (:...ids)`, { ids })
+        .andWhere(`${status} = 'COMPLETED'`)
+        .andWhere(`${attended} IS NOT NULL`)
+        .andWhere(`${closed} IS NOT NULL`);
+
+      if (q.from) idleQb.andWhere(`${attended} >= :from`, { from: q.from });
+      if (q.to) idleQb.andWhere(`${attended} <= :to`, { to: q.to });
+
+      this.applyFilters(idleQb, q, cols);
+
+      const idleRows = await idleQb
+        .orderBy(`${operatorId}`, 'ASC')
+        .addOrderBy(`${attended}`, 'ASC')
+        .getRawMany<{ operatorId: number | string; startedAt: string | Date; completedAt: string | Date }>();
+
+      const byOperator = new Map<number, Array<{ startedAt: Date; completedAt: Date }>>();
+
+      for (const row of idleRows) {
+        const id = Number(row.operatorId);
+        const startedAt = new Date(row.startedAt);
+        const completedAt = new Date(row.completedAt);
+
+        if (
+          Number.isInteger(id) &&
+          !Number.isNaN(startedAt.getTime()) &&
+          !Number.isNaN(completedAt.getTime())
+        ) {
+          const list = byOperator.get(id) ?? [];
+          list.push({ startedAt, completedAt });
+          byOperator.set(id, list);
+        }
+      }
+
+      for (const [id, tickets] of byOperator.entries()) {
+        let totalIdleSec = 0;
+        let intervals = 0;
+
+        for (let i = 1; i < tickets.length; i += 1) {
+          const previousCompletedAt = tickets[i - 1].completedAt.getTime();
+          const currentStartedAt = tickets[i].startedAt.getTime();
+          const idleSec = Math.floor((currentStartedAt - previousCompletedAt) / 1000);
+
+          if (idleSec > 0) {
+            totalIdleSec += idleSec;
+            intervals += 1;
+          }
+        }
+
+        idleByOperator.set(id, { totalIdleSec, intervals });
+      }
+    }
+
     const operators = ids.length
       ? await this.operatorsRepo
           .createQueryBuilder('o')
@@ -316,19 +376,35 @@ export class ReportsService {
         const cancelled = Number(row.cancelledTickets ?? 0);
         const abandoned = Number(row.abandonedTickets ?? 0);
         const serviceCount = Number(row.serviceCount ?? 0);
-        const avgWaitSec = row.avgWaitSec != null ? Math.round(Number(row.avgWaitSec)) : null;
-        const avgHandleSec = row.avgHandleSec != null ? Math.round(Number(row.avgHandleSec)) : null;
-        const avgLeadSec = row.avgLeadSec != null ? Math.round(Number(row.avgLeadSec)) : null;
-        const totalWaitSec = row.totalWaitSec != null ? Math.round(Number(row.totalWaitSec)) : null;
-        const totalHandleSec = row.totalHandleSec != null ? Math.round(Number(row.totalHandleSec)) : null;
+        const avgWaitSec =
+          completed > 0 && row.avgWaitSec != null ? Math.round(Number(row.avgWaitSec)) : null;
+        const avgHandleSec =
+          completed > 0 && row.avgHandleSec != null ? Math.round(Number(row.avgHandleSec)) : null;
+        const avgLeadSec =
+          completed > 0 && row.avgLeadSec != null ? Math.round(Number(row.avgLeadSec)) : null;
+        const totalWaitSec =
+          completed > 0 && row.totalWaitSec != null ? Math.round(Number(row.totalWaitSec)) : null;
+        const totalHandleSec =
+          completed > 0 && row.totalHandleSec != null ? Math.round(Number(row.totalHandleSec)) : null;
         const spanSec = row.activeSpanSec != null ? Math.max(Number(row.activeSpanSec), 0) : null;
         let throughputPerHour: number | null = null;
         if (spanSec && spanSec > 0) {
           throughputPerHour = Number((completed / (spanSec / 3600)).toFixed(2));
         }
-        const occupancyPct = spanSec && spanSec > 0 && totalHandleSec != null
-          ? Number(((totalHandleSec / spanSec) * 100).toFixed(1))
-          : null;
+        const idleMetrics = idleByOperator.get(Number(row.operatorId)) ?? { totalIdleSec: 0, intervals: 0 };
+        const totalIdleBetweenTicketsSec =
+          completed > 1 && idleMetrics.intervals > 0 ? idleMetrics.totalIdleSec : null;
+        const avgIdleBetweenTicketsSec =
+          completed > 1 && idleMetrics.intervals > 0
+            ? Math.round(idleMetrics.totalIdleSec / idleMetrics.intervals)
+            : null;
+
+        const occupancyPct =
+          totalHandleSec != null && totalIdleBetweenTicketsSec != null && (totalHandleSec + totalIdleBetweenTicketsSec) > 0
+            ? Number(((totalHandleSec / (totalHandleSec + totalIdleBetweenTicketsSec)) * 100).toFixed(1))
+            : spanSec && spanSec > 0 && totalHandleSec != null
+              ? Number(((totalHandleSec / spanSec) * 100).toFixed(1))
+              : null;
         const attendanceRatePct = total > 0 ? Number(((completed / total) * 100).toFixed(1)) : null;
 
         const firstActivity = row.firstActivityAt ? new Date(row.firstActivityAt) : null;
@@ -350,6 +426,8 @@ export class ReportsService {
           avgLeadSec,
           totalWaitSec,
           totalHandleSec,
+          totalIdleBetweenTicketsSec,
+          avgIdleBetweenTicketsSec,
           throughputPerHour,
           occupancyPct,
           attendanceRatePct,
