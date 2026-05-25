@@ -2749,7 +2749,13 @@ useEffect(() => {
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium">Mensajes Activos</h3>
                         <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                          {customMessages.map((message) => (
+                          {[...customMessages]
+                            .sort((a, b) => {
+                              const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+                              const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+                              return orderA - orderB
+                            })
+                            .map((message, index, orderedMessages) => (
                             <div
                               key={message.id}
                             className={[
@@ -2765,8 +2771,60 @@ useEffect(() => {
                             >
                               <div className="flex justify-between items-start mb-2">
                                 <h4 className="font-medium">{message.title}</h4>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 items-center">
+                                  <Badge variant="secondary">
+                                    #{message.displayOrder ?? index + 1}
+                                  </Badge>
+
                                   <span className="chip px-2 py-0.5 rounded text-xs capitalize">{message.type}</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={index === 0}
+                                    onClick={async () => {
+                                      const previous = orderedMessages[index - 1]
+                                      if (!previous) return
+
+                                      await updateMessage(message.id, {
+                                        displayOrder: previous.displayOrder ?? index,
+                                      })
+
+                                      await updateMessage(previous.id, {
+                                        displayOrder: message.displayOrder ?? index + 1,
+                                      })
+
+                                      await refreshCustomMessages()
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    title="Subir mensaje"
+                                  >
+                                    ↑
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={index === orderedMessages.length - 1}
+                                    onClick={async () => {
+                                      const next = orderedMessages[index + 1]
+                                      if (!next) return
+
+                                      await updateMessage(message.id, {
+                                        displayOrder: next.displayOrder ?? index + 2,
+                                      })
+
+                                      await updateMessage(next.id, {
+                                        displayOrder: message.displayOrder ?? index + 1,
+                                      })
+
+                                      await refreshCustomMessages()
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    title="Bajar mensaje"
+                                  >
+                                    ↓
+                                  </Button>
+
                                   <Button
                                     size="sm"
                                     variant="outline"
