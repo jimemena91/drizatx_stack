@@ -373,7 +373,13 @@ export default function DisplayPage() {
     const handleStatusUpdate = (status: typeof queueStatus) => {
       if (!isMounted) return
 
-      setCustomMessages(getActiveMessages())
+      setCustomMessages(
+        getActiveMessages().sort((a: any, b: any) => {
+          const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+          const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+          return orderA - orderB
+        }),
+      )
 
       const audioTicket = status.calledTickets?.[0] ?? null
       const audioKey = audioTicket

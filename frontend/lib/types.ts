@@ -76,6 +76,7 @@ export interface CustomMessage {
   type: "info" | "warning" | "promotion" | "announcement"
   active: boolean
   priority: number
+  displayOrder: number
   startDate?: string | Date | null
   endDate?: string | Date | null
   mediaUrl?: string | null
