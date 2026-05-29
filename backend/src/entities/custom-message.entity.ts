@@ -20,6 +20,9 @@ export class CustomMessage {
   @Column({ type: 'int', default: 1 })
   priority: number;
 
+  @Column({ name: 'display_order', type: 'int', default: 0 })
+  displayOrder: number;
+
   @Column({ name: 'start_date', type: 'datetime', nullable: true })
   startDate?: Date | null;
 
