@@ -17,6 +17,7 @@ export class CustomMessagesService {
   findAll(): Promise<CustomMessage[]> {
     return this.messagesRepo.find({
       order: {
+        displayOrder: 'ASC',
         priority: 'DESC',
         startDate: 'ASC',
         title: 'ASC',
@@ -36,7 +37,8 @@ export class CustomMessagesService {
         '(message.activeDays IS NULL OR message.activeDays = "" OR FIND_IN_SET(:dayCode, message.activeDays) > 0)',
         { dayCode },
       )
-      .orderBy('message.priority', 'DESC')
+      .orderBy('message.displayOrder', 'ASC')
+      .addOrderBy('message.priority', 'DESC')
       .addOrderBy('message.startDate', 'ASC')
       .addOrderBy('message.title', 'ASC')
       .getMany();

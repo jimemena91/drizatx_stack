@@ -79,6 +79,16 @@ export class CreateCustomMessageDto {
   @Max(6)
   priority?: number;
 
+  @ApiProperty({
+    description: 'Orden visual del mensaje en la cartelería',
+    example: 1,
+    required: false,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  displayOrder?: number;
+
   @ApiProperty({ description: 'Fecha de inicio de vigencia', example: '2024-01-01T00:00:00.000Z', required: false })
   @IsOptional()
   @IsDateString()
