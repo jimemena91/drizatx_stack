@@ -2,9 +2,6 @@
 
 import Link from "next/link"
 import { useState, useEffect, useMemo, useCallback, useRef, type ChangeEvent } from "react"
-import { DndContext, closestCenter, type DragEndEvent } from "@dnd-kit/core"
-import { SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable"
-import { SortableMessageCard } from "@/components/admin/sortable-message-card"
 import { DialogFooter } from "@/components/ui/dialog"
 import { AuthGuard } from "@/components/auth-guard"
 import { PermissionGuard } from "@/components/permission-guard"
@@ -1589,45 +1586,6 @@ useEffect(() => {
     setCustomMessages(getActiveMessages())
   }, [getActiveMessages])
 
-  const handleMessageDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event
-
-    if (!over || active.id === over.id) return
-
-    const oldIndex = orderedCustomMessages.findIndex((message) => String(message.id) === String(active.id))
-    const newIndex = orderedCustomMessages.findIndex((message) => String(message.id) === String(over.id))
-
-    if (oldIndex < 0 || newIndex < 0) return
-
-    const reorderedMessages = arrayMove(orderedCustomMessages, oldIndex, newIndex)
-
-    try {
-      await Promise.all(
-        reorderedMessages.map((message, index) =>
-          updateMessage(message.id, {
-            displayOrder: index + 1,
-          }),
-        ),
-      )
-
-      await refreshCustomMessages()
-
-      toast({
-        title: "Orden actualizado",
-        description: "El nuevo orden ya se aplicó a la cartelería.",
-      })
-    } catch (error) {
-      toast({
-        title: "No se pudo actualizar el orden",
-        description:
-          error instanceof Error && error.message?.trim()
-            ? error.message
-            : "Intentá nuevamente.",
-        variant: "destructive",
-      })
-    }
-  }
-
   const formatMessageDate = useCallback((value?: string | Date | null) => {
     if (!value) return null
     const parsed = value instanceof Date ? value : new Date(value)
@@ -2922,6 +2880,38 @@ useEffect(() => {
                                     title="Bajar mensaje"
                                   >
                                     ↓
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant={message.active ? "outline" : "secondary"}
+                                    onClick={async () => {
+                                      try {
+                                        await updateMessage(message.id, {
+                                          active: !message.active,
+                                        })
+                                        await refreshCustomMessages()
+                                        toast({
+                                          title: message.active ? "Mensaje pausado" : "Mensaje activado",
+                                          description: message.active
+                                            ? "El mensaje ya no se mostrará en el display."
+                                            : "El mensaje volverá a mostrarse en el display.",
+                                        })
+                                      } catch (error) {
+                                        toast({
+                                          title: "No se pudo cambiar el estado",
+                                          description:
+                                            error instanceof Error && error.message?.trim()
+                                              ? error.message
+                                              : "Intentá nuevamente.",
+                                          variant: "destructive",
+                                        })
+                                      }
+                                    }}
+                                    className="h-6 px-2 text-xs"
+                                    title={message.active ? "Pausar mensaje" : "Activar mensaje"}
+                                  >
+                                    {message.active ? "Pausar" : "Activar"}
                                   </Button>
 
                                   <Button
