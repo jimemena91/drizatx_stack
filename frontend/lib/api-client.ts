@@ -1074,14 +1074,7 @@ class ApiClient {
       return Array.isArray(data) ? data : [];
     } catch (err) {
       if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
-        return {
-          processed: 0,
-          created: 0,
-          updated: 0,
-          skipped: 0,
-          clients: [],
-          errors: [],
-        };
+        return [];
       }
       throw err;
     }
@@ -1653,14 +1646,7 @@ class ApiClient {
       return Array.isArray(list) ? list : [];
     } catch (err) {
       if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
-        return {
-          processed: 0,
-          created: 0,
-          updated: 0,
-          skipped: 0,
-          clients: [],
-          errors: [],
-        };
+        return [];
       }
       throw err;
     }

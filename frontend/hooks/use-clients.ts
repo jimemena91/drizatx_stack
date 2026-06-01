@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useQueue } from "@/contexts/queue-context"
 import type { Client, ClientHistory, ClientVisitHistoryItem } from "@/lib/types"
-import { apiClient, ApiError } from "@/lib/api-client"
+import { apiClient, ApiError, type BulkCreateClientsResponse } from "@/lib/api-client"
 
 type UseClientsOptions = {
   publicMode?: boolean;
@@ -172,7 +172,7 @@ export function useClients(options: UseClientsOptions = {}) {
     }
   }
 
-  const bulkImport = async (rows: Array<Pick<Client, "dni" | "name" | "email" | "phone"> & { vip?: boolean }>) => {
+  const bulkImport = async (rows: Array<Pick<Client, "dni" | "name" | "email" | "phone"> & { vip?: boolean }>): Promise<BulkCreateClientsResponse> => {
     try {
       setError(null)
 
@@ -182,24 +182,37 @@ export function useClients(options: UseClientsOptions = {}) {
         }
         setLoading(true)
         const clients = rows.map((r) => ({ ...r, vip: r.vip ?? false }))
-        let createdClients: Client[] = []
+        let bulkResult: BulkCreateClientsResponse | null = null
 
         try {
-          createdClients = await apiClient.bulkCreateClients(clients)
+          bulkResult = await apiClient.bulkCreateClients(clients)
         } catch (apiErr) {
           if (apiErr instanceof ApiError && [404, 405, 501].includes(apiErr.status)) {
             const processed: Client[] = []
+            let createdCount = 0
+            let updatedCount = 0
+
             for (const clientPayload of clients) {
               const existing = await apiClient.getClientByDni(clientPayload.dni)
               if (existing) {
-                const updated = await apiClient.updateClient(existing.id, clientPayload)
-                processed.push(updated)
+                const updatedClient = await apiClient.updateClient(existing.id, clientPayload)
+                processed.push(updatedClient)
+                updatedCount += 1
               } else {
-                const created = await apiClient.createClient(clientPayload)
-                processed.push(created)
+                const createdClient = await apiClient.createClient(clientPayload)
+                processed.push(createdClient)
+                createdCount += 1
               }
             }
-            createdClients = processed
+
+            bulkResult = {
+              processed: clients.length,
+              created: createdCount,
+              updated: updatedCount,
+              skipped: 0,
+              clients: processed,
+              errors: [],
+            }
           } else {
             throw apiErr
           }
@@ -207,12 +220,23 @@ export function useClients(options: UseClientsOptions = {}) {
 
         // Refresh clients list
         await fetchClients()
-        return createdClients
+        return bulkResult ?? {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        }
       } else {
+        let createdCount = 0
+        let updatedCount = 0
+
         rows.forEach((r) => {
           const existed = state.clients.find((c) => c.dni === r.dni)
           if (existed) {
             dispatch({ type: "UPDATE_CLIENT", payload: { id: existed.id, data: { ...r } } })
+            updatedCount += 1
           } else {
             const newClient: Client = {
               ...r,
@@ -222,9 +246,18 @@ export function useClients(options: UseClientsOptions = {}) {
               updatedAt: new Date(),
             }
             dispatch({ type: "ADD_CLIENT", payload: newClient })
+            createdCount += 1
           }
         })
-        return []
+
+        return {
+          processed: rows.length,
+          created: createdCount,
+          updated: updatedCount,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        }
       }
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : "Error importing clients"
