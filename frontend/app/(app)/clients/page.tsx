@@ -175,8 +175,11 @@ export default function ClientsPage() {
         throw new Error("No se encontraron filas válidas en el CSV")
       }
 
-      await bulkImport(parsed)
-      toast({ title: "Importación completada", description: `${parsed.length} clientes procesados` })
+      const result = await bulkImport(parsed)
+      toast({
+        title: "Importación completada",
+        description: `${result.processed} procesados · ${result.created} creados · ${result.updated} actualizados · ${result.skipped} omitidos`,
+      })
     } catch (err) {
       const description = err instanceof Error ? err.message : "Error importando clientes"
       toast({
