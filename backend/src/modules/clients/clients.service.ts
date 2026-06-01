@@ -182,15 +182,18 @@ export class ClientsService {
   async getHistory(id: number, limit = 25): Promise<ClientHistoryResponse> {
     const client = await this.findOne(id);
 
-    const query = this.ticketRepo
+    const totalVisits = await this.ticketRepo.count({
+      where: { clientId: id },
+    });
+
+    const tickets = await this.ticketRepo
       .createQueryBuilder('ticket')
       .leftJoinAndSelect('ticket.service', 'service')
       .leftJoinAndSelect('ticket.operator', 'operator')
-      .where('ticket.client_id = :clientId', { clientId: id })
-      .orderBy('ticket.created_at', 'DESC')
-      .take(limit);
-
-    const [tickets, totalVisits] = await query.getManyAndCount();
+      .where('ticket.clientId = :clientId', { clientId: id })
+      .orderBy('ticket.createdAt', 'DESC')
+      .take(limit)
+      .getMany();
 
     const history: ClientVisitHistoryItem[] = tickets.map((ticket) => ({
       ticketId: ticket.id,
