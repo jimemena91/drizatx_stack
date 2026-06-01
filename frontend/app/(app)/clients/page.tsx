@@ -18,7 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/toast-provider"
 import { Upload, Search, Download, History } from "lucide-react"
 import { useClients } from "@/hooks/use-clients"
 import type { Client, ClientHistory } from "@/lib/types"
@@ -68,7 +68,7 @@ export default function ClientsPage() {
     error,
     refetch,
   } = useClients()
-  const { toast } = useToast()
+  const { addToast } = useToast()
 
   const [query, setQuery] = useState("")
   const [form, setForm] = useState({ dni: "", name: "", email: "", phone: "", vip: false })
@@ -96,10 +96,10 @@ export default function ClientsPage() {
 
   const handleSubmit = async () => {
     if (!form.dni || !form.name) {
-      toast({
+      addToast({
+        type: "error",
         title: "Datos incompletos",
         description: "Completá DNI y nombre para continuar",
-        variant: "destructive",
       })
       return
     }
@@ -109,17 +109,17 @@ export default function ClientsPage() {
 
       if (editingId) {
         await updateClient(editingId, { ...form })
-        toast({ title: "Cliente actualizado" })
+        addToast({ type: "success", title: "Cliente actualizado" })
         setEditingId(null)
       } else {
         await createClient(form as any)
-        toast({ title: "Cliente creado" })
+        addToast({ type: "success", title: "Cliente creado" })
       }
 
       setForm({ dni: "", name: "", email: "", phone: "", vip: false })
     } catch (err) {
       const message = err instanceof Error ? err.message : "No se pudo guardar el cliente"
-      toast({ title: "Error", description: message, variant: "destructive" })
+      addToast({ type: "error", title: "Error", description: message })
     } finally {
       setSaving(false)
     }
@@ -176,16 +176,17 @@ export default function ClientsPage() {
       }
 
       const result = await bulkImport(parsed)
-      toast({
+      addToast({
+        type: "success",
         title: "Importación completada",
         description: `${result.processed} procesados · ${result.created} creados · ${result.updated} actualizados · ${result.skipped} omitidos`,
       })
     } catch (err) {
       const description = err instanceof Error ? err.message : "Error importando clientes"
-      toast({
+      addToast({
+        type: "error",
         title: "No se pudo importar",
         description,
-        variant: "destructive",
       })
     } finally {
       if (fileRef.current) fileRef.current.value = ""
@@ -222,10 +223,10 @@ export default function ClientsPage() {
     } catch (err) {
       console.error("Error loading client history", err)
       const description = err instanceof Error ? err.message : "Intentalo nuevamente"
-      toast({
+      addToast({
+        type: "error",
         title: "No se pudo cargar el historial",
         description,
-        variant: "destructive",
       })
     } finally {
       setHistoryLoading(false)
@@ -465,14 +466,14 @@ export default function ClientsPage() {
                                       if (!confirm("¿Eliminar cliente?")) return
                                       try {
                                         await deleteClient(c.id)
-                                        toast({ title: "Cliente eliminado" })
+                                        addToast({ type: "success", title: "Cliente eliminado" })
                                       } catch (err) {
                                         const message =
                                           err instanceof Error ? err.message : "No se pudo eliminar el cliente"
-                                        toast({
+                                        addToast({
+                                          type: "error",
                                           title: "Error",
                                           description: message,
-                                          variant: "destructive",
                                         })
                                       }
                                     }}
