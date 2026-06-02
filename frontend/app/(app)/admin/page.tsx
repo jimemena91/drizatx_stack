@@ -2950,7 +2950,34 @@ useEffect(() => {
                                   </Button>
                                 </div>
                               </div>
-                              <p className="text-sm text-muted-foreground mb-2">{message.content}</p>
+                              <div className="mb-3 flex gap-3 rounded-md border border-border/60 bg-background/60 p-2">
+                                {message.mediaUrl && message.mediaType?.startsWith("image") ? (
+                                  <img
+                                    src={message.mediaUrl}
+                                    alt={`Preview de ${message.title}`}
+                                    className="h-16 w-24 shrink-0 rounded object-cover border"
+                                  />
+                                ) : message.mediaUrl && message.mediaType?.startsWith("video") ? (
+                                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded border bg-muted text-[11px] font-medium text-muted-foreground">
+                                    VIDEO
+                                  </div>
+                                ) : (
+                                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded border bg-muted text-[11px] font-medium text-muted-foreground">
+                                    TEXTO
+                                  </div>
+                                )}
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="line-clamp-2 text-sm text-muted-foreground">
+                                    {message.content || "Sin contenido de texto"}
+                                  </p>
+                                  {message.mediaUrl && (
+                                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                                      {message.mediaUrl}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                               <div className="mb-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                 <Badge variant="outline" className="border-dashed">
                                   Prioridad {message.priority}
