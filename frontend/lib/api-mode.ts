@@ -57,17 +57,9 @@ function toBool(v: any): boolean {
 
 /** Devuelve true si el front debe usar la API real. */
 export function isApiMode(): boolean {
-  const apiMode = toBool(process.env.NEXT_PUBLIC_API_MODE ?? "false")
-  const demoMode = toBool(process.env.NEXT_PUBLIC_DEMO_MODE ?? "0")
-  const enabled = apiMode && !demoMode
-  if (typeof window !== "undefined") {
-    console.debug("[api-mode] isApiMode:", enabled, {
-      NEXT_PUBLIC_API_MODE: process.env.NEXT_PUBLIC_API_MODE,
-      NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE,
-    })
-  }
-  return enabled
+  return true
 }
+
 
 /* ==================== Checks de conectividad ==================== */
 /** Lanza error si /api/health no responde 200. */

@@ -5,9 +5,13 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import { AppModule } from "./app.module";
 import { DataSource } from "typeorm"; // ⬅️ para logs de DB
 import * as bodyParser from "body-parser";
+import cookieParser from "cookie-parser";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+// ✅ habilita req.cookies (para leer drizatx-token)
+  app.use(cookieParser());
 
   // Permitir cargas más grandes para material promocional (videos/imágenes en data URI)
   const MEDIA_PAYLOAD_LIMIT = "32mb"; // 20 MB de archivo ~ 26.7mb base64; usamos un margen seguro

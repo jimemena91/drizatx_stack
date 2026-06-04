@@ -129,6 +129,13 @@ export function canAccessRoute(
     return false; // bloquea el resto
   }
 
+  // DISPLAY: solo puede acceder a /display y rutas públicas
+  if (normalizedRole === Role.DISPLAY) {
+    if (/^\/display(\/.*)?$/.test(pathname)) return true;
+    if (isPublicPath(pathname)) return true;
+    return false;
+  }
+
   // Resto de roles (ADMIN/SUPERVISOR/SUPERADMIN)
   const match = matchRouteRule(pathname);
   const need = match ? match[1] : ("view_dashboard" as Permission);
@@ -151,6 +158,10 @@ export function getDefaultRouteForRole(
   switch (normalized) {
     case "OPERATOR":
       return "/operator";
+
+    case "DISPLAY":
+      return "/display";
+
     case "ADMIN":
     case "SUPERVISOR":
     case "SUPERADMIN":

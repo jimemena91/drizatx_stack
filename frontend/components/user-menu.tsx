@@ -24,11 +24,11 @@ export function UserMenu() {
 
   const isOperator = state.user.role === "OPERATOR"
 
-  const handleLogout = useCallback((event?: MouseEvent<HTMLElement>) => {
+  const handleLogout = useCallback(async (event?: MouseEvent<HTMLElement>) => {
     event?.preventDefault()
     event?.stopPropagation()
-    logout()
-    router.replace("/login")
+    await logout()
+    window.location.href = "/logout"
   }, [logout, router])
 
   const initials =

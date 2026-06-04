@@ -1,34 +1,39 @@
-# Node / Next / Nest
-node_modules/
-.next/
-dist/
-out/
-coverage/
-.cache/
-.turbo/
-**/node_modules/
-**/.next/
-**/dist/
+# dependencies
+node_modules
+.pnp
+.pnp.js
 
-# Env & runtime
+# testing
+coverage
+
+# next.js
+.next
+out
+
+# production
+build
+dist
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# env
 .env
 .env.*
-**/.env
-**/.env.*
 !.env.example
 
-# Sistemas / IDE
-.DS_Store
-Thumbs.db
-*.log
-.vscode/
-.idea/
-backups/
-*.sql
-*.bak
-*.save
+# local scratch / debugging
+cookies*.txt
 
 # --- Local backups / editor saves (VPS) ---
+# backups/temporales
 *.bak
 *.bak.*
 *.BAK.*

@@ -4,7 +4,6 @@ import { Activity, AlertTriangle, Moon, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 type DashboardTopControlsProps = {
@@ -13,7 +12,6 @@ type DashboardTopControlsProps = {
   onThemeToggle: (checked: boolean) => void;
   onRefresh: () => void;
   onAlertsClick?: () => void;
-  alertsCount?: number;
   className?: string;
 };
 
@@ -23,7 +21,6 @@ export function DashboardTopControls({
   onThemeToggle,
   onRefresh,
   onAlertsClick,
-  alertsCount = 0,
   className,
 }: DashboardTopControlsProps) {
   return (
@@ -60,9 +57,6 @@ export function DashboardTopControls({
         <Button className="btn-premium relative w-full sm:w-auto" onClick={onAlertsClick}>
           <AlertTriangle className="mr-2 h-4 w-4" />
           Alertas
-          <Badge variant="secondary" className="ml-2 px-2 py-0 text-xs font-semibold">
-            {alertsCount}
-          </Badge>
         </Button>
       </div>
     </div>

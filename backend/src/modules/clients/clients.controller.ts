@@ -17,6 +17,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../common/enums/permission.enum';
+import { BulkImportClientsDto } from './dto/bulk-import-clients.dto';
 
 @UseGuards(AuthGuard('jwt'), PermissionsGuard)
 @Controller('clients')
@@ -34,6 +35,12 @@ export class ClientsController {
   @Permissions(Permission.SERVE_TICKETS)
   findByDni(@Param('dni') dni: string): Promise<Client | null> {
     return this.clientsService.findByDni(dni);
+  }
+
+  @Post('bulk')
+  @Permissions(Permission.SERVE_TICKETS)
+  bulkImport(@Body() body: BulkImportClientsDto) {
+    return this.clientsService.bulkImport(body.clients);
   }
 
   @Get(':id/history')

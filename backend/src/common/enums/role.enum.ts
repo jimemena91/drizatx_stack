@@ -3,4 +3,6 @@ export enum Role {
   OPERATOR = "OPERATOR",
   SUPERVISOR = "SUPERVISOR",
   ADMIN = "ADMIN",
+  USER = "USER",
+  DISPLAY = "DISPLAY",
 }

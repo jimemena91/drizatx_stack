@@ -51,6 +51,7 @@ function sanitizeMessage(message: CustomMessage) {
     type: String(message.type ?? 'info'),
     active: Boolean(message.active),
     priority: Number(message.priority ?? 0),
+    displayOrder: Number(message.displayOrder ?? message.id ?? 0),
     startDate: toIso(message.startDate),
     endDate: toIso(message.endDate),
     mediaUrl: message.mediaUrl ?? null,

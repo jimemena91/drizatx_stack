@@ -15,6 +15,8 @@ export enum Role {
   OPERATOR = "OPERATOR",
   SUPERVISOR = "SUPERVISOR",
   ADMIN = "ADMIN",
+  USER = "USER",
+  DISPLAY = "DISPLAY",
 }
 
 export type Permission =
@@ -74,6 +76,7 @@ export interface CustomMessage {
   type: "info" | "warning" | "promotion" | "announcement"
   active: boolean
   priority: number
+  displayOrder: number
   startDate?: string | Date | null
   endDate?: string | Date | null
   mediaUrl?: string | null

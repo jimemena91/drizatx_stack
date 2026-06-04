@@ -55,7 +55,7 @@ export default function ChangePasswordDialog({
     })
 
   const validate = () => {
-    if (pwd.length < 3) return "La contraseña debe tener al menos 3 caracteres."
+    if (pwd.length < 1) return "La contraseña es requerida."
     if (pwd !== pwd2) return "Las contraseñas no coinciden."
     return null
   }
@@ -114,7 +114,7 @@ export default function ChangePasswordDialog({
               type="password"
               value={pwd}
               onChange={(e) => setPwd(e.target.value)}
-              placeholder="La contraseña debe tener al menos 3 caracteres."
+              placeholder="Ingresá la nueva contraseña."
               autoFocus
             />
           </div>

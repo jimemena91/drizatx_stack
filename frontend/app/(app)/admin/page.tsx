@@ -316,7 +316,7 @@ export default function AdminPage() {
   const { operators, createOperator, updateOperator, deleteOperator, loading, error, refetch } = useOperators()
 
   const { state, isApiMode: queueApiMode } = useQueue()
-  const { createMessage, deleteMessage, getActiveMessages, refetch: refetchMessages } = useCustomMessages()
+  const { createMessage, updateMessage, deleteMessage, getActiveMessages, refetch: refetchMessages } = useCustomMessages()
 
   // Flag de admin para la UI (enum o string)
   const currentUserId = authState.user?.id ?? null
@@ -324,22 +324,27 @@ export default function AdminPage() {
   const isAdmin = normalizedCurrentRole === Role.ADMIN || normalizedCurrentRole === Role.SUPERADMIN
   const isSuperAdminUser = normalizedCurrentRole === Role.SUPERADMIN
 
-  // ===== DEBUG: fetch crudo =====
-  useEffect(() => {
-    if (!SHOW_DEBUG_UI) return; // ⬅️ evita ejecutar en prod
-    const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-    const url = `${BASE}/api/operators`;
-    fetch(url)
-      .then((r) => r.text())
-      .then((t) => {
-        try {
-          console.log("[AdminPage] operadores crudos:", JSON.parse(t));
-        } catch {
-          console.log("[AdminPage] operadores crudos (texto):", t);
-        }
-      })
-      .catch((e) => console.error("[AdminPage] error fetch crudo /operators", e));
-  }, []);
+// ===== DEBUG: fetch crudo =====
+useEffect(() => {
+  if (!SHOW_DEBUG_UI) return; // ⬅️ evita ejecutar en prod
+
+  // Importante: pegamos a la API del FRONT (proxy Next), no al backend directo
+  const url = "/api/operators";
+
+  fetch(url, {
+    method: "GET",
+    credentials: "include", // ⬅️ por las dudas, asegura cookies en el request al front
+  })
+    .then((r) => r.text())
+    .then((t) => {
+      try {
+        console.log("[AdminPage] operadores crudos:", JSON.parse(t));
+      } catch {
+        console.log("[AdminPage] operadores crudos (texto):", t);
+      }
+    })
+    .catch((e) => console.error("[AdminPage] error fetch crudo /api/operators", e));
+}, []);
 
   const nativeDirectoryInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -467,6 +472,7 @@ export default function AdminPage() {
     displayDurationSeconds: DEFAULT_PROMOTION_DURATION,
     activeDays: [] as string[],
   })
+  const [editingMessage, setEditingMessage] = useState<CustomMessage | null>(null)
   const [messageMediaError, setMessageMediaError] = useState<string | null>(null)
   const [messageMediaName, setMessageMediaName] = useState<string | null>(null)
   const dayOptions = useMemo(
@@ -481,6 +487,15 @@ export default function AdminPage() {
     ],
     [],
   )
+
+  const orderedCustomMessages = useMemo(() => {
+    return [...customMessages].sort((a, b) => {
+      const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+      const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+      return orderA - orderB
+    })
+  }, [customMessages])
+
   const [creatingMessage, setCreatingMessage] = useState(false)
   const [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null)
   const [loadingBackupStatus, setLoadingBackupStatus] = useState(false)
@@ -1353,8 +1368,8 @@ export default function AdminPage() {
       showOperatorValidationError("El usuario debe tener al menos 3 caracteres")
       return
     }
-    if (!password?.trim() || password.trim().length < 4) {
-      showOperatorValidationError("La contraseña debe tener al menos 4 caracteres")
+    if (!password?.trim() || password.trim().length < 1) {
+      showOperatorValidationError("La contraseña es requerida")
       return
     }
 
@@ -1506,19 +1521,26 @@ export default function AdminPage() {
         ? Math.max(5, Number(newMessage.displayDurationSeconds))
         : null
       const normalizedDays = (newMessage.activeDays || []).filter(Boolean)
-      const created = await createMessage({
+
+      const payload = {
         title: newMessage.title,
         content: newMessage.content,
         type: newMessage.type,
         active: true,
         priority: safePriority,
+        displayOrder: editingMessage?.displayOrder ?? customMessages.length + 1,
         startDate: newMessage.startDate ? new Date(newMessage.startDate) : null,
         endDate: newMessage.endDate ? new Date(newMessage.endDate) : null,
         mediaUrl: newMessage.mediaUrl ?? null,
         mediaType: newMessage.mediaType ?? null,
         displayDurationSeconds: normalizedDuration,
         activeDays: normalizedDays.length ? normalizedDays : null,
-      })
+      }
+
+      const saved = editingMessage
+        ? await updateMessage(editingMessage.id, payload)
+        : await createMessage(payload)
+
       await refreshCustomMessages()
       setNewMessage({
         title: "",
@@ -1532,19 +1554,26 @@ export default function AdminPage() {
         displayDurationSeconds: DEFAULT_PROMOTION_DURATION,
         activeDays: [],
       })
+      setEditingMessage(null)
       setMessageMediaName(null)
       setMessageMediaError(null)
       toast({
-        title: "Mensaje creado con éxito",
-        description: created.title ? `"${created.title}" ya está visible para los visitantes.` : undefined,
+        title: editingMessage ? "Mensaje actualizado con éxito" : "Mensaje creado con éxito",
+        description: editingMessage
+          ? "Los cambios ya están disponibles para la cartelería."
+          : saved?.title
+            ? `"${saved.title}" ya está visible para los visitantes.`
+            : undefined,
       })
     } catch (error) {
       const description =
         error instanceof Error && error.message?.trim()
           ? error.message
-          : "No se pudo crear el mensaje. Inténtalo nuevamente."
+          : editingMessage
+            ? "No se pudo actualizar el mensaje. Inténtalo nuevamente."
+            : "No se pudo crear el mensaje. Inténtalo nuevamente."
       toast({
-        title: "Error al crear mensaje",
+        title: editingMessage ? "Error al actualizar mensaje" : "Error al crear mensaje",
         description,
         variant: "destructive",
       })
@@ -2152,6 +2181,7 @@ export default function AdminPage() {
                                   <SelectItem value={Role.OPERATOR}>Operador</SelectItem>
                                   <SelectItem value={Role.SUPERVISOR}>Supervisor</SelectItem>
                                   <SelectItem value={Role.ADMIN}>Administrador</SelectItem>
+                                  <SelectItem value={Role.DISPLAY}>Display</SelectItem>
                                   <SelectItem value={Role.SUPERADMIN} disabled={!isSuperAdminUser}>
                                     Super Admin
                                   </SelectItem>
@@ -2298,7 +2328,9 @@ export default function AdminPage() {
                                     ? "Admin"
                                     : operatorRole === Role.SUPERVISOR
                                       ? "Supervisor"
-                                      : "Operador"}
+                                      : operatorRole === Role.DISPLAY
+                                        ? "Display"
+                                        : "Operador"}
                               </Badge>
                               <Badge variant={operator.active ? "default" : "secondary"}>
                                 {operator.active ? "Activo" : "Inactivo"}
@@ -2572,7 +2604,16 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Formulario para crear mensaje */}
                       <div className="space-y-4">
-                        <h3 className="text-lg font-medium">Crear Nuevo Mensaje</h3>
+                        <h3 className="text-lg font-medium">
+                          {editingMessage ? "Editar Mensaje" : "Crear Nuevo Mensaje"}
+                        </h3>
+
+                        {editingMessage && (
+                          <div className="rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm">
+                            Estás editando: <strong>{editingMessage.title}</strong>. Al guardar, los cambios se aplican al display.
+                          </div>
+                        )}
+
                       <div className="space-y-3">
                         <div>
                           <Label htmlFor="message-title">Título</Label>
@@ -2722,18 +2763,48 @@ export default function AdminPage() {
                               </p>
                             )}
                           </div>
-                          <Button
-                            onClick={handleCreateMessage}
-                            className="w-full btn-premium"
-                            disabled={creatingMessage}
-                          >
-                            {creatingMessage ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Plus className="h-4 w-4 mr-2" />
+                          <div className="space-y-2">
+                            <Button
+                              onClick={handleCreateMessage}
+                              className="w-full btn-premium"
+                              disabled={creatingMessage}
+                            >
+                              {creatingMessage ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Plus className="h-4 w-4 mr-2" />
+                              )}
+                              {creatingMessage ? (editingMessage ? "Guardando..." : "Creando...") : editingMessage ? "Guardar Cambios" : "Crear Mensaje"}
+                            </Button>
+
+                            {editingMessage && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full"
+                                disabled={creatingMessage}
+                                onClick={() => {
+                                  setEditingMessage(null)
+                                  setNewMessage({
+                                    title: "",
+                                    content: "",
+                                    type: "info",
+                                    priority: 1,
+                                    startDate: "",
+                                    endDate: "",
+                                    mediaUrl: null,
+                                    mediaType: null,
+                                    displayDurationSeconds: DEFAULT_PROMOTION_DURATION,
+                                    activeDays: [],
+                                  })
+                                  setMessageMediaName(null)
+                                  setMessageMediaError(null)
+                                }}
+                              >
+                                Cancelar edición
+                              </Button>
                             )}
-                            {creatingMessage ? "Creando..." : "Crear Mensaje"}
-                          </Button>
+                          </div>
                         </div>
                       </div>
 
@@ -2741,7 +2812,7 @@ export default function AdminPage() {
                       <div className="space-y-4">
                         <h3 className="text-lg font-medium">Mensajes Activos</h3>
                         <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
-                          {customMessages.map((message) => (
+                          {orderedCustomMessages.map((message, index, orderedMessages) => (
                             <div
                               key={message.id}
                             className={[
@@ -2757,8 +2828,118 @@ export default function AdminPage() {
                             >
                               <div className="flex justify-between items-start mb-2">
                                 <h4 className="font-medium">{message.title}</h4>
-                                <div className="flex gap-1">
+                                <div className="flex gap-1 items-center">
+                                  <Badge variant="secondary">
+                                    #{message.displayOrder ?? index + 1}
+                                  </Badge>
+
                                   <span className="chip px-2 py-0.5 rounded text-xs capitalize">{message.type}</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={index === 0}
+                                    onClick={async () => {
+                                      const previous = orderedMessages[index - 1]
+                                      if (!previous) return
+
+                                      await updateMessage(message.id, {
+                                        displayOrder: previous.displayOrder ?? index,
+                                      })
+
+                                      await updateMessage(previous.id, {
+                                        displayOrder: message.displayOrder ?? index + 1,
+                                      })
+
+                                      await refreshCustomMessages()
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    title="Subir mensaje"
+                                  >
+                                    ↑
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={index === orderedMessages.length - 1}
+                                    onClick={async () => {
+                                      const next = orderedMessages[index + 1]
+                                      if (!next) return
+
+                                      await updateMessage(message.id, {
+                                        displayOrder: next.displayOrder ?? index + 2,
+                                      })
+
+                                      await updateMessage(next.id, {
+                                        displayOrder: message.displayOrder ?? index + 1,
+                                      })
+
+                                      await refreshCustomMessages()
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    title="Bajar mensaje"
+                                  >
+                                    ↓
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant={message.active ? "outline" : "secondary"}
+                                    onClick={async () => {
+                                      try {
+                                        await updateMessage(message.id, {
+                                          active: !message.active,
+                                        })
+                                        await refreshCustomMessages()
+                                        toast({
+                                          title: message.active ? "Mensaje pausado" : "Mensaje activado",
+                                          description: message.active
+                                            ? "El mensaje ya no se mostrará en el display."
+                                            : "El mensaje volverá a mostrarse en el display.",
+                                        })
+                                      } catch (error) {
+                                        toast({
+                                          title: "No se pudo cambiar el estado",
+                                          description:
+                                            error instanceof Error && error.message?.trim()
+                                              ? error.message
+                                              : "Intentá nuevamente.",
+                                          variant: "destructive",
+                                        })
+                                      }
+                                    }}
+                                    className="h-6 px-2 text-xs"
+                                    title={message.active ? "Pausar mensaje" : "Activar mensaje"}
+                                  >
+                                    {message.active ? "Pausar" : "Activar"}
+                                  </Button>
+
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingMessage(message)
+                                      setNewMessage({
+                                        title: message.title ?? "",
+                                        content: message.content ?? "",
+                                        type: message.type,
+                                        priority: message.priority ?? 1,
+                                        startDate: "",
+                                        endDate: "",
+                                        mediaUrl: message.mediaUrl ?? null,
+                                        mediaType: message.mediaType ?? null,
+                                        displayDurationSeconds: message.displayDurationSeconds ?? DEFAULT_PROMOTION_DURATION,
+                                        activeDays: message.activeDays ?? [],
+                                      })
+                                      setMessageMediaName(message.mediaType ? "Archivo actual" : null)
+                                      setMessageMediaError(null)
+                                    }}
+                                    className="h-6 w-6 p-0"
+                                    title="Editar mensaje"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -2769,7 +2950,34 @@ export default function AdminPage() {
                                   </Button>
                                 </div>
                               </div>
-                              <p className="text-sm text-muted-foreground mb-2">{message.content}</p>
+                              <div className="mb-3 flex gap-3 rounded-md border border-border/60 bg-background/60 p-2">
+                                {message.mediaUrl && message.mediaType?.startsWith("image") ? (
+                                  <img
+                                    src={message.mediaUrl}
+                                    alt={`Preview de ${message.title}`}
+                                    className="h-16 w-24 shrink-0 rounded object-cover border"
+                                  />
+                                ) : message.mediaUrl && message.mediaType?.startsWith("video") ? (
+                                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded border bg-muted text-[11px] font-medium text-muted-foreground">
+                                    VIDEO
+                                  </div>
+                                ) : (
+                                  <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded border bg-muted text-[11px] font-medium text-muted-foreground">
+                                    TEXTO
+                                  </div>
+                                )}
+
+                                <div className="min-w-0 flex-1">
+                                  <p className="line-clamp-2 text-sm text-muted-foreground">
+                                    {message.content || "Sin contenido de texto"}
+                                  </p>
+                                  {message.mediaUrl && (
+                                    <p className="mt-1 truncate text-[11px] text-muted-foreground">
+                                      {message.mediaUrl}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
                               <div className="mb-2 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                                 <Badge variant="outline" className="border-dashed">
                                   Prioridad {message.priority}

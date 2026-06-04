@@ -337,8 +337,8 @@ export class OperatorsService {
     if (typeof body.position === 'string') op.position = body.position;
     if (typeof body.active === 'boolean') op.active = body.active;
 
-    // ✅ Ajustado a mínimo 3 caracteres
-    if (body.password && body.password.length >= 3) {
+    // ✅ Permite contraseñas de al menos 1 carácter
+    if (body.password && body.password.length >= 1) {
       op.passwordHash = await bcrypt.hash(body.password, 10);
     }
 
@@ -460,7 +460,10 @@ export class OperatorsService {
 
     const opIds = operators.map((op) => op.id);
 
-    const [activeTickets, availabilityRows, openShifts] = await Promise.all([
+    const today = new Date();
+    const issuedForDate = today.toISOString().slice(0, 10);
+
+    const [activeTickets, lastCompletedRows] = await Promise.all([
       this.ticketRepo.find({
         where: {
           operatorId: In(opIds) as any,
@@ -469,11 +472,24 @@ export class OperatorsService {
         relations: { service: true, operator: true, client: true },
         order: { startedAt: 'ASC', calledAt: 'ASC', id: 'ASC' },
       }),
-      this.availabilityRepo.find({ where: { operatorId: In(opIds) as any } }),
+      this.ticketRepo
+        .createQueryBuilder('ticket')
+        .select('ticket.operatorId', 'operatorId')
+        .addSelect('MAX(ticket.completedAt)', 'lastAttentionEndedAt')
+        .where('ticket.operatorId IN (:...opIds)', { opIds })
+        .andWhere('ticket.status = :status', { status: Status.COMPLETED })
+        .andWhere('ticket.issuedForDate = :issuedForDate', { issuedForDate })
+        .andWhere('ticket.completedAt IS NOT NULL')
+        .groupBy('ticket.operatorId')
+        .getRawMany<{ operatorId: number | string; lastAttentionEndedAt: Date | string | null }>(),
+    ]);
+
+    const [availabilityRows, openShifts] = await Promise.all([
+      this.availabilityRepo.find({ where: { operatorId: In(opIds) as any } }).catch(() => []),
       this.shiftRepo.find({
         where: { operatorId: In(opIds) as any, endedAt: IsNull() },
         order: { startedAt: 'DESC' },
-      }),
+      }).catch(() => []),
     ]);
 
     const byOp = new Map<number, Ticket[]>();
@@ -498,6 +514,18 @@ export class OperatorsService {
       }
     }
 
+    const lastAttentionEndedAtByOperator = new Map<number, Date>();
+    for (const row of lastCompletedRows) {
+      const operatorId = Number(row.operatorId);
+      const endedAt = row.lastAttentionEndedAt ? new Date(row.lastAttentionEndedAt) : null;
+
+      if (Number.isInteger(operatorId) && endedAt && !Number.isNaN(endedAt.getTime())) {
+        lastAttentionEndedAtByOperator.set(operatorId, endedAt);
+      }
+    }
+
+    const nowMs = Date.now();
+
     const pickCurrent = (list?: Ticket[]): Ticket | null => {
       if (!list || list.length === 0) return null;
       const inProg = list.find((ticket) => ticket.status === 'IN_PROGRESS');
@@ -514,9 +542,18 @@ export class OperatorsService {
         availability,
       );
       const shift = shiftMap.get(op.id) ?? null;
+      const lastAttentionEndedAt = lastAttentionEndedAtByOperator.get(op.id) ?? null;
+      const hasAttendedToday = Boolean(lastAttentionEndedAt);
+      const idleSeconds =
+        derivedStatus === 'AVAILABLE' && lastAttentionEndedAt
+          ? Math.max(0, Math.floor((nowMs - lastAttentionEndedAt.getTime()) / 1000))
+          : null;
 
       return {
         ...this.toResponse(op),
+        hasAttendedToday,
+        lastAttentionEndedAt,
+        idleSeconds,
         currentTicket: current
           ? {
               id: current.id,

@@ -49,8 +49,13 @@ function normalizeMessage(raw: any): CustomMessage {
     title: String(raw.title ?? ""),
     content: String(raw.content ?? ""),
     type: (raw.type ?? "info") as CustomMessage["type"],
-    active: !!raw.active,
+    active: raw.active == null && raw.isActive == null ? true : Boolean(raw.active ?? raw.isActive),
     priority: normalizePriorityLevel(raw.priority) ?? 1,
+    displayOrder: Number.isFinite(Number(raw.displayOrder))
+      ? Number(raw.displayOrder)
+      : Number.isFinite(Number(raw.order))
+        ? Number(raw.order)
+        : Number(raw.id ?? 0),
     // en runtime trabajamos con Date, aunque el tipo original use string
     // @ts-expect-error: startDate/endDate pueden ser string en el tipo
     startDate: toDate(raw.startDate),
@@ -89,6 +94,8 @@ export function useCustomMessages(options: UseCustomMessagesOptions = {}) {
       type: data.type,
       active: data.active,
       priority: normalizePriorityLevel(data.priority) ?? 1,
+      // @ts-expect-error: puede no existir en payload viejo
+      displayOrder: data.displayOrder ?? 0,
       // @ts-expect-error: en runtime usamos Date|null
       startDate: data.startDate ?? null,
       // @ts-expect-error
@@ -114,6 +121,8 @@ export function useCustomMessages(options: UseCustomMessagesOptions = {}) {
       if (data.active !== undefined) payload.active = data.active
       if (data.priority !== undefined)
         payload.priority = normalizePriorityLevel(data.priority) ?? 1
+      // @ts-expect-error: puede no existir en payload viejo
+      if (data.displayOrder !== undefined) payload.displayOrder = data.displayOrder
       // @ts-expect-error
       if (data.startDate !== undefined) payload.startDate = data.startDate
       // @ts-expect-error

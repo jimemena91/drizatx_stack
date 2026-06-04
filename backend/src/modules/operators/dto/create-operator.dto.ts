@@ -31,11 +31,11 @@ export class CreateOperatorDto {
   @Matches(/^[a-zA-Z0-9._-]+$/, { message: 'username inválido (solo letras, números, ., _, -)' })
   username!: string;
 
-  @ApiProperty({ example: 'admin123', minLength: 6, maxLength: 100 })
+  @ApiProperty({ example: 'm', minLength: 1, maxLength: 100 })
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
-  @MinLength(6)
-  @Length(6, 100)
+  @MinLength(1)
+  @Length(1, 100)
   password!: string;
 
   @ApiProperty({ example: 'maria@empresa.com' })

@@ -19,6 +19,9 @@ export type DashboardOperator = {
   currentTicket?: { id: number; number: string; status: number | string } | null;
   services?: Array<{ id: number; name: string; prefix?: string | null } | null> | null;
   serviceIds?: number[] | null;
+  hasAttendedToday?: boolean;
+  lastAttentionEndedAt?: string | Date | null;
+  idleSeconds?: number | null;
 };
 
 type OperatorsCardProps = {
@@ -117,6 +120,14 @@ export function OperatorsCard({
                   <div className="min-w-0">
                     <p className="font-semibold text-card-foreground truncate">{operator.name}</p>
                     <p className="text-sm text-muted-foreground truncate">{operator.position ?? "—"}</p>
+
+                    {derived === "AVAILABLE" && !operator.currentTicket && (
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                        {operator.hasAttendedToday && typeof operator.idleSeconds === "number"
+                          ? `Sin atención hace ${formatDuration(operator.idleSeconds)}`
+                          : "Sin atenciones hoy"}
+                      </p>
+                    )}
                     <div className="mt-1 flex flex-wrap items-center gap-1">
                       {Array.isArray(operator.services) && operator.services.filter(Boolean).length > 0 ? (
                         operator.services

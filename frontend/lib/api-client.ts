@@ -335,12 +335,26 @@ export type CreateClientPayload = {
 
 export type UpdateClientPayload = Partial<CreateClientPayload>;
 
+export type BulkCreateClientsResponse = {
+  processed: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  clients: Client[];
+  errors: Array<{
+    row: number;
+    dni?: string;
+    message: string;
+  }>;
+};
+
 export type CreateCustomMessagePayload = {
   title: string;
   content: string;
   type?: CustomMessage['type'];
   active?: boolean | 0 | 1;
   priority?: number;
+  displayOrder?: number;
   startDate?: string | Date | null;
   endDate?: string | Date | null;
   mediaUrl?: string | null;
@@ -493,14 +507,15 @@ function warnIfApiMisconfigured(base: string, rawApiUrl: string | undefined) {
   if (connectivityCheckBase === base) return;
   connectivityCheckBase = base;
 
-  const target = `${base}${API_HEALTHCHECK_PATH}`;
+  const target = API_HEALTHCHECK_PATH;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), API_HEALTHCHECK_TIMEOUT_MS);
 
   fetch(target, {
+    credentials: "include",
     method: "GET",
-    mode: "cors",
-    credentials: "omit",
+    mode: "same-origin",
+    credentials: "same-origin",
     signal: controller.signal,
   })
     .then((res) => {
@@ -546,6 +561,7 @@ function extractList<T>(payload: any): T[] {
     payload?.result,
     payload?.results,
     payload?.operators,
+    payload?.clients,
     payload?.data?.data,
     payload?.data?.items,
     payload?.data?.result,
@@ -932,7 +948,7 @@ class ApiClient {
         ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
       },
       mode: "cors",
-      credentials: "omit",
+      credentials: "include",
       cache: "no-store",
       signal: signal ?? controller.signal,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -973,7 +989,7 @@ class ApiClient {
         ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
       },
       mode: "cors",
-      credentials: "omit",
+      credentials: "include",
       cache: "no-store",
       signal: signal ?? controller.signal,
     };
@@ -1057,7 +1073,9 @@ class ApiClient {
       const data = await this.request<Service[]>("GET", "/api/services", undefined, { expectedOk: [200, 201, 204] });
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return [];
+      }
       throw err;
     }
   }
@@ -1109,7 +1127,16 @@ class ApiClient {
       );
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1124,7 +1151,16 @@ class ApiClient {
       );
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1305,7 +1341,16 @@ class ApiClient {
       const data = await this.request<Operator[]>("GET", "/api/operators", undefined, { expectedOk: [200, 201, 204] });
       return extractList<Operator>(data);
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1320,7 +1365,16 @@ class ApiClient {
       );
       return extractList<OperatorWithStatus>(data);
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1330,7 +1384,16 @@ class ApiClient {
       const data = await this.request<Operator[]>("GET", "/api/operators/active", undefined, { expectedOk: [200, 201, 204] });
       return extractList<Operator>(data);
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1495,7 +1558,16 @@ class ApiClient {
       const list = extractList<Client>(data);
       return Array.isArray(list) ? list : [];
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1573,20 +1645,38 @@ class ApiClient {
       const list = extractList<Client>(data);
       return Array.isArray(list) ? list : [];
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return [];
+      }
       throw err;
     }
   }
 
-  async bulkCreateClients(payload: CreateClientPayload[]): Promise<Client[]> {
+  async bulkCreateClients(payload: CreateClientPayload[]): Promise<BulkCreateClientsResponse> {
     try {
-      const data = await this.request<any>("POST", "/api/clients/bulk", { clients: payload }, {
+      const data = await this.request<BulkCreateClientsResponse>("POST", "/api/clients/bulk", { clients: payload }, {
         expectedOk: [200, 201, 204],
       });
-      const list = extractList<Client>(data);
-      return Array.isArray(list) ? list : [];
+
+      return {
+        processed: data?.processed ?? payload.length,
+        created: data?.created ?? 0,
+        updated: data?.updated ?? 0,
+        skipped: data?.skipped ?? 0,
+        clients: Array.isArray(data?.clients) ? data.clients : extractList<Client>(data),
+        errors: Array.isArray(data?.errors) ? data.errors : [],
+      };
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       if (err instanceof ApiError && (err.status === 405 || err.status === 501)) {
         throw new ApiError(err.status, "Importación masiva no disponible en la API", err.details);
       }
@@ -1641,7 +1731,16 @@ class ApiClient {
       );
       return Array.isArray(data) ? data : [];
     } catch (err) {
-      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) return [];
+      if (err instanceof ApiError && (err.status === 204 || err.status === 404)) {
+        return {
+          processed: 0,
+          created: 0,
+          updated: 0,
+          skipped: 0,
+          clients: [],
+          errors: [],
+        };
+      }
       throw err;
     }
   }
@@ -1925,7 +2024,7 @@ class ApiClient {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
         mode: "cors",
-        credentials: "omit",
+        credentials: "include",
         signal: controller.signal,
         cache: "no-store",
       });

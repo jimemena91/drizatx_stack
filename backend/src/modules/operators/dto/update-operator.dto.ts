@@ -33,8 +33,8 @@ export class UpdateOperatorDto {
   @IsOptional()
   @Transform(({ value }) => typeof value === 'string' ? value.trim() : value)
   @IsString()
-  @MinLength(6)
-  @Length(6, 100)
+  @MinLength(1)
+  @Length(1, 100)
   password?: string;
 
   @ApiPropertyOptional({ example: 'maria@empresa.com' })
