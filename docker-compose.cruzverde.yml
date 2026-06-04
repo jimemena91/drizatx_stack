@@ -25,6 +25,7 @@ services:
       - db
     environment:
       NODE_ENV: production
+      JWT_SECRET: driza-super-secret-2025
       PORT: 3001
       DATABASE_HOST: db
       DATABASE_PORT: 3306
