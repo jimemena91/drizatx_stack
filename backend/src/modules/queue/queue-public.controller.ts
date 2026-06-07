@@ -75,6 +75,7 @@ function toIso(value?: Date | string | null): string | null {
 type QueuePublicService = {
   id: number;
   name: string;
+  icon: string | null;
   prefix: string;
   active: boolean;
   priority: number;
@@ -103,6 +104,10 @@ function mapServiceEntity(service: ServiceEntity): QueuePublicService {
   return {
     id: Number(service.id),
     name: String(service.name ?? ''),
+    icon:
+      (service as any).icon === null || (service as any).icon === undefined
+        ? null
+        : String((service as any).icon),
     prefix: String(service.prefix ?? ''),
     active: Boolean(service.active),
     priority: Number(service.priority ?? 0),
