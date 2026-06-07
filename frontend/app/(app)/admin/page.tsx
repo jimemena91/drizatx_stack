@@ -379,6 +379,18 @@ useEffect(() => {
 
   const SelectedServiceIcon = getServiceIcon(serviceForm.icon !== "none" ? serviceForm.icon : null)
   const DefaultServiceIcon = getServiceIcon(null)
+  const serviceIconsByCategory = useMemo(() => {
+    return SERVICE_ICON_OPTIONS.reduce((acc, option) => {
+      if (!acc[option.category]) {
+        acc[option.category] = []
+      }
+
+      acc[option.category].push(option)
+      return acc
+    }, {} as Record<string, typeof SERVICE_ICON_OPTIONS>)
+  }, [])
+
+
 
   const [operatorForm, setOperatorForm] = useState({
     name: "",
@@ -1945,14 +1957,24 @@ useEffect(() => {
                                       <span>Sin icono</span>
                                     </span>
                                   </SelectItem>
-                                  {SERVICE_ICON_OPTIONS.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                      <span className="flex items-center gap-2">
-                                        <option.icon className="h-4 w-4" />
-                                        <span>{option.label}</span>
-                                      </span>
-                                    </SelectItem>
-                                  ))}
+                                  {Object.entries(serviceIconsByCategory).map(
+                                    ([category, options]) => (
+                                      <div key={category}>
+                                        <div className="px-2 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                          {category}
+                                        </div>
+
+                                        {options.map((option) => (
+                                          <SelectItem key={option.value} value={option.value}>
+                                            <span className="flex items-center gap-2">
+                                              <option.icon className="h-4 w-4" />
+                                              <span>{option.label}</span>
+                                            </span>
+                                          </SelectItem>
+                                        ))}
+                                      </div>
+                                    )
+                                  )}
                                 </SelectContent>
                               </Select>
                             </div>

@@ -466,6 +466,32 @@ export default function TerminalPage() {
     }
   }
 
+  const gridColumnsClass = useMemo(() => {
+    const count = services.length
+
+    if (count === 1) {
+      return "grid-cols-1 max-w-xl"
+    }
+
+    if (count === 2) {
+      return "grid-cols-2 max-w-4xl"
+    }
+
+    if (count === 3) {
+      return "grid-cols-3 max-w-6xl"
+    }
+
+    if (count === 4) {
+      return "grid-cols-2 max-w-5xl"
+    }
+
+    if (count <= 6) {
+      return "grid-cols-3 max-w-6xl"
+    }
+
+    return "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-7xl"
+  }, [services.length])
+
   const DebugOverlay = () =>
     !debug ? null : (
       <div
@@ -511,7 +537,7 @@ export default function TerminalPage() {
       )}
 
       {!selectedService ? (
-        <div className="relative">
+        <div className="relative flex min-h-[65vh] items-center justify-center">
           {creating && (
             <div
               className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-sm"
@@ -524,10 +550,12 @@ export default function TerminalPage() {
           )}
 
           <div
-            className={`grid gap-6 transition-opacity duration-200 ${
-              creating ? "pointer-events-none opacity-40" : ""
-            }`}
-            style={{ gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}
+            className={cn(
+              "w-full",
+              gridColumnsClass,
+              "grid gap-6 transition-opacity duration-200",
+              creating && "pointer-events-none opacity-40"
+            )}
           >
           {services.map((service) => {
             const ServiceIcon = getServiceIcon(service.icon)
@@ -537,20 +565,27 @@ export default function TerminalPage() {
             return (
               <Card
                 key={service.id}
-                className={`h-full cursor-pointer hover:shadow-xl transition-all duration-300 transform hover:scale-105 ${
-                  isSelected ? "ring-2 ring-blue-500 shadow-lg" : ""
-                }`}
+                className={cn(
+                  "cursor-pointer",
+                  "min-h-[220px]",
+                  "h-full",
+                  "hover:shadow-xl",
+                  "transition-all",
+                  "duration-300",
+                  "hover:scale-105",
+                  isSelected && "ring-2 ring-blue-500 shadow-lg"
+                )}
                 onClick={() => handleServiceSelect(service.id)}
               >
-                <CardContent className="flex h-full flex-col items-center gap-4 p-6 text-center sm:p-8">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
-                    <ServiceIcon className="h-8 w-8 text-white" />
+                <CardContent className="flex h-full flex-col items-center justify-center gap-8 p-8 text-center">
+                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
+                    <ServiceIcon className="h-12 w-12 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold">{service.name}</h3>
+                  <h3 className="text-3xl lg:text-4xl font-bold">{service.name}</h3>
                   {priorityService && <PriorityAudienceIcons className="mt-1" />}
-                  <div className="mt-auto">
-                    {isSelected && <div className="mt-2 text-xs font-medium text-blue-600">Seleccionado</div>}
-                  </div>
+                  {isSelected && (
+                    <div className="mt-2 text-xs font-medium text-blue-600">Seleccionado</div>
+                  )}
                 </CardContent>
               </Card>
             )
