@@ -164,6 +164,16 @@ export default function TerminalPage() {
     return fallbackTitle || "DrizaTx"
   }, [getSetting])
 
+  const brandPrimaryColor = useMemo(
+    () => getSetting("brandPrimaryColor", "#0f172a").trim() || "#0f172a",
+    [getSetting],
+  )
+
+  const brandSecondaryColor = useMemo(
+    () => getSetting("brandSecondaryColor", "#22d3ee").trim() || "#22d3ee",
+    [getSetting],
+  )
+
   const ticketCreatedAt = useMemo(() => {
     if (!generatedTicket) return null
     const value = generatedTicket.createdAt
@@ -521,10 +531,16 @@ export default function TerminalPage() {
     )
 
   return (
-    <div className="flex-1 space-y-4">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Terminal de Autoservicio</h1>
-        <p className="text-gray-600 text-lg">Seleccione el servicio para obtener su turno.</p>
+    <div
+      className="flex-1 space-y-4 rounded-3xl p-6 lg:p-10"
+      style={{
+        background:
+          "radial-gradient(circle at top left, rgba(110, 231, 183, 0.24), transparent 34%), linear-gradient(135deg, #022C22 0%, #064E3B 48%, #065F46 100%)",
+      }}
+    >
+      <div className="shrink-0 text-center text-white">
+        <h1 className="text-3xl font-bold mb-4">{brandDisplayName}</h1>
+        <p className="text-emerald-50/90 text-lg">Seleccione el servicio para obtener su turno.</p>
       </div>
 
       {isPrinting && (
@@ -569,22 +585,31 @@ export default function TerminalPage() {
                   "cursor-pointer",
                   "min-h-[220px]",
                   "h-full",
-                  "hover:shadow-xl",
+                  "border-white/70",
+                  "bg-white text-slate-900",
+                  "shadow-[0_18px_45px_rgba(2,44,34,0.18)]",
+                  "hover:shadow-[0_24px_60px_rgba(2,44,34,0.28)]",
                   "transition-all",
                   "duration-300",
                   "hover:scale-105",
-                  isSelected && "ring-2 ring-blue-500 shadow-lg"
+                  isSelected && "ring-2 shadow-lg"
                 )}
                 onClick={() => handleServiceSelect(service.id)}
               >
                 <CardContent className="flex h-full flex-col items-center justify-center gap-8 p-8 text-center">
-                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
+                  <div
+                    className="mx-auto flex h-24 w-24 items-center justify-center rounded-full"
+                    style={{
+                      background: "linear-gradient(135deg, #A7F3D0 0%, #34D399 45%, #059669 100%)",
+                      boxShadow: "0 14px 34px rgba(5, 150, 105, 0.28)",
+                    }}
+                  >
                     <ServiceIcon className="h-12 w-12 text-white" />
                   </div>
                   <h3 className="text-3xl lg:text-4xl font-bold">{service.name}</h3>
                   {priorityService && <PriorityAudienceIcons className="mt-1" />}
                   {isSelected && (
-                    <div className="mt-2 text-xs font-medium text-blue-600">Seleccionado</div>
+                    <div className="mt-2 text-xs font-medium" style={{ color: brandPrimaryColor }}>Seleccionado</div>
                   )}
                 </CardContent>
               </Card>
@@ -594,14 +619,14 @@ export default function TerminalPage() {
         </div>
       ) : showTicket ? (
         <div className="w-full">
-          <Card className="max-w-md mx-auto">
+          <Card className="max-w-md mx-auto bg-white shadow-[0_18px_45px_rgba(2,44,34,0.22)]">
             <CardHeader className="text-center" data-print-hidden="true">
               <CardTitle className="text-2xl">¡Turno Generado!</CardTitle>
             </CardHeader>
             <CardContent className="text-center space-y-6">
               <div data-print-hidden="true" className="space-y-6">
                 <div className="bg-gray-100 p-8 rounded-lg">
-                  <div className="text-6xl font-bold text-blue-600 mb-2">{generatedTicket?.number}</div>
+                  <div className="text-6xl font-bold mb-2" style={{ color: brandPrimaryColor }}>{generatedTicket?.number}</div>
                   <p className="text-gray-600">Su número de turno</p>
                   {selectedClientId && (
                     <div className="mt-3 inline-flex items-center gap-2 text-sm text-gray-700">
@@ -613,7 +638,7 @@ export default function TerminalPage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-center gap-2">
-                    <GeneratedServiceIcon className="h-5 w-5 text-blue-600" />
+                    <GeneratedServiceIcon className="h-5 w-5" style={{ color: brandPrimaryColor }} />
                     <p className="font-medium">Servicio: {generatedService?.name}</p>
                   </div>
                   {isPriorityService(generatedService) && <PriorityAudienceIcons size="sm" className="mt-1" />}
@@ -665,7 +690,7 @@ export default function TerminalPage() {
           </Card>
         </div>
       ) : (
-        <Card className="max-w-md mx-auto">
+        <Card className="max-w-md mx-auto bg-white shadow-[0_18px_45px_rgba(2,44,34,0.22)]">
           <CardHeader>
             <CardTitle className="text-center">Confirmar Servicio</CardTitle>
           </CardHeader>
