@@ -534,8 +534,25 @@ export default function TerminalPage() {
     <div
       className="flex-1 space-y-4 rounded-3xl p-6 lg:p-10"
       style={{
-        background:
-          "radial-gradient(circle at top left, rgba(110, 231, 183, 0.24), transparent 34%), linear-gradient(135deg, #022C22 0%, #064E3B 48%, #065F46 100%)",
+        background: `
+          radial-gradient(
+            circle at top left,
+            rgba(255,255,255,0.08) 0%,
+            transparent 30%
+          ),
+          radial-gradient(
+            circle at bottom right,
+            rgba(110,231,183,0.10) 0%,
+            transparent 35%
+          ),
+          linear-gradient(
+            135deg,
+            #021B14 0%,
+            #043328 25%,
+            #064E3B 60%,
+            #0A6B52 100%
+          )
+        `,
       }}
     >
       <div className="shrink-0 text-center text-white">
