@@ -146,7 +146,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       void refreshQueuesAndOperators();
-    }, 30000);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 

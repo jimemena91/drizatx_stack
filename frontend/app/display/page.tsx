@@ -419,7 +419,7 @@ export default function DisplayPage() {
     }
 
     updateQueueStatus()
-    const dataInterval = setInterval(updateQueueStatus, 4200)
+    const dataInterval = setInterval(updateQueueStatus, 1000)
 
     let announcementTimer: ReturnType<typeof setInterval> | null = null
     if (signageShowNews && currentAnnouncements.length > 0) {
