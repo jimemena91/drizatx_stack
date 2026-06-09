@@ -261,7 +261,7 @@ export default function QueuesIndexPage() {
       } finally {
         refreshing.current = false;
       }
-    }, 5000);
+    }, 3000);
     return () => clearInterval(id);
   }, [refetch]);
 

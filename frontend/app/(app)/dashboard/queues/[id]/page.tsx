@@ -202,7 +202,7 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       } finally {
         refreshing.current = false;
       }
-    }, 5000);
+    }, 3000);
     return () => clearInterval(id);
   }, [refetchQueue, serviceId, statsRange]);
 
