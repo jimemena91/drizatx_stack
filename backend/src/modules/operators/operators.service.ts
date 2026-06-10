@@ -25,6 +25,7 @@ import {
   OperatorAvailability,
   OperatorAvailabilityState,
 } from '../../entities/operator-availability.entity';
+import { QueueEventsService } from '../queue-events/queue-events.service';
 
 type MutationActor = {
   id?: number | string | null;
@@ -144,6 +145,7 @@ export class OperatorsService {
     private readonly rolesRepo: Repository<RoleEntity>,
     @InjectRepository(OperatorRole)
     private readonly operatorRoleRepo: Repository<OperatorRole>,
+    private readonly queueEvents: QueueEventsService,
   ) {}
 
   private normalizeAvailabilityInput(value: unknown): OperatorAvailabilityState | null {
@@ -1239,6 +1241,7 @@ export class OperatorsService {
 
       const ticket = await runner.manager.findOneByOrFail(Ticket, { id: ticketId as any });
       await runner.commitTransaction();
+      this.queueEvents.emitTicketCalled({ ticketId, operatorId, serviceId: Number((ticket as any).serviceId ?? normalizedServiceId) });
       return ticket;
     } catch (e) {
       await runner.rollbackTransaction();
@@ -1316,6 +1319,7 @@ export class OperatorsService {
 
       const ticket = await runner.manager.findOneByOrFail(Ticket, { id: ticketId as any });
       await runner.commitTransaction();
+      this.queueEvents.emitTicketCalled({ ticketId, operatorId, serviceId: Number((ticket as any).serviceId ?? rows[0]?.service_id ?? null) });
       return ticket;
     } catch (e) {
       await runner.rollbackTransaction();

@@ -17,6 +17,7 @@ import { OperatorService } from '../../entities/operator-service.entity';
 import { ServicesService } from '../../modules/services/services.service';
 import { ClientsService } from '../../modules/clients/clients.service';
 import { SystemSettingsService } from '../../modules/system-settings/system-settings.service';
+import { QueueEventsService } from '../queue-events/queue-events.service';
 import { AuditLog, type AuditLogActorSnapshot } from '../../entities/audit-log.entity';
 import { Status } from '../../common/enums/status.enum'; // ⬅️ enum fuente de verdad (incluye ABSENT)
 
@@ -68,6 +69,7 @@ export class TicketsService {
     private readonly systemSettings: SystemSettingsService,
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
+    private readonly queueEvents: QueueEventsService,
   ) {}
 
   private readonly logger = new Logger(TicketsService.name);
@@ -548,7 +550,9 @@ export class TicketsService {
     t.completedAt = null;
     t.attentionDuration = null;
 
-    return this.ticketRepo.save(t);
+    const saved = await this.ticketRepo.save(t);
+    this.queueEvents.emitTicketCalled({ ticketId: saved.id, operatorId, serviceId: saved.serviceId });
+    return saved;
   }
 
   /** Llamar SIGUIENTE de UN servicio específico (modo viejo por servicio) */
@@ -617,6 +621,7 @@ export class TicketsService {
       });
 
       await qr.commitTransaction();
+      this.queueEvents.emitTicketCalled({ ticketId, operatorId, serviceId });
       return full!;
     } catch (e) {
       await qr.rollbackTransaction();
@@ -667,7 +672,9 @@ export class TicketsService {
     next.completedAt = null;
     next.attentionDuration = null;
 
-    return this.ticketRepo.save(next);
+    const saved = await this.ticketRepo.save(next);
+    this.queueEvents.emitTicketCalled({ ticketId: saved.id, operatorId, serviceId: saved.serviceId });
+    return saved;
   }
 
   /** Inicia la atención: CALLED -> IN_PROGRESS */
