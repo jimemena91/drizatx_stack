@@ -1906,6 +1906,10 @@ class ApiClient {
     return this.request<DashboardResponse>("GET", path);
   }
 
+  getQueuePublicEventsUrl(): string {
+    return `${this.normalizeBase()}/api/queue/public/events`;
+  }
+
   async getPublicServices(): Promise<PublicServiceResponse[]> {
     const data = await this.request<PublicServiceResponse[]>("GET", "/api/queue/public/services");
     return Array.isArray(data) ? data : [];

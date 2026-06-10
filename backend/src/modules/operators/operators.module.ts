@@ -15,9 +15,11 @@ import { OperatorsController } from './operators.controller';
 
 // ⬇️ importá el guard localmente
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { QueueEventsModule } from '../queue-events/queue-events.module';
 
 @Module({
   imports: [
+    QueueEventsModule,
     TypeOrmModule.forFeature([
       Operator,
       Ticket,

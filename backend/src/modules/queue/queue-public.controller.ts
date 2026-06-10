@@ -1,9 +1,11 @@
-import { BadRequestException, Body, Controller, Get, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, MessageEvent, Post, Sse } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { QueueService, QueueDashboardResponse } from './queue.service';
 import { Ticket } from '../../entities/ticket.entity';
 import { Operator } from '../../entities/operator.entity';
 import { Service as ServiceEntity } from '../../entities/service.entity';
 import { Client } from '../../entities/client.entity';
+import { QueueEventsService } from '../queue-events/queue-events.service';
 
 export type QueuePublicDashboardTicket = {
   id: number;
@@ -180,7 +182,15 @@ function mapTickets(tickets: Ticket[] | null | undefined): QueuePublicDashboardT
 
 @Controller('queue/public')
 export class QueuePublicController {
-  constructor(private readonly queueService: QueueService) {}
+  constructor(
+    private readonly queueService: QueueService,
+    private readonly queueEvents: QueueEventsService,
+  ) {}
+
+  @Sse('events')
+  streamEvents(): Observable<MessageEvent> {
+    return this.queueEvents.events();
+  }
 
   @Get('dashboard')
   async getPublicDashboard(): Promise<QueuePublicDashboardResponse> {

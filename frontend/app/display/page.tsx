@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useQueueStatus } from "@/hooks/use-queue-status"
 import { useQueue } from "@/contexts/queue-context"
 import { audioService } from "@/lib/audio-service"
+import { apiClient } from "@/lib/api-client"
 import { AudioControls } from "@/components/audio-controls"
 import { AnimatedTicketDisplay } from "@/components/animated-ticket-display"
 import { AudioVisualizer } from "@/components/audio-visualizer"
@@ -421,6 +422,22 @@ export default function DisplayPage() {
     updateQueueStatus()
     const dataInterval = setInterval(updateQueueStatus, 1000)
 
+    let displayEventsSource: EventSource | null = null
+    if (
+      process.env.NEXT_PUBLIC_API_MODE === "true" &&
+      typeof window !== "undefined" &&
+      typeof EventSource !== "undefined"
+    ) {
+      displayEventsSource = new EventSource(apiClient.getQueuePublicEventsUrl())
+      const refreshFromQueueEvent = () => updateQueueStatus()
+
+      displayEventsSource.addEventListener("ticket.called", refreshFromQueueEvent)
+      displayEventsSource.addEventListener("queue.updated", refreshFromQueueEvent)
+      displayEventsSource.onerror = (error) => {
+        console.warn("[DisplayPage] SSE connection warning:", error)
+      }
+    }
+
     let announcementTimer: ReturnType<typeof setInterval> | null = null
     if (signageShowNews && currentAnnouncements.length > 0) {
       announcementTimer = setInterval(() => {
@@ -435,6 +452,7 @@ export default function DisplayPage() {
       isMounted = false
       clearInterval(dataInterval)
       if (announcementTimer) clearInterval(announcementTimer)
+      if (displayEventsSource) displayEventsSource.close()
       if (audioResetTimeout) clearTimeout(audioResetTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
