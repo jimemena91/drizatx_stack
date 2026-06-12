@@ -15,6 +15,7 @@ import { AudioVisualizer } from "@/components/audio-visualizer"
 import { useCustomMessages } from "@/hooks/use-custom-messages"
 import { getBooleanSetting, getSettingValue } from "@/lib/system-settings"
 import { useSystemSettings } from "@/hooks/use-system-settings"
+import { useDisplaySocket } from "@/hooks/use-display-socket"
 import type { TicketWithRelations } from "@/lib/types"
 import { normalizePriorityLevel } from "@/lib/priority"
 
@@ -296,6 +297,7 @@ export default function DisplayPage() {
   const { getActiveMessages = () => [], getMessagesByType = (_type?: string) => [] } = useCustomMessages({ publicMode: true })
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
+  const { liveTicket } = useDisplaySocket({ clientKey: "staging", screen: "display" })
   const [lastAnnouncedTicket, setLastAnnouncedTicket] = useState<string | null>(null)
   const [showAudioControls, setShowAudioControls] = useState(false)
   const [isNewTicket, setIsNewTicket] = useState(false)
@@ -529,7 +531,7 @@ export default function DisplayPage() {
 
   /** datos visibles */
   const calledTickets = queueStatus.calledTickets
-  const activeCalledTicket = calledTickets[0] ?? null
+  const activeCalledTicket = liveTicket ?? calledTickets[0] ?? null
 
   // 🔹 NUEVA LÓGICA: tickets “atendidos” = IN_PROGRESS + COMPLETED de hoy (por startOfService)
   const attendedTickets = useMemo(() => {

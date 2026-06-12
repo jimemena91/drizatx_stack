@@ -255,4 +255,5 @@ export class QueuePublicController {
     }
     return mapped;
   }
+
 }

@@ -16,6 +16,7 @@ import { AclModule } from "./modules/acl/acl.module";
 import { BackupsModule } from "./modules/backups/backups.module";
 import { AuditLogsModule } from "./modules/audit/audit-logs.module";
 import { DisplayModule } from "./modules/display/display.module";
+import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { PrintModule } from "./modules/print/print.module";
 
@@ -44,6 +45,7 @@ import { PrintModule } from "./modules/print/print.module";
     BackupsModule,
     AuditLogsModule,
     DisplayModule,
+    RealtimeModule,
     TerminalModule,
     PrintModule,
   ],
