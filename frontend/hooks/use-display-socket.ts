@@ -82,8 +82,9 @@ export function useDisplaySocket(options?: {
     setStatus("connecting")
 
     const socket = io(getDisplaySocketUrl(), {
-      transports: ["websocket"],
+      transports: ["polling"],
       query: { clientKey, screen },
+      upgrade: false,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
