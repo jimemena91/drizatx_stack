@@ -8,7 +8,6 @@ import Link from "next/link"
 import { useQueueStatus } from "@/hooks/use-queue-status"
 import { useQueue } from "@/contexts/queue-context"
 import { audioService } from "@/lib/audio-service"
-import { apiClient } from "@/lib/api-client"
 import { AudioControls } from "@/components/audio-controls"
 import { AnimatedTicketDisplay } from "@/components/animated-ticket-display"
 import { AudioVisualizer } from "@/components/audio-visualizer"
@@ -294,10 +293,10 @@ export default function DisplayPage() {
   }, [displayTimeoutSetting])
   const rotationMs = rotationSeconds * 1000
 
-  const { getActiveMessages = () => [], getMessagesByType = (_type?: string) => [] } = useCustomMessages({ publicMode: true })
+  const { getActiveMessages = () => [] } = useCustomMessages({ publicMode: true })
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
-  const { liveTicket } = useDisplaySocket({ clientKey: "staging", screen: "display" })
+  const { liveTicket, lastQueueUpdatedAt } = useDisplaySocket({ clientKey: "staging", screen: "display" })
   const [lastAnnouncedTicket, setLastAnnouncedTicket] = useState<string | null>(null)
   const [showAudioControls, setShowAudioControls] = useState(false)
   const [isNewTicket, setIsNewTicket] = useState(false)
@@ -311,8 +310,19 @@ export default function DisplayPage() {
   )
   const [weatherError, setWeatherError] = useState<string | null>(null)
 
-  const rawPromotions = useMemo(() => getMessagesByType("promotion"), [getMessagesByType])
-  const promotions = useMemo(() => (signageShowNews ? rawPromotions : []), [rawPromotions, signageShowNews])
+  const promotions = useMemo(
+    () =>
+      signageShowNews
+        ? (customMessages || [])
+            .filter((msg: any) => msg.type === "promotion")
+            .sort((a: any, b: any) => {
+              const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+              const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+              return orderA - orderB
+            })
+        : [],
+    [customMessages, signageShowNews],
+  )
   const promotionSignature = useMemo(
     () =>
       promotions
@@ -337,6 +347,22 @@ export default function DisplayPage() {
   /** efectos */
   useEffect(() => {
     setAudioConfig(audioService.getConfig())
+  }, [])
+
+  /**
+   * Watchdog para Smart TV / navegadores kiosk:
+   * algunos WebViews congelan timers o dejan el estado React viejo.
+   * Si la página lleva mucho tiempo viva, forzamos reload controlado.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const reloadEveryMs = 5 * 60 * 1000
+    const timer = window.setTimeout(() => {
+      window.location.reload()
+    }, reloadEveryMs)
+
+    return () => window.clearTimeout(timer)
   }, [])
 
   useEffect(() => {
@@ -422,23 +448,7 @@ export default function DisplayPage() {
     }
 
     updateQueueStatus()
-    const dataInterval = setInterval(updateQueueStatus, 1000)
-
-    let displayEventsSource: EventSource | null = null
-    if (
-      process.env.NEXT_PUBLIC_API_MODE === "true" &&
-      typeof window !== "undefined" &&
-      typeof EventSource !== "undefined"
-    ) {
-      displayEventsSource = new EventSource(apiClient.getQueuePublicEventsUrl())
-      const refreshFromQueueEvent = () => updateQueueStatus()
-
-      displayEventsSource.addEventListener("ticket.called", refreshFromQueueEvent)
-      displayEventsSource.addEventListener("queue.updated", refreshFromQueueEvent)
-      displayEventsSource.onerror = (error) => {
-        console.warn("[DisplayPage] SSE connection warning:", error)
-      }
-    }
+    const dataInterval = setInterval(updateQueueStatus, 2000)
 
     let announcementTimer: ReturnType<typeof setInterval> | null = null
     if (signageShowNews && currentAnnouncements.length > 0) {
@@ -454,11 +464,10 @@ export default function DisplayPage() {
       isMounted = false
       clearInterval(dataInterval)
       if (announcementTimer) clearInterval(announcementTimer)
-      if (displayEventsSource) displayEventsSource.close()
       if (audioResetTimeout) clearTimeout(audioResetTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastAnnouncedTicket, rotationMs, signageShowNews, currentAnnouncements.length])
+  }, [lastAnnouncedTicket, rotationMs, signageShowNews, currentAnnouncements.length, lastQueueUpdatedAt])
 
   /** handlers */
   const handleScreenClick = async () => {
@@ -610,7 +619,8 @@ export default function DisplayPage() {
     const isSafeImage =
       mediaUrl.startsWith("data:image/") ||
       mediaUrl.startsWith("https://") ||
-      mediaUrl.startsWith("http://")
+      mediaUrl.startsWith("http://") ||
+      mediaUrl.startsWith("/uploads/display-messages/")
 
     const isVideo =
       mediaType.startsWith("video/") ||

@@ -62,11 +62,13 @@ export function useDisplaySocket(options?: {
   clientKey?: string
   screen?: string
 }) {
-  const enabled = options?.enabled ?? process.env.NEXT_PUBLIC_API_MODE === "true"
+  const apiMode = String(process.env.NEXT_PUBLIC_API_MODE ?? "").toLowerCase()
+  const enabled = options?.enabled ?? (apiMode === "true" || apiMode === "1")
   const clientKey = options?.clientKey ?? "staging"
   const screen = options?.screen ?? "display"
 
   const socketRef = useRef<Socket | null>(null)
+  const liveTicketClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastEventIdsRef = useRef<Set<string>>(new Set())
 
   const [status, setStatus] = useState<DisplayConnectionStatus>("idle")
@@ -116,15 +118,37 @@ export function useDisplaySocket(options?: {
 
     socket.on("ticket.called", (event: TicketCalledEvent) => {
       if (!rememberEvent(event.eventId)) return
+
+      if (liveTicketClearTimerRef.current) {
+        clearTimeout(liveTicketClearTimerRef.current)
+      }
+
       setLiveTicket(mapTicketCalledToTicket(event))
+
+      liveTicketClearTimerRef.current = setTimeout(() => {
+        setLiveTicket(null)
+        liveTicketClearTimerRef.current = null
+      }, 6000)
     })
 
     socket.on("queue.updated", (event: QueueUpdatedEvent) => {
       if (!rememberEvent(event.eventId)) return
+
+      if (liveTicketClearTimerRef.current) {
+        clearTimeout(liveTicketClearTimerRef.current)
+        liveTicketClearTimerRef.current = null
+      }
+
+      setLiveTicket(null)
       setLastQueueUpdatedAt(event.emittedAt)
     })
 
     return () => {
+      if (liveTicketClearTimerRef.current) {
+        clearTimeout(liveTicketClearTimerRef.current)
+        liveTicketClearTimerRef.current = null
+      }
+
       socket.removeAllListeners()
       socket.disconnect()
       socketRef.current = null
