@@ -366,6 +366,17 @@ export default function DisplayPage() {
   }, [])
 
   useEffect(() => {
+    const messages = getActiveMessages()
+    setCustomMessages(
+      messages.sort((a: any, b: any) => {
+        const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+        const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+        return orderA - orderB
+      }),
+    )
+  }, [getActiveMessages])
+
+  useEffect(() => {
     setCurrentPromotionIndex(0)
   }, [promotionSignature, signageShowNews])
 
@@ -402,13 +413,16 @@ export default function DisplayPage() {
     const handleStatusUpdate = (status: typeof queueStatus) => {
       if (!isMounted) return
 
-      setCustomMessages(
-        getActiveMessages().sort((a: any, b: any) => {
-          const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
-          const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
-          return orderA - orderB
-        }),
-      )
+      const activeMessages = getActiveMessages()
+      if (activeMessages.length > 0) {
+        setCustomMessages(
+          activeMessages.sort((a: any, b: any) => {
+            const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+            const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+            return orderA - orderB
+          }),
+        )
+      }
 
       const audioTicket = status.calledTickets?.[0] ?? null
       const audioKey = audioTicket
