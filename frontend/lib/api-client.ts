@@ -1930,6 +1930,35 @@ class ApiClient {
   /* ======================
    * Custom Messages
    * ====================== */
+  async uploadCustomMessageMedia(file: File): Promise<{ mediaUrl: string; mediaType: string }> {
+    const base = this.normalizeBase();
+    const url = `${base}${this.ensureApiPath("/api/custom-messages/media")}`;
+    const effectiveToken = this.authToken;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        ...(effectiveToken ? { Authorization: `Bearer ${effectiveToken}` } : {}),
+      },
+      mode: "cors",
+      credentials: "include",
+      cache: "no-store",
+      body: formData,
+    });
+
+    const data = await this.parseJsonSafe(res);
+
+    if (!res.ok) {
+      const msg = (data && (data.message || data.error)) || `HTTP ${res.status}`;
+      throw new ApiError(res.status, typeof msg === "string" ? msg : JSON.stringify(msg), data);
+    }
+
+    return data as { mediaUrl: string; mediaType: string };
+  }
+
   async getCustomMessages(): Promise<CustomMessage[]> {
     try {
       const data = await this.request<CustomMessage[]>(
