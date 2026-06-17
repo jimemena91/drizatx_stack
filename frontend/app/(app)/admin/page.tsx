@@ -469,7 +469,7 @@ useEffect(() => {
   const [operatorBeingDeletedId, setOperatorBeingDeletedId] = useState<number | null>(null)
 
   const DEFAULT_PROMOTION_DURATION = 30
-  const MAX_PROMOTION_MEDIA_MB = 20
+  const MAX_PROMOTION_MEDIA_MB = 5
   const MAX_PROMOTION_MEDIA_BYTES = MAX_PROMOTION_MEDIA_MB * 1024 * 1024
   const [customMessages, setCustomMessages] = useState<CustomMessage[]>([])
   const [newMessage, setNewMessage] = useState({
@@ -1679,16 +1679,25 @@ useEffect(() => {
       }
 
       try {
-        const dataUrl = await readFileAsDataUrl(file)
-        setNewMessage((prev) => ({ ...prev, mediaUrl: dataUrl, mediaType: file.type }))
+        const uploaded = await apiClient.uploadCustomMessageMedia(file)
+        setNewMessage((prev) => ({ ...prev, mediaUrl: uploaded.mediaUrl, mediaType: uploaded.mediaType }))
         setMessageMediaName(file.name)
       } catch (error: any) {
-        setMessageMediaError(error?.message ?? "No se pudo procesar el archivo")
+        const details = error?.details
+        const backendMessage = Array.isArray(details?.message)
+          ? details.message.join(". ")
+          : details?.message || details?.error || error?.message
+
+        setMessageMediaError(
+          backendMessage
+            ? `No se pudo subir el archivo: ${backendMessage}`
+            : "No se pudo subir el archivo. Verificá formato, tamaño y sesión.",
+        )
       } finally {
         event.target.value = ""
       }
     },
-    [readFileAsDataUrl, validateVideoDuration],
+    [validateVideoDuration],
   )
 
   useEffect(() => {
