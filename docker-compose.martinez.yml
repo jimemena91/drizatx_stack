@@ -26,10 +26,13 @@ services:
 
       # CORS: el front (3210) y el backend (3201) por si el browser lo necesita
       FRONTEND_URLS: "https://martinez.app.drizatx.com"
+      DISPLAY_MEDIA_DIR: "/app/uploads/display-messages"
       # === IMPRESION CENTRALIZADA (VIA TUNEL SSH) ===
       PRINT_WEBHOOK_URL: "http://host.docker.internal:17080/print"
       PRINT_WEBHOOK_TOKEN: "mi_token_super_secreto_123"
       # === IMPRESION CENTRALIZADA (VIA TUNEL SSH) ===
+    volumes:
+      - /srv/drizatx/martinez/uploads/display-messages:/app/uploads/display-messages
     networks:
       - martinez-net
 
