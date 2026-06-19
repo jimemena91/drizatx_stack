@@ -33,8 +33,11 @@ services:
       DATABASE_PASSWORD: DrizaCruzVerde_2025
       DATABASE_NAME: drizatx_cruzverde
       FRONTEND_URLS: https://cruzverde.app.drizatx.com,http://localhost:3220
+      DISPLAY_MEDIA_DIR: "/app/uploads/display-messages"
     ports:
       - "3221:3001"
+    volumes:
+      - /srv/drizatx/cruzverde/uploads/display-messages:/app/uploads/display-messages
     networks:
       - drizatx-cruzverde-network
 
