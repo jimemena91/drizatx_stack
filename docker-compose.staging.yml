@@ -41,6 +41,9 @@ services:
 
       # CORS: frontend prod (3010) + staging (3110)
       FRONTEND_URLS: "http://77.42.23.51:3010,https://staging.app.drizatx.com"
+      DISPLAY_MEDIA_DIR: "/app/uploads/display-messages"
+    volumes:
+      - /srv/drizatx/staging/uploads/display-messages:/app/uploads/display-messages
     ports:
       - "3101:3001"   # backend staging
 

@@ -77,7 +77,7 @@ export class CustomMessagesController {
       extname(file.originalname).toLowerCase();
 
     const fileName = `message-${Date.now()}-${Math.random().toString(36).slice(2, 10)}${safeExt}`;
-    const uploadDir = join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'display-messages');
+    const uploadDir = process.env.DISPLAY_MEDIA_DIR || join(process.cwd(), '..', 'frontend', 'public', 'uploads', 'display-messages');
 
     await fs.mkdir(uploadDir, { recursive: true });
     await fs.writeFile(join(uploadDir, fileName), file.buffer);
