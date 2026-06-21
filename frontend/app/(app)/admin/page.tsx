@@ -487,6 +487,7 @@ useEffect(() => {
   const [editingMessage, setEditingMessage] = useState<CustomMessage | null>(null)
   const [messageMediaError, setMessageMediaError] = useState<string | null>(null)
   const [messageMediaName, setMessageMediaName] = useState<string | null>(null)
+  const [uploadingMessageMedia, setUploadingMessageMedia] = useState(false)
   const dayOptions = useMemo(
     () => [
       { value: "mon", label: "Lunes" },
