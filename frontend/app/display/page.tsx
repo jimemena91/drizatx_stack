@@ -294,7 +294,11 @@ export default function DisplayPage() {
   }, [displayTimeoutSetting])
   const rotationMs = rotationSeconds * 1000
 
-  const { getActiveMessages = () => [], getMessagesByType = (_type?: string) => [] } = useCustomMessages({ publicMode: true })
+  const {
+    messages: signageMessages = [],
+    getActiveMessages = () => [],
+    getMessagesByType = (_type?: string) => [],
+  } = useCustomMessages({ publicMode: true })
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
   const { liveTicket } = useDisplaySocket({ clientKey: "staging", screen: "display" })
@@ -345,14 +349,17 @@ export default function DisplayPage() {
   useEffect(() => {
     setMounted(true)
     setAudioConfig(audioService.getConfig())
+  }, [])
+
+  useEffect(() => {
     setCustomMessages(
-      getActiveMessages().sort((a: any, b: any) => {
+      (signageMessages || []).sort((a: any, b: any) => {
         const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
         const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
         return orderA - orderB
       }),
     )
-  }, [getActiveMessages])
+  }, [signageMessages])
 
   useEffect(() => {
     setCurrentPromotionIndex(0)
@@ -366,7 +373,7 @@ export default function DisplayPage() {
     const customDurationSeconds = Number.isFinite(Number(current?.displayDurationSeconds))
       ? Math.max(5, Number(current?.displayDurationSeconds))
       : rotationSeconds
-    const duration = Math.max(customDurationSeconds * 1000, rotationMs) + (priority - 1) * 500
+    const duration = customDurationSeconds * 1000 + (priority - 1) * 500
     const timer = setTimeout(() => {
       setCurrentPromotionIndex((prev) => (prev + 1) % promotions.length)
     }, duration)
@@ -388,14 +395,6 @@ export default function DisplayPage() {
 
     const handleStatusUpdate = (status: typeof queueStatus) => {
       if (!isMounted) return
-
-      setCustomMessages(
-        getActiveMessages().sort((a: any, b: any) => {
-          const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
-          const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
-          return orderA - orderB
-        }),
-      )
 
       const audioTicket = status.calledTickets?.[0] ?? null
       const audioKey = audioTicket
