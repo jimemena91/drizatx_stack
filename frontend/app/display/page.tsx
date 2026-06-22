@@ -303,16 +303,23 @@ export default function DisplayPage() {
   const [isNewTicket, setIsNewTicket] = useState(false)
   const [audioConfig, setAudioConfig] = useState(audioService.getConfig())
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  const [customMessages, setCustomMessages] = useState(getActiveMessages())
+  const [customMessages, setCustomMessages] = useState<CustomMessage[]>([])
   const [weatherSnapshot, setWeatherSnapshot] = useState<WeatherSnapshot | null>(null)
   const [weatherStatus, setWeatherStatus] = useState<"idle" | "loading" | "error" | "success">(
     signageShowWeather ? "loading" : "idle",
   )
   const [weatherError, setWeatherError] = useState<string | null>(null)
 
-  const rawPromotions = useMemo(() => getMessagesByType("promotion"), [getMessagesByType])
-  const promotions = useMemo(() => (signageShowNews ? rawPromotions : []), [rawPromotions, signageShowNews])
+  const promotions = useMemo(
+    () =>
+      (customMessages || []).filter((message: any) => {
+        const mediaUrl = typeof message?.mediaUrl === "string" ? message.mediaUrl.trim() : ""
+        return message?.type === "promotion" && Boolean(mediaUrl)
+      }),
+    [customMessages],
+  )
   const promotionSignature = useMemo(
     () =>
       promotions
@@ -336,16 +343,23 @@ export default function DisplayPage() {
 
   /** efectos */
   useEffect(() => {
+    setMounted(true)
     setAudioConfig(audioService.getConfig())
-  }, [])
+    setCustomMessages(
+      getActiveMessages().sort((a: any, b: any) => {
+        const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
+        const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
+        return orderA - orderB
+      }),
+    )
+  }, [getActiveMessages])
 
   useEffect(() => {
     setCurrentPromotionIndex(0)
-  }, [promotionSignature, signageShowNews])
+  }, [promotionSignature])
 
   /** rotación de promos */
   useEffect(() => {
-    if (!signageShowNews) return
     if (promotions.length === 0) return
     const current = promotions[currentPromotionIndex % promotions.length]
     const priority = normalizePriorityLevel(current?.priority) ?? 1
@@ -357,11 +371,10 @@ export default function DisplayPage() {
       setCurrentPromotionIndex((prev) => (prev + 1) % promotions.length)
     }, duration)
     return () => clearTimeout(timer)
-  }, [currentPromotionIndex, promotions, rotationMs, signageShowNews, promotionSignature, rotationSeconds])
+  }, [currentPromotionIndex, promotions, rotationMs, promotionSignature, rotationSeconds])
 
   /** anuncios combinados */
   const getAllAnnouncements = useCallback(() => {
-    if (!signageShowNews) return []
     const customAnnouncements = (customMessages || [])
       .filter((msg: any) => msg.type === "announcement" || msg.type === "info")
       .map((msg: any) => msg.content)
@@ -441,7 +454,7 @@ export default function DisplayPage() {
     }
 
     let announcementTimer: ReturnType<typeof setInterval> | null = null
-    if (signageShowNews && currentAnnouncements.length > 0) {
+    if (currentAnnouncements.length > 0) {
       announcementTimer = setInterval(() => {
         setCurrentAnnouncement((prev) => {
           const total = currentAnnouncements.length || 1
@@ -458,7 +471,7 @@ export default function DisplayPage() {
       if (audioResetTimeout) clearTimeout(audioResetTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastAnnouncedTicket, rotationMs, signageShowNews, currentAnnouncements.length])
+  }, [lastAnnouncedTicket, rotationMs, currentAnnouncements.length])
 
   /** handlers */
   const handleScreenClick = async () => {
@@ -610,7 +623,8 @@ export default function DisplayPage() {
     const isSafeImage =
       mediaUrl.startsWith("data:image/") ||
       mediaUrl.startsWith("https://") ||
-      mediaUrl.startsWith("http://")
+      mediaUrl.startsWith("http://") ||
+      mediaUrl.startsWith("/uploads/display-messages/")
 
     const isVideo =
       mediaType.startsWith("video/") ||
@@ -654,8 +668,8 @@ export default function DisplayPage() {
     )
   }
 
-  const displayMessagesEnabled = signageShowNews
   const hasPromotions = promotions.length > 0
+  const displayMessagesEnabled = mounted && (hasPromotions || currentAnnouncements.length > 0)
   const activeCarouselIndex = hasPromotions
     ? promotions.length
       ? ((currentPromotionIndex % promotions.length) + promotions.length) % promotions.length
@@ -663,6 +677,16 @@ export default function DisplayPage() {
     : 0
   const activePromotion = hasPromotions && promotions.length ? promotions[activeCarouselIndex] : null
   const activePromotionMedia = activePromotion ? renderPromotionMedia(activePromotion) : null
+
+  if (!mounted) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950 text-slate-100">
+        <div className="text-center text-sm uppercase tracking-[0.35em] text-slate-400">
+          Cargando display
+        </div>
+      </div>
+    )
+  }
 
   /** layout */
   return (
