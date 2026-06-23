@@ -17,10 +17,12 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { ServicesModule } from '../../modules/services/services.module';
 import { ClientsModule } from '../../modules/clients/clients.module';
 import { SystemSettingsModule } from '../../modules/system-settings/system-settings.module';
+import { QueueEventsModule } from '../queue-events/queue-events.module';
 
 @Module({
   imports: [
     // 👇 AQUI va TODO lo que necesites inyectar con @InjectRepository(...)
+    QueueEventsModule,
     TypeOrmModule.forFeature([
       Ticket,
       ServiceEntity,

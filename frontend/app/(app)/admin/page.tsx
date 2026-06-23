@@ -487,6 +487,7 @@ useEffect(() => {
   const [editingMessage, setEditingMessage] = useState<CustomMessage | null>(null)
   const [messageMediaError, setMessageMediaError] = useState<string | null>(null)
   const [messageMediaName, setMessageMediaName] = useState<string | null>(null)
+  const [uploadingMessageMedia, setUploadingMessageMedia] = useState(false)
   const dayOptions = useMemo(
     () => [
       { value: "mon", label: "Lunes" },
@@ -1679,6 +1680,7 @@ useEffect(() => {
       }
 
       try {
+        setUploadingMessageMedia(true)
         const uploaded = await apiClient.uploadCustomMessageMedia(file)
         setNewMessage((prev) => ({ ...prev, mediaUrl: uploaded.mediaUrl, mediaType: uploaded.mediaType }))
         setMessageMediaName(file.name)
@@ -1694,6 +1696,7 @@ useEffect(() => {
             : "No se pudo subir el archivo. Verificá formato, tamaño y sesión.",
         )
       } finally {
+        setUploadingMessageMedia(false)
         event.target.value = ""
       }
     },
@@ -2798,14 +2801,18 @@ useEffect(() => {
                             <Button
                               onClick={handleCreateMessage}
                               className="w-full btn-premium"
-                              disabled={creatingMessage}
+                              disabled={creatingMessage || uploadingMessageMedia}
                             >
                               {creatingMessage ? (
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                               ) : (
                                 <Plus className="h-4 w-4 mr-2" />
                               )}
-                              {creatingMessage ? (editingMessage ? "Guardando..." : "Creando...") : editingMessage ? "Guardar Cambios" : "Crear Mensaje"}
+                              {uploadingMessageMedia
+                                ? "Subiendo archivo..."
+                                : creatingMessage
+                                  ? (editingMessage ? "Guardando..." : "Creando...")
+                                  : editingMessage ? "Guardar Cambios" : "Crear Mensaje"}
                             </Button>
 
                             {editingMessage && (

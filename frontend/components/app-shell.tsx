@@ -19,8 +19,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <AppSidebar />
       <SidebarInset>
         {/* Hero + glass con la nueva paleta */}
-        <main className="min-h-screen bg-hero dark:bg-hero-dark p-4 sm:p-6">
-          <section className="glass rounded-xl card-elev-2 p-4 sm:p-6">
+        <main className="min-h-screen w-full overflow-x-hidden bg-hero p-3 dark:bg-hero-dark sm:p-4 lg:p-6">
+          <section className="glass card-elev-2 w-full rounded-xl p-3 sm:p-4 lg:p-6">
             {children}
           </section>
         </main>

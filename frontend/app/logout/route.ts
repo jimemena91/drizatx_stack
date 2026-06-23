@@ -5,7 +5,7 @@ export async function GET(request: Request) {
 
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
-    "https://cruzverde.app.drizatx.com"
+    "https://martinez.app.drizatx.com"
 
   const response = NextResponse.redirect(
     new URL("/login", baseUrl)
