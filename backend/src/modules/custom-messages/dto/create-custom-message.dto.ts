@@ -34,12 +34,13 @@ class IsMediaUrlConstraint implements ValidatorConstraintInterface {
 
     return (
       isURL(value, { protocols: ['http', 'https'], require_protocol: true }) ||
-      isDataURI(value)
+      isDataURI(value) ||
+      /^\/uploads\/display-messages\/[A-Za-z0-9._-]+$/.test(value)
     );
   }
 
   defaultMessage(): string {
-    return 'mediaUrl debe ser una URL válida';
+    return 'mediaUrl debe ser una URL http(s), data URI o ruta interna válida de display-messages';
   }
 }
 
@@ -102,7 +103,7 @@ export class CreateCustomMessageDto {
   @ApiProperty({ description: 'URL de un recurso multimedia', example: 'https://cdn.example.com/promo.jpg', required: false })
   @IsOptional()
   @IsString()
-  @Validate(IsMediaUrlConstraint, { message: 'mediaUrl debe ser una URL válida' })
+  @Validate(IsMediaUrlConstraint, { message: 'mediaUrl debe ser una URL http(s), data URI o ruta interna válida de display-messages' })
   mediaUrl?: string | null;
 
   @ApiProperty({ description: 'Tipo de recurso multimedia (imagen, video, etc.)', example: 'image/jpeg', required: false })

@@ -16,7 +16,7 @@ import { Server, Socket } from 'socket.io';
     origin: true,
     credentials: false,
   },
-  transports: ['websocket', 'polling'],
+  transports: ['websocket'],
 })
 export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private readonly logger = new Logger(RealtimeGateway.name);

@@ -8,6 +8,7 @@ import Link from "next/link"
 import { useQueueStatus } from "@/hooks/use-queue-status"
 import { useQueue } from "@/contexts/queue-context"
 import { audioService } from "@/lib/audio-service"
+import { apiClient } from "@/lib/api-client"
 import { AudioControls } from "@/components/audio-controls"
 import { AnimatedTicketDisplay } from "@/components/animated-ticket-display"
 import { AudioVisualizer } from "@/components/audio-visualizer"
@@ -293,17 +294,22 @@ export default function DisplayPage() {
   }, [displayTimeoutSetting])
   const rotationMs = rotationSeconds * 1000
 
-  const { getActiveMessages = () => [] } = useCustomMessages({ publicMode: true })
+  const {
+    messages: signageMessages = [],
+    getActiveMessages = () => [],
+    getMessagesByType = (_type?: string) => [],
+  } = useCustomMessages({ publicMode: true })
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
-  const { liveTicket, lastQueueUpdatedAt } = useDisplaySocket({ clientKey: "staging", screen: "display" })
+  const { liveTicket } = useDisplaySocket({ clientKey: "staging", screen: "display" })
   const [lastAnnouncedTicket, setLastAnnouncedTicket] = useState<string | null>(null)
   const [showAudioControls, setShowAudioControls] = useState(false)
   const [isNewTicket, setIsNewTicket] = useState(false)
   const [audioConfig, setAudioConfig] = useState(audioService.getConfig())
   const [isPlayingAudio, setIsPlayingAudio] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  const [customMessages, setCustomMessages] = useState(getActiveMessages())
+  const [customMessages, setCustomMessages] = useState<CustomMessage[]>([])
   const [weatherSnapshot, setWeatherSnapshot] = useState<WeatherSnapshot | null>(null)
   const [weatherStatus, setWeatherStatus] = useState<"idle" | "loading" | "error" | "success">(
     signageShowWeather ? "loading" : "idle",
@@ -312,16 +318,11 @@ export default function DisplayPage() {
 
   const promotions = useMemo(
     () =>
-      signageShowNews
-        ? (customMessages || [])
-            .filter((msg: any) => msg.type === "promotion")
-            .sort((a: any, b: any) => {
-              const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
-              const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
-              return orderA - orderB
-            })
-        : [],
-    [customMessages, signageShowNews],
+      (customMessages || []).filter((message: any) => {
+        const mediaUrl = typeof message?.mediaUrl === "string" ? message.mediaUrl.trim() : ""
+        return message?.type === "promotion" && Boolean(mediaUrl)
+      }),
+    [customMessages],
   )
   const promotionSignature = useMemo(
     () =>
@@ -346,59 +347,41 @@ export default function DisplayPage() {
 
   /** efectos */
   useEffect(() => {
+    setMounted(true)
     setAudioConfig(audioService.getConfig())
   }, [])
 
-  /**
-   * Watchdog para Smart TV / navegadores kiosk:
-   * algunos WebViews congelan timers o dejan el estado React viejo.
-   * Si la página lleva mucho tiempo viva, forzamos reload controlado.
-   */
   useEffect(() => {
-    if (typeof window === "undefined") return
-
-    const reloadEveryMs = 5 * 60 * 1000
-    const timer = window.setTimeout(() => {
-      window.location.reload()
-    }, reloadEveryMs)
-
-    return () => window.clearTimeout(timer)
-  }, [])
-
-  useEffect(() => {
-    const messages = getActiveMessages()
     setCustomMessages(
-      messages.sort((a: any, b: any) => {
+      (signageMessages || []).sort((a: any, b: any) => {
         const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
         const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
         return orderA - orderB
       }),
     )
-  }, [getActiveMessages])
+  }, [signageMessages])
 
   useEffect(() => {
     setCurrentPromotionIndex(0)
-  }, [promotionSignature, signageShowNews])
+  }, [promotionSignature])
 
   /** rotación de promos */
   useEffect(() => {
-    if (!signageShowNews) return
     if (promotions.length === 0) return
     const current = promotions[currentPromotionIndex % promotions.length]
     const priority = normalizePriorityLevel(current?.priority) ?? 1
     const customDurationSeconds = Number.isFinite(Number(current?.displayDurationSeconds))
       ? Math.max(5, Number(current?.displayDurationSeconds))
       : rotationSeconds
-    const duration = Math.max(customDurationSeconds * 1000, rotationMs) + (priority - 1) * 500
+    const duration = customDurationSeconds * 1000 + (priority - 1) * 500
     const timer = setTimeout(() => {
       setCurrentPromotionIndex((prev) => (prev + 1) % promotions.length)
     }, duration)
     return () => clearTimeout(timer)
-  }, [currentPromotionIndex, promotions, rotationMs, signageShowNews, promotionSignature, rotationSeconds])
+  }, [currentPromotionIndex, promotions, rotationMs, promotionSignature, rotationSeconds])
 
   /** anuncios combinados */
   const getAllAnnouncements = useCallback(() => {
-    if (!signageShowNews) return []
     const customAnnouncements = (customMessages || [])
       .filter((msg: any) => msg.type === "announcement" || msg.type === "info")
       .map((msg: any) => msg.content)
@@ -412,17 +395,6 @@ export default function DisplayPage() {
 
     const handleStatusUpdate = (status: typeof queueStatus) => {
       if (!isMounted) return
-
-      const activeMessages = getActiveMessages()
-      if (activeMessages.length > 0) {
-        setCustomMessages(
-          activeMessages.sort((a: any, b: any) => {
-            const orderA = Number.isFinite(Number(a.displayOrder)) ? Number(a.displayOrder) : Number(a.id ?? 0)
-            const orderB = Number.isFinite(Number(b.displayOrder)) ? Number(b.displayOrder) : Number(b.id ?? 0)
-            return orderA - orderB
-          }),
-        )
-      }
 
       const audioTicket = status.calledTickets?.[0] ?? null
       const audioKey = audioTicket
@@ -462,10 +434,26 @@ export default function DisplayPage() {
     }
 
     updateQueueStatus()
-    const dataInterval = setInterval(updateQueueStatus, 2000)
+    const dataInterval = setInterval(updateQueueStatus, 1000)
+
+    let displayEventsSource: EventSource | null = null
+    if (
+      process.env.NEXT_PUBLIC_API_MODE === "true" &&
+      typeof window !== "undefined" &&
+      typeof EventSource !== "undefined"
+    ) {
+      displayEventsSource = new EventSource(apiClient.getQueuePublicEventsUrl())
+      const refreshFromQueueEvent = () => updateQueueStatus()
+
+      displayEventsSource.addEventListener("ticket.called", refreshFromQueueEvent)
+      displayEventsSource.addEventListener("queue.updated", refreshFromQueueEvent)
+      displayEventsSource.onerror = (error) => {
+        console.warn("[DisplayPage] SSE connection warning:", error)
+      }
+    }
 
     let announcementTimer: ReturnType<typeof setInterval> | null = null
-    if (signageShowNews && currentAnnouncements.length > 0) {
+    if (currentAnnouncements.length > 0) {
       announcementTimer = setInterval(() => {
         setCurrentAnnouncement((prev) => {
           const total = currentAnnouncements.length || 1
@@ -478,10 +466,11 @@ export default function DisplayPage() {
       isMounted = false
       clearInterval(dataInterval)
       if (announcementTimer) clearInterval(announcementTimer)
+      if (displayEventsSource) displayEventsSource.close()
       if (audioResetTimeout) clearTimeout(audioResetTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastAnnouncedTicket, rotationMs, signageShowNews, currentAnnouncements.length, lastQueueUpdatedAt])
+  }, [lastAnnouncedTicket, rotationMs, currentAnnouncements.length])
 
   /** handlers */
   const handleScreenClick = async () => {
@@ -678,8 +667,8 @@ export default function DisplayPage() {
     )
   }
 
-  const displayMessagesEnabled = signageShowNews
   const hasPromotions = promotions.length > 0
+  const displayMessagesEnabled = mounted && (hasPromotions || currentAnnouncements.length > 0)
   const activeCarouselIndex = hasPromotions
     ? promotions.length
       ? ((currentPromotionIndex % promotions.length) + promotions.length) % promotions.length
@@ -687,6 +676,16 @@ export default function DisplayPage() {
     : 0
   const activePromotion = hasPromotions && promotions.length ? promotions[activeCarouselIndex] : null
   const activePromotionMedia = activePromotion ? renderPromotionMedia(activePromotion) : null
+
+  if (!mounted) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950 text-slate-100">
+        <div className="text-center text-sm uppercase tracking-[0.35em] text-slate-400">
+          Cargando display
+        </div>
+      </div>
+    )
+  }
 
   /** layout */
   return (

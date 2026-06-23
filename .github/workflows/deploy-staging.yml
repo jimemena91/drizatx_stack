@@ -1,0 +1,75 @@
+name: Deploy STAGING
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy STAGING en VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+
+            echo "🚀 Deploy STAGING iniciado"
+
+            APP_DIR="/opt/drizatx_worktrees/staging"
+            COMPOSE_MAIN="docker-compose.staging.yml"
+            COMPOSE_OVERRIDE="docker-compose.staging.override.yml"
+            HEALTH_URL="http://127.0.0.1:3101/api/health"
+
+            cd "$APP_DIR"
+
+            compose() {
+              docker compose -f "$COMPOSE_MAIN" -f "$COMPOSE_OVERRIDE" "$@"
+            }
+
+            echo "📥 Actualizando código"
+            git fetch origin
+            git pull --ff-only origin staging
+
+            echo "🟢 Levantando base"
+            compose up -d db
+
+            echo "⏳ Esperando DB"
+            sleep 5
+
+            echo "🧠 Ejecutando migraciones + seed"
+            compose run --rm backend npm run deploy:prepare
+
+            echo "🏗️ Levantando aplicación"
+            compose up -d --build
+
+            echo "⏳ Esperando backend"
+            sleep 10
+
+            echo "🩺 Healthcheck"
+            if ! curl -fsS "$HEALTH_URL" > /tmp/staging-health.json; then
+              echo "❌ Healthcheck falló"
+              echo "===== docker compose ps ====="
+              compose ps || true
+              echo "===== backend logs ====="
+              docker logs --tail 200 drizatx-stg-backend || true
+              echo "===== frontend logs ====="
+              docker logs --tail 200 drizatx-stg-frontend || true
+              exit 1
+            fi
+
+            echo "✅ Healthcheck OK"
+            cat /tmp/staging-health.json
+
+            echo "📊 Estado final"
+            compose ps
+
+            echo "✅ Deploy STAGING finalizado"

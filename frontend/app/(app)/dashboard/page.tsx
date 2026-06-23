@@ -526,8 +526,8 @@ console.log(
       )}
 
       {/* Métricas principales */}
-      <div className="mt-8 space-y-8">
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+      <div className="mt-6 space-y-6 lg:mt-8 lg:space-y-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-6 xl:grid-cols-4">
           <MetricCard
             title="Total en Cola"
             value={totalInQueueDisplay}
@@ -563,7 +563,7 @@ console.log(
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
           <QueueStatusCard queues={filteredQueues} />
           <OperatorsCard
             operators={filteredOperators}
