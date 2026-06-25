@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import {
   DailyClosingCounts,
   DailyClosingRepository,
 } from './daily-closing.repository';
+import { DailyClosingEventsService } from './daily-closing-events.service';
 
 export type DailyClosingResult = DailyClosingCounts & {
   closureDate: string;
@@ -13,9 +14,10 @@ export type DailyClosingResult = DailyClosingCounts & {
 
 @Injectable()
 export class DailyClosingService {
-  private readonly logger = new Logger(DailyClosingService.name);
-
-  constructor(private readonly repository: DailyClosingRepository) {}
+  constructor(
+    private readonly repository: DailyClosingRepository,
+    private readonly events: DailyClosingEventsService,
+  ) {}
 
   async run(options?: {
     closureDate?: string;
@@ -24,55 +26,62 @@ export class DailyClosingService {
     const closureDate = options?.closureDate ?? this.resolveBusinessDate();
     const executedBy = options?.executedBy ?? 'system';
 
-    return this.repository.transaction(async (manager) => {
-      const existing = await this.repository.findExistingClosureLog(
-        manager,
-        closureDate,
-      );
+    this.events.started(closureDate);
 
-      if (existing) {
+    try {
+      const result = await this.repository.transaction(async (manager) => {
+        const existing = await this.repository.findExistingClosureLog(
+          manager,
+          closureDate,
+        );
+
+        if (existing) {
+          return {
+            closureDate,
+            executedAt: new Date().toISOString(),
+            alreadyExecuted: true,
+            ticketsClosed: Number(existing.tickets_closed ?? 0),
+            waitingClosed: 0,
+            calledClosed: 0,
+            inProgressClosed: 0,
+          };
+        }
+
+        const counts = await this.repository.countOpenTicketsBeforeDate(
+          manager,
+          closureDate,
+        );
+
+        if (counts.ticketsClosed > 0) {
+          await this.repository.closeOpenTicketsBeforeDate(
+            manager,
+            closureDate,
+            executedBy,
+          );
+        }
+
+        await this.repository.createClosureLog(
+          manager,
+          closureDate,
+          counts,
+          executedBy,
+        );
+
         return {
           closureDate,
           executedAt: new Date().toISOString(),
-          alreadyExecuted: true,
-          ticketsClosed: Number(existing.tickets_closed ?? 0),
-          waitingClosed: 0,
-          calledClosed: 0,
-          inProgressClosed: 0,
+          alreadyExecuted: false,
+          ...counts,
         };
-      }
+      });
 
-      const counts = await this.repository.countOpenTicketsBeforeDate(
-        manager,
-        closureDate,
-      );
+      this.events.completed(result);
 
-      if (counts.ticketsClosed > 0) {
-        await this.repository.closeOpenTicketsBeforeDate(
-          manager,
-          closureDate,
-          executedBy,
-        );
-      }
-
-      await this.repository.createClosureLog(
-        manager,
-        closureDate,
-        counts,
-        executedBy,
-      );
-
-      this.logger.log(
-        `Daily closing completed for ${closureDate}: ${counts.ticketsClosed} tickets closed`,
-      );
-
-      return {
-        closureDate,
-        executedAt: new Date().toISOString(),
-        alreadyExecuted: false,
-        ...counts,
-      };
-    });
+      return result;
+    } catch (error) {
+      this.events.failed(closureDate, error);
+      throw error;
+    }
   }
 
   private resolveBusinessDate(): string {
