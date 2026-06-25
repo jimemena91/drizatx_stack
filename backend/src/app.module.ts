@@ -19,6 +19,7 @@ import { DisplayModule } from "./modules/display/display.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { PrintModule } from "./modules/print/print.module";
+import { DailyClosingModule } from "./modules/daily-closing/daily-closing.module";
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { PrintModule } from "./modules/print/print.module";
     RealtimeModule,
     TerminalModule,
     PrintModule,
+    DailyClosingModule,
   ],
   providers: [DatabaseConfig],
 })
