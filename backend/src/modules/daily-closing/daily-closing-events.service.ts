@@ -15,10 +15,9 @@ export class DailyClosingEventsService {
   started(closureDate: string) {
     this.logger.log(`Daily closing started (${closureDate})`);
 
-    // Próximamente:
-    // - WebSocket
+    // Proximamente:
     // - Audit Log
-    // - Métricas
+    // - Metricas
   }
 
   completed(result: DailyClosingResult) {
@@ -32,16 +31,12 @@ export class DailyClosingEventsService {
   }
 
   failed(closureDate: string, error: unknown) {
-    const message =
-      error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
 
-    this.logger.error(
-      `Daily closing failed (${closureDate})`,
-      message,
-    );
+    this.logger.error(`Daily closing failed (${closureDate})`, message);
 
-    // Próximamente:
-    // - Audit crítico
-    // - Notificación
+    // Proximamente:
+    // - Audit critico
+    // - Notificacion
   }
 }
