@@ -1,10 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 
+import { QueueEventsService } from '../queue-events/queue-events.service';
 import { DailyClosingResult } from './daily-closing.service';
 
 @Injectable()
 export class DailyClosingEventsService {
   private readonly logger = new Logger(DailyClosingEventsService.name);
+
+  constructor(
+    @Optional()
+    private readonly queueEvents?: QueueEventsService,
+  ) {}
 
   started(closureDate: string) {
     this.logger.log(`Daily closing started (${closureDate})`);
@@ -20,10 +26,9 @@ export class DailyClosingEventsService {
       `Daily closing completed (${result.closureDate}) - ${result.ticketsClosed} tickets`,
     );
 
-    // Próximamente:
-    // - Broadcast websocket
-    // - Refresh dashboard
-    // - Evento para display
+    this.queueEvents?.emitQueueUpdated({
+      at: result.executedAt,
+    });
   }
 
   failed(closureDate: string, error: unknown) {
