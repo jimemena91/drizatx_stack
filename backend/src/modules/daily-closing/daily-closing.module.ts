@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { AuditLogsModule } from '../audit/audit-logs.module';
 import { QueueEventsModule } from '../queue-events/queue-events.module';
 
 import { DailyClosingController } from './daily-closing.controller';
@@ -10,7 +11,7 @@ import { DailyClosingEventsService } from './daily-closing-events.service';
 import { DailyClosingScheduler } from './daily-closing.scheduler';
 
 @Module({
-  imports: [QueueEventsModule],
+  imports: [AuditLogsModule, QueueEventsModule],
   controllers: [DailyClosingController],
   providers: [DailyClosingRepository, DailyClosingService, DailyClosingEventsService, DailyClosingScheduler],
   exports: [DailyClosingService],
