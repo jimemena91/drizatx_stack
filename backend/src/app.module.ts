@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { ScheduleModule } from "@nestjs/schedule";
 import { ConfigModule } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { DatabaseConfig } from "./config/database.config";
@@ -19,9 +20,11 @@ import { DisplayModule } from "./modules/display/display.module";
 import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { PrintModule } from "./modules/print/print.module";
+import { DailyClosingModule } from "./modules/daily-closing/daily-closing.module";
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ".env",
@@ -48,6 +51,7 @@ import { PrintModule } from "./modules/print/print.module";
     RealtimeModule,
     TerminalModule,
     PrintModule,
+    DailyClosingModule,
   ],
   providers: [DatabaseConfig],
 })
