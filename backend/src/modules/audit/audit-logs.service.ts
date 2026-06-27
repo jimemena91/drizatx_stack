@@ -121,6 +121,48 @@ export class AuditLogsService {
     };
   }
 
+  async recordSystemEvent(event: {
+    eventType: string;
+    action?: string;
+    target?: string | null;
+    description?: string | null;
+    severity?: AuditLogSeverity;
+    source?: string | null;
+    tags?: string[];
+    changes?: AuditLogChange[] | null;
+    metadata?: Record<string, any> | null;
+    at?: Date;
+  }): Promise<void> {
+    try {
+      const log = this.auditRepo.create({
+        eventType: event.eventType,
+        action: event.action ?? event.eventType,
+        target: event.target ?? null,
+        description: event.description ?? null,
+        severity: event.severity ?? 'low',
+        actorId: null,
+        actorName: 'system',
+        actorRole: 'system',
+        actorSnapshot: {
+          id: null,
+          name: 'system',
+          primaryRole: 'system',
+          identifier: 'system',
+        },
+        ip: null,
+        source: event.source ?? 'system',
+        tags: event.tags ?? ['system'],
+        changes: event.changes ?? null,
+        metadata: event.metadata ?? null,
+        createdAt: event.at ?? new Date(),
+      });
+
+      await this.auditRepo.save(log);
+    } catch (error) {
+      this.logger.warn(`Failed to record system audit event: ${(error as any)?.message}`);
+    }
+  }
+
   async record(event: AuthAuditEvent): Promise<void> {
     try {
       const actorSnapshot = await this.resolveActorSnapshot(event);
