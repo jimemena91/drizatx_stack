@@ -274,6 +274,7 @@ export class QueueService {
         'service.updatedAt',
       ])
       .where('ticket.status IN (:...statuses)', { statuses })
+      .andWhere('ticket.issued_for_date = CURRENT_DATE()')
       .orderBy('ticket.priority_level', 'DESC')
       .addOrderBy('COALESCE(ticket.requeued_at, ticket.created_at)', 'ASC')
       .addOrderBy('ticket.id', 'ASC')
@@ -332,7 +333,11 @@ export class QueueService {
         'absentCountToday',
       )
       .from(ServiceEntity, 's')
-      .leftJoin(Ticket, 't', 't.service_id = s.id')
+      .leftJoin(
+        Ticket,
+        't',
+        't.service_id = s.id AND t.issued_for_date = CURRENT_DATE()',
+      )
       .groupBy('s.id')
       .addGroupBy('s.name')
       .addGroupBy('s.priority_level')

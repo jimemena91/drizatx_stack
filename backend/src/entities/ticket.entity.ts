@@ -66,6 +66,15 @@ export class Ticket {
   @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt?: Date | null;
 
+  @Column({ name: 'closed_at', type: 'timestamp', nullable: true })
+  closedAt?: Date | null;
+
+  @Column({ name: 'closed_reason', type: 'varchar', length: 80, nullable: true })
+  closedReason?: string | null;
+
+  @Column({ name: 'closed_by', type: 'varchar', length: 80, nullable: true })
+  closedBy?: string | null;
+
   @Column({ name: 'attention_duration', type: 'int', nullable: true })
   attentionDuration?: number | null;
 

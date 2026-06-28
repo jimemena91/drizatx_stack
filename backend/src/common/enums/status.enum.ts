@@ -5,4 +5,5 @@ export enum Status {
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
   ABSENT = "ABSENT",
+  DAILY_CLOSED = "DAILY_CLOSED",
 }
