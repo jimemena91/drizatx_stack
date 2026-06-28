@@ -20,7 +20,7 @@ class AudioService {
   private audioContext: AudioContext | null = null
   private config: AudioConfig = {
     enabled: true,
-    volume: 0.7,
+    volume: 0.9,
     // ⬇️ RUTA CORRECTA (carpeta singular "sound")
     ticketCalledSound: "/sound/ticket-called.mp3",
     // no usados
@@ -118,7 +118,12 @@ class AudioService {
   }
 
   private async playSound(type: string, options: { volume?: number } = {}): Promise<boolean> {
-    if (!this.config.enabled || !this.isInitialized) return false
+    if (!this.config.enabled) return false
+
+    if (!this.isInitialized) {
+      await this.initialize()
+    }
+
     const ctx = await this.ensureAudioContext()
     if (!ctx) return false
     try {
@@ -231,11 +236,22 @@ class AudioService {
 export const audioService = new AudioService()
 
 if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    setTimeout(async () => {
+      try {
+        await audioService.initialize()
+      } catch (error) {
+        console.warn("Audio initialization failed", error)
+      }
+    }, 500)
+  })
+
   const initializeOnInteraction = async () => {
     await audioService.initialize()
     document.removeEventListener("click", initializeOnInteraction)
     document.removeEventListener("keydown", initializeOnInteraction)
   }
+
   document.addEventListener("click", initializeOnInteraction, { once: true })
   document.addEventListener("keydown", initializeOnInteraction, { once: true })
 }
