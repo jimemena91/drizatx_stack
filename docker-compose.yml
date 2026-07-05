@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: drizatx-main-backend
+    container_name: drizatx-stg-backend
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -13,10 +13,10 @@ services:
       DATABASE_USER: root
       DATABASE_PASSWORD: root
       DATABASE_NAME: drizatx
-      FRONTEND_URLS: "https://app.drizatx.com"
+      FRONTEND_URLS: "https://staging.app.drizatx.com"
       JWT_SECRET: "driza-super-secret-2025"
     ports:
-      - "3401:3001"
+      - "3101:3001"
     depends_on:
       - db
 
@@ -25,36 +25,36 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        BACKEND_URL: "https://api.drizatx.com"
+        BACKEND_URL: "https://staging.api.drizatx.com"
         NEXT_PUBLIC_API_MODE: "true"
-        NEXT_PUBLIC_API_URL: "https://api.drizatx.com"
-        NEXT_PUBLIC_API_BASE_URL: "https://api.drizatx.com"
-        NEXT_PUBLIC_BASE_URL: "https://app.drizatx.com"
+        NEXT_PUBLIC_API_URL: "https://staging.api.drizatx.com"
+        NEXT_PUBLIC_API_BASE_URL: "https://staging.api.drizatx.com"
+        NEXT_PUBLIC_BASE_URL: "https://staging.app.drizatx.com"
         NEXT_PUBLIC_PRINT_WEBHOOK_URL: ""
         NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN: ""
         NEXT_PUBLIC_SMS_ENABLED: "false"
         NEXT_PUBLIC_PUSH_ENABLED: "false"
-    container_name: drizatx-main-frontend
+    container_name: drizatx-stg-frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
       NODE_ENV: production
-      BACKEND_URL: "https://api.drizatx.com"
+      BACKEND_URL: "https://staging.api.drizatx.com"
       NEXT_PUBLIC_API_MODE: "true"
-      NEXT_PUBLIC_API_URL: "https://api.drizatx.com"
-      NEXT_PUBLIC_API_BASE_URL: "https://api.drizatx.com"
-      NEXT_PUBLIC_BASE_URL: "https://app.drizatx.com"
+      NEXT_PUBLIC_API_URL: "https://staging.api.drizatx.com"
+      NEXT_PUBLIC_API_BASE_URL: "https://staging.api.drizatx.com"
+      NEXT_PUBLIC_BASE_URL: "https://staging.app.drizatx.com"
       NEXT_PUBLIC_PRINT_WEBHOOK_URL: ""
       NEXT_PUBLIC_PRINT_WEBHOOK_TOKEN: ""
       NEXT_PUBLIC_SMS_ENABLED: "false"
       NEXT_PUBLIC_PUSH_ENABLED: "false"
     ports:
-      - "3410:3000"
+      - "3110:3000"
 
   db:
     image: mysql:8
-    container_name: drizatx-main-db
+    container_name: drizatx-stg-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -64,3 +64,5 @@ services:
 
 volumes:
   db_data:
+    external: true
+    name: drizatx_staging_rescue_20260704
