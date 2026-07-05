@@ -65,4 +65,4 @@ services:
 volumes:
   db_data:
     external: true
-    name: drizatx_staging_rescue_20260704
+    name: drizatx_staging_clean_20260705
