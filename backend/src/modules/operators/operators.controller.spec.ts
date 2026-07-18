@@ -47,7 +47,7 @@ describe('OperatorsController access control', () => {
   it('impide que un operador lea el perfil de otro operador', async () => {
     const req: any = { user: { role: 'OPERATOR', sub: 2 } };
 
-    await expect(controller.findOne(7, req)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(() => controller.findOne(7, req)).toThrow(ForbiddenException);
     expect(service.findOne).not.toHaveBeenCalled();
   });
 
