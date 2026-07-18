@@ -1008,7 +1008,8 @@ export class OperatorsService {
           'exceeded',
         )
         .where('t.operator_id = :operatorId', { operatorId })
-        .andWhere('t.status = :statusCompleted', { statusCompleted: Status.COMPLETED });
+        .andWhere('t.status = :statusCompleted', { statusCompleted: Status.COMPLETED })
+        .andWhere('t.counts_for_metrics = :countsForMetrics', { countsForMetrics: true });
 
       if (range.from) {
         statsQuery.andWhere(

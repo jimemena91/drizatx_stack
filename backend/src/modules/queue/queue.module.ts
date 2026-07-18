@@ -18,6 +18,7 @@ import { OperatorsModule } from '../../modules/operators/operators.module';
 import { ClientsModule } from '../../modules/clients/clients.module';
 import { TicketsModule } from '../../modules/tickets/tickets.module';
 import { QueueEventsModule } from '../../modules/queue-events/queue-events.module';
+import { MetricsPolicyModule } from '../metrics-policy/metrics-policy.module';
 // (Opcional) si tenés TicketsModule propio: importalo y exportá su service
 
 @Module({
@@ -28,6 +29,7 @@ import { QueueEventsModule } from '../../modules/queue-events/queue-events.modul
     ClientsModule,      // 👈 Exporta ClientsService
     TicketsModule,
     QueueEventsModule,
+    MetricsPolicyModule,
   ],
   providers: [QueueService, PermissionsGuard],
   controllers: [QueueController, QueuePublicController],
