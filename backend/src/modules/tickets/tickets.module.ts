@@ -18,11 +18,13 @@ import { ServicesModule } from '../../modules/services/services.module';
 import { ClientsModule } from '../../modules/clients/clients.module';
 import { SystemSettingsModule } from '../../modules/system-settings/system-settings.module';
 import { QueueEventsModule } from '../queue-events/queue-events.module';
+import { MetricsPolicyModule } from '../metrics-policy/metrics-policy.module';
 
 @Module({
   imports: [
     // 👇 AQUI va TODO lo que necesites inyectar con @InjectRepository(...)
     QueueEventsModule,
+    MetricsPolicyModule,
     TypeOrmModule.forFeature([
       Ticket,
       ServiceEntity,
