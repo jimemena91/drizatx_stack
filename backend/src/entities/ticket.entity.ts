@@ -78,6 +78,13 @@ export class Ticket {
   @Column({ name: 'attention_duration', type: 'int', nullable: true })
   attentionDuration?: number | null;
 
+  // Define si este ticket debe contar para métricas productivas/reportes/ranking.
+  @Column({ name: 'counts_for_metrics', type: 'tinyint', width: 1, default: 1 })
+  countsForMetrics: boolean;
+
+  @Column({ name: 'metrics_exclusion_reason', type: 'varchar', length: 80, nullable: true })
+  metricsExclusionReason?: string | null;
+
   // ⬇️ trazabilidad ausente/reencolado
   @Column({ name: 'absent_at', type: 'timestamp', nullable: true })
   absentAt?: Date | null;
