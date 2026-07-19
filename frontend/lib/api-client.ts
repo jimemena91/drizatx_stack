@@ -2270,7 +2270,16 @@ class ApiClient {
   }) {
     const query = this.qs(filters);
     return this.request<{
-      totals: { total: number; attended: number; cancelled: number; abandoned: number };
+      totals: {
+        total: number;
+        attended: number;
+        cancelled: number;
+        abandoned: number;
+        productiveAttentions?: number;
+        excludedShortAttentions?: number;
+        completedTotal?: number;
+        exclusionRate?: number;
+      };
       kpis: { tmeSec: number | null; tmaSec: number | null; leadSec: number | null; slaPct: number | null; totalInQueue: number | null; peakBucket: string | null };
       operators: Array<{
         operatorId: number;
@@ -2280,12 +2289,18 @@ class ApiClient {
         active: boolean;
         totalTickets: number;
         completedTickets: number;
+        productiveAttentions?: number;
+        excludedShortAttentions?: number;
+        completedTotal?: number;
+        exclusionRate?: number;
         cancelledTickets: number;
         abandonedTickets: number;
         serviceCount: number;
         avgWaitSec: number | null;
         avgHandleSec: number | null;
         avgLeadSec: number | null;
+        avgIdleBetweenTicketsSec: number | null;
+        totalIdleBetweenTicketsSec: number | null;
         totalWaitSec: number | null;
         totalHandleSec: number | null;
         throughputPerHour: number | null;
