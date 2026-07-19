@@ -6,6 +6,7 @@ import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportSnapshot } from '../../entities/report-snapshot.entity';
 import { CreateSnapshotDto, ListSnapshotsQueryDto } from './dto/create-snapshot.dto';
 import { Operator } from '../../entities/operator.entity';
+import { buildAttentionClassificationMetrics } from './reports-metrics.util';
 
 type ResolvedCols = {
   table: string;
@@ -150,6 +151,7 @@ export class ReportsService {
         .select([
           'COUNT(*) as total',
           `SUM(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN 1 ELSE 0 END) as attended`,
+          `SUM(CASE WHEN ${status} = 'COMPLETED' AND t.metrics_exclusion_reason = 'SHORT_ATTENTION' THEN 1 ELSE 0 END) as excluded_short_attentions`,
           `SUM(CASE WHEN ${status} = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled`,
           `SUM(CASE WHEN ${status} = 'ABANDONED' THEN 1 ELSE 0 END) as abandoned`,
           hasAttended
@@ -170,9 +172,21 @@ export class ReportsService {
       this.applyFilters(qb, q, cols);
 
       const raw = await qb.getRawOne<{
-        total: string; attended: string; cancelled: string; abandoned: string;
-        tme_sec: string | null; tma_sec: string | null; lead_sec: string | null;
+        total: string;
+        attended: string;
+        excluded_short_attentions: string;
+        cancelled: string;
+        abandoned: string;
+        tme_sec: string | null;
+        tma_sec: string | null;
+        lead_sec: string | null;
       }>();
+
+      const attentionMetrics =
+        buildAttentionClassificationMetrics(
+          raw?.attended,
+          raw?.excluded_short_attentions,
+        );
 
       // Pico por bucket (UNIX_TIMESTAMP + offset)
       const offsetSec = this.getTzOffsetSeconds(q.tz);
@@ -206,7 +220,13 @@ export class ReportsService {
       return {
         totals: {
           total: Number(raw?.total ?? 0),
-          attended: Number(raw?.attended ?? 0),
+          attended: attentionMetrics.productiveAttentions,
+          productiveAttentions:
+            attentionMetrics.productiveAttentions,
+          excludedShortAttentions:
+            attentionMetrics.excludedShortAttentions,
+          completedTotal: attentionMetrics.completedTotal,
+          exclusionRate: attentionMetrics.exclusionRate,
           cancelled: Number(raw?.cancelled ?? 0),
           abandoned: Number(raw?.abandoned ?? 0),
         },
@@ -250,6 +270,7 @@ export class ReportsService {
 
     qb.addSelect('COUNT(*)', 'totalTickets')
       .addSelect(`SUM(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN 1 ELSE 0 END)`, 'completedTickets')
+      .addSelect(`SUM(CASE WHEN ${status} = 'COMPLETED' AND t.metrics_exclusion_reason = 'SHORT_ATTENTION' THEN 1 ELSE 0 END)`, 'excludedShortAttentions')
       .addSelect(`SUM(CASE WHEN ${status} = 'CANCELLED' THEN 1 ELSE 0 END)`, 'cancelledTickets')
       .addSelect(`SUM(CASE WHEN ${status} = 'ABANDONED' THEN 1 ELSE 0 END)`, 'abandonedTickets')
       .addSelect(`MIN(${timeRef})`, 'firstActivityAt')
@@ -299,6 +320,7 @@ export class ReportsService {
       operatorId: number;
       totalTickets: string;
       completedTickets: string;
+      excludedShortAttentions: string;
       cancelledTickets: string;
       abandonedTickets: string;
       serviceCount: string;
@@ -393,6 +415,11 @@ export class ReportsService {
         const op = opMap.get(Number(row.operatorId));
         const total = Number(row.totalTickets ?? 0);
         const completed = Number(row.completedTickets ?? 0);
+        const attentionMetrics =
+          buildAttentionClassificationMetrics(
+            completed,
+            row.excludedShortAttentions,
+          );
         const cancelled = Number(row.cancelledTickets ?? 0);
         const abandoned = Number(row.abandonedTickets ?? 0);
         const serviceCount = Number(row.serviceCount ?? 0);
@@ -437,7 +464,14 @@ export class ReportsService {
           role: op?.role ?? null,
           active: op?.active ?? false,
           totalTickets: total,
-          completedTickets: completed,
+          completedTickets:
+            attentionMetrics.productiveAttentions,
+          productiveAttentions:
+            attentionMetrics.productiveAttentions,
+          excludedShortAttentions:
+            attentionMetrics.excludedShortAttentions,
+          completedTotal: attentionMetrics.completedTotal,
+          exclusionRate: attentionMetrics.exclusionRate,
           cancelledTickets: cancelled,
           abandonedTickets: abandoned,
           serviceCount,
