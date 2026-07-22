@@ -8,7 +8,7 @@ EXPECTED_DB_VOLUME="main_db_data"
 EXPECTED_DB_CONTAINER="drizatx-main-db"
 EXPECTED_BACKEND_CONTAINER="drizatx-main-backend"
 EXPECTED_FRONTEND_CONTAINER="drizatx-main-frontend"
-HEALTH_URL="http://127.0.0.1:3201/api/health"
+HEALTH_URL="http://127.0.0.1:3401/api/health"
 
 cd "$APP_DIR"
 
