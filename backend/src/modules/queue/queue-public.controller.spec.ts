@@ -1,14 +1,17 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
+import { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import request from "supertest";
 
-import { QueuePublicController } from './queue-public.controller';
-import { QueueService, QueueDashboardResponse } from './queue.service';
-import { Status } from '@/common/enums/status.enum';
+import { QueuePublicController } from "./queue-public.controller";
+import { QueueService, QueueDashboardResponse } from "./queue.service";
+import { QueueEventsService } from "../queue-events/queue-events.service";
+import { Status } from "@/common/enums/status.enum";
 
-describe('QueuePublicController', () => {
+describe("QueuePublicController", () => {
   let app: INestApplication;
-  const queueService: { getDashboard: jest.Mock<Promise<QueueDashboardResponse>, []> } = {
+  const queueService: {
+    getDashboard: jest.Mock<Promise<QueueDashboardResponse>, []>;
+  } = {
     getDashboard: jest.fn(),
   };
 
@@ -20,11 +23,15 @@ describe('QueuePublicController', () => {
           provide: QueueService,
           useValue: queueService,
         },
+        {
+          provide: QueueEventsService,
+          useValue: {},
+        },
       ],
     }).compile();
 
     app = moduleRef.createNestApplication();
-    app.setGlobalPrefix('api');
+    app.setGlobalPrefix("api");
     await app.init();
   });
 
@@ -33,14 +40,14 @@ describe('QueuePublicController', () => {
     jest.resetAllMocks();
   });
 
-  it('returns a sanitized dashboard payload without requiring authentication', async () => {
-    const updatedAt = new Date('2024-01-01T10:00:00.000Z').toISOString();
+  it("returns a sanitized dashboard payload without requiring authentication", async () => {
+    const updatedAt = new Date("2024-01-01T10:00:00.000Z").toISOString();
     queueService.getDashboard.mockResolvedValue({
       services: [
         {
           serviceId: 1,
-          serviceName: 'Caja',
-          serviceIcon: 'icon-caja',
+          serviceName: "Caja",
+          serviceIcon: "icon-caja",
           waitingCount: 2,
           avgWaitTime: 5,
           inProgressCount: 1,
@@ -52,46 +59,46 @@ describe('QueuePublicController', () => {
       updatedAt,
       currentTicket: {
         id: 10,
-        number: 'A001',
+        number: "A001",
         serviceId: 1,
         service: {
           id: 1,
-          name: 'Caja',
-          prefix: 'A',
+          name: "Caja",
+          prefix: "A",
           active: true,
           priority: 1,
           estimatedTime: 5,
           maxAttentionTime: null,
-          createdAt: new Date('2024-01-01T08:00:00.000Z'),
-          updatedAt: new Date('2024-01-01T09:00:00.000Z'),
+          createdAt: new Date("2024-01-01T08:00:00.000Z"),
+          updatedAt: new Date("2024-01-01T09:00:00.000Z"),
         } as any,
         operatorId: 5,
         operator: {
           id: 5,
-          name: 'Operador',
-          username: 'operador',
-          email: 'op@example.com',
-          position: 'Caja',
+          name: "Operador",
+          username: "operador",
+          email: "op@example.com",
+          position: "Caja",
           active: true,
-          createdAt: new Date('2024-01-01T08:00:00.000Z'),
-          updatedAt: new Date('2024-01-01T09:00:00.000Z'),
+          createdAt: new Date("2024-01-01T08:00:00.000Z"),
+          updatedAt: new Date("2024-01-01T09:00:00.000Z"),
         } as any,
         clientId: 9,
         client: {
           id: 9,
-          dni: '12345678',
-          name: 'Cliente Demo',
-          email: 'cliente@example.com',
-          phone: '123456789',
+          dni: "12345678",
+          name: "Cliente Demo",
+          email: "cliente@example.com",
+          phone: "123456789",
           vip: false,
-          createdAt: new Date('2024-01-01T07:00:00.000Z'),
-          updatedAt: new Date('2024-01-01T07:30:00.000Z'),
+          createdAt: new Date("2024-01-01T07:00:00.000Z"),
+          updatedAt: new Date("2024-01-01T07:30:00.000Z"),
         } as any,
         status: Status.IN_PROGRESS,
         priority: 1,
-        createdAt: new Date('2024-01-01T09:50:00.000Z'),
-        calledAt: new Date('2024-01-01T09:55:00.000Z'),
-        startedAt: new Date('2024-01-01T09:57:00.000Z'),
+        createdAt: new Date("2024-01-01T09:50:00.000Z"),
+        calledAt: new Date("2024-01-01T09:55:00.000Z"),
+        startedAt: new Date("2024-01-01T09:57:00.000Z"),
         completedAt: null,
         attentionDuration: null,
         estimatedWaitTime: 4,
@@ -106,15 +113,15 @@ describe('QueuePublicController', () => {
     });
 
     const response = await request(app.getHttpServer())
-      .get('/api/queue/public/dashboard')
+      .get("/api/queue/public/dashboard")
       .expect(200);
 
     expect(response.body).toEqual({
       services: [
         expect.objectContaining({
           serviceId: 1,
-          serviceName: 'Caja',
-          serviceIcon: 'icon-caja',
+          serviceName: "Caja",
+          serviceIcon: "icon-caja",
           waitingCount: 2,
           avgWaitTime: 5,
           inProgressCount: 1,
@@ -126,14 +133,14 @@ describe('QueuePublicController', () => {
       updatedAt,
       currentTicket: expect.objectContaining({
         id: 10,
-        number: 'A001',
+        number: "A001",
         serviceId: 1,
         status: Status.IN_PROGRESS,
         operatorId: 5,
         clientId: 9,
-        service: expect.objectContaining({ id: 1, name: 'Caja', prefix: 'A' }),
-        operator: expect.objectContaining({ id: 5, name: 'Operador' }),
-        client: expect.objectContaining({ id: 9, name: 'Cliente Demo' }),
+        service: expect.objectContaining({ id: 1, name: "Caja", prefix: "A" }),
+        operator: expect.objectContaining({ id: 5, name: "Operador" }),
+        client: expect.objectContaining({ id: 9, name: "Cliente Demo" }),
       }),
       nextTickets: [],
       inProgressTickets: [],

@@ -1,13 +1,20 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import request from 'supertest';
+import { ExecutionContext, INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import request from "supertest";
 
-import { TerminalController } from './terminal.controller';
-import { TerminalService } from './terminal.service';
+import { AuthGuard } from "@nestjs/passport";
 
-describe('TerminalController', () => {
+import { TerminalController } from "./terminal.controller";
+import { TerminalService } from "./terminal.service";
+import { RolesGuard } from "../../common/guards/roles.guard";
+
+const JwtAuthGuard = AuthGuard("jwt");
+
+describe("TerminalController", () => {
   let app: INestApplication;
-  const terminalService: { sendTicketToPrinter: jest.Mock<Promise<void>, any[]> } = {
+  const terminalService: {
+    sendTicketToPrinter: jest.Mock<Promise<void>, any[]>;
+  } = {
     sendTicketToPrinter: jest.fn(),
   };
 
@@ -20,10 +27,21 @@ describe('TerminalController', () => {
           useValue: terminalService,
         },
       ],
-    }).compile();
+    })
+      .overrideGuard(JwtAuthGuard)
+      .useValue({
+        canActivate: (context: ExecutionContext) => {
+          const requestContext = context.switchToHttp().getRequest();
+          requestContext.user = { role: "OPERATOR" };
+          return true;
+        },
+      })
+      .overrideGuard(RolesGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     app = moduleRef.createNestApplication();
-    app.setGlobalPrefix('api');
+    app.setGlobalPrefix("api");
     await app.init();
   });
 
@@ -32,21 +50,21 @@ describe('TerminalController', () => {
     jest.resetAllMocks();
   });
 
-  it('delega en el servicio y responde éxito', async () => {
+  it("delega en el servicio y responde éxito", async () => {
     const payload = {
       ticketId: 1,
       serviceId: 2,
-      ticketNumber: 'A001',
-      serviceName: 'Caja',
+      ticketNumber: "A001",
+      serviceName: "Caja",
       payload: { ticket: { id: 1 } },
     };
 
     terminalService.sendTicketToPrinter.mockResolvedValue(undefined);
 
     const response = await request(app.getHttpServer())
-      .post('/api/terminal/print')
+      .post("/api/terminal/print")
       .send(payload)
-      .expect(200);
+      .expect(201);
 
     expect(response.body).toEqual({ success: true });
     expect(terminalService.sendTicketToPrinter).toHaveBeenCalledWith(payload);
