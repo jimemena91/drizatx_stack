@@ -11,6 +11,7 @@ import { Client } from '../../entities/client.entity';
 import { ServicesService } from '../../modules/services/services.service';
 import { ClientsService } from '../../modules/clients/clients.service';
 import { TicketsService } from '../../modules/tickets/tickets.service';
+import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
 
 type DashboardServiceSummary = {
   serviceId: number;
@@ -55,6 +56,7 @@ export class QueueService {
     private readonly servicesService: ServicesService,
     private readonly clientsService: ClientsService,
     private readonly ticketsService: TicketsService,
+    private readonly metricsPolicy: MetricsPolicyService,
   ) {}
 
   private normalizePriorityLevel(input: unknown): number | null {
@@ -243,6 +245,15 @@ export class QueueService {
       const ms = ticket.completedAt.getTime() - ticket.startedAt.getTime();
       ticket.attentionDuration = Math.max(0, Math.round(ms / 1000));
     }
+
+    const metricsEvaluation = this.metricsPolicy.evaluate({
+      attentionDurationSeconds: ticket.attentionDuration ?? null,
+      serviceId: ticket.serviceId ?? null,
+      operatorId: ticket.operatorId ?? null,
+    });
+
+    ticket.countsForMetrics = metricsEvaluation.countsForMetrics;
+    ticket.metricsExclusionReason = metricsEvaluation.exclusionReason;
 
     // cálculo simple del tiempo real de espera si no lo tenés
     if (ticket.calledAt && ticket.createdAt) {

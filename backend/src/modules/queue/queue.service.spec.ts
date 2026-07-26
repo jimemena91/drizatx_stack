@@ -1,8 +1,8 @@
-import { ForbiddenException } from '@nestjs/common';
-import { Status } from '@/common/enums/status.enum';
-import { QueueService } from './queue.service';
+import { ForbiddenException } from "@nestjs/common";
+import { Status } from "../../common/enums/status.enum";
+import { QueueService } from "./queue.service";
 
-describe('QueueService', () => {
+describe("QueueService", () => {
   let queueService: QueueService;
   let ticketsService: { callTicket: jest.Mock };
   let dataSource: any;
@@ -31,6 +31,7 @@ describe('QueueService', () => {
     ticketRepoQueryBuilder = {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
       addOrderBy: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
@@ -57,6 +58,7 @@ describe('QueueService', () => {
     servicesService = {
       findActive: jest.fn(),
       findOne: jest.fn(),
+      findAll: jest.fn().mockResolvedValue([]),
     };
     clientsService = {
       findOne: jest.fn(),
@@ -73,11 +75,17 @@ describe('QueueService', () => {
       servicesService,
       clientsService,
       ticketsService as any,
+      {
+        evaluate: jest.fn().mockReturnValue({
+          countsForMetrics: true,
+          exclusionReason: null,
+        }),
+      } as any,
     );
   });
 
-  describe('callTicket', () => {
-    it('delegates the call to TicketsService', async () => {
+  describe("callTicket", () => {
+    it("delegates the call to TicketsService", async () => {
       const ticket = { id: 42 } as any;
       ticketsService.callTicket.mockResolvedValue(ticket);
 
@@ -87,24 +95,24 @@ describe('QueueService', () => {
       expect(result).toBe(ticket);
     });
 
-    it('rethrows errors from TicketsService', async () => {
-      const error = new ForbiddenException('Operador inactivo');
+    it("rethrows errors from TicketsService", async () => {
+      const error = new ForbiddenException("Operador inactivo");
       ticketsService.callTicket.mockRejectedValue(error);
 
       await expect(queueService.callTicket(10, 99)).rejects.toBe(error);
     });
   });
 
-  describe('getDashboard', () => {
-    it('returns dashboard data including current, next and absent tickets', async () => {
+  describe("getDashboard", () => {
+    it("returns dashboard data including current, next and absent tickets", async () => {
       const inProgressTicket = {
         id: 1,
         status: Status.IN_PROGRESS,
         serviceId: 9,
         priority: 1,
-        createdAt: new Date('2024-01-01T10:00:00Z'),
-        startedAt: new Date('2024-01-01T10:05:00Z'),
-        calledAt: new Date('2024-01-01T10:02:00Z'),
+        createdAt: new Date("2024-01-01T10:00:00Z"),
+        startedAt: new Date("2024-01-01T10:05:00Z"),
+        calledAt: new Date("2024-01-01T10:02:00Z"),
       } as any;
 
       const calledTicket = {
@@ -112,8 +120,8 @@ describe('QueueService', () => {
         status: Status.CALLED,
         serviceId: 9,
         priority: 1,
-        createdAt: new Date('2024-01-01T10:10:00Z'),
-        calledAt: new Date('2024-01-01T10:12:00Z'),
+        createdAt: new Date("2024-01-01T10:10:00Z"),
+        calledAt: new Date("2024-01-01T10:12:00Z"),
       } as any;
 
       const waitingHighPriority = {
@@ -121,8 +129,8 @@ describe('QueueService', () => {
         status: Status.WAITING,
         serviceId: 9,
         priority: 5,
-        createdAt: new Date('2024-01-01T10:20:00Z'),
-        requeuedAt: new Date('2024-01-01T10:21:00Z'),
+        createdAt: new Date("2024-01-01T10:20:00Z"),
+        requeuedAt: new Date("2024-01-01T10:21:00Z"),
       } as any;
 
       const waitingLowPriority = {
@@ -130,7 +138,7 @@ describe('QueueService', () => {
         status: Status.WAITING,
         serviceId: 9,
         priority: 2,
-        createdAt: new Date('2024-01-01T10:25:00Z'),
+        createdAt: new Date("2024-01-01T10:25:00Z"),
         requeuedAt: null,
       } as any;
 
@@ -139,15 +147,15 @@ describe('QueueService', () => {
         status: Status.ABSENT,
         serviceId: 9,
         priority: 1,
-        createdAt: new Date('2024-01-01T10:15:00Z'),
-        calledAt: new Date('2024-01-01T10:18:00Z'),
-        absentAt: new Date('2024-01-01T10:20:00Z'),
+        createdAt: new Date("2024-01-01T10:15:00Z"),
+        calledAt: new Date("2024-01-01T10:18:00Z"),
+        absentAt: new Date("2024-01-01T10:20:00Z"),
       } as any;
 
       queryBuilder.getRawMany.mockResolvedValue([
         {
           serviceId: 9,
-          serviceName: 'General',
+          serviceName: "General",
           waitingCount: 3,
           avgWaitTime: 7,
           inProgressCount: 2,
@@ -158,7 +166,7 @@ describe('QueueService', () => {
       ]);
 
       const dashboardSpy = jest
-        .spyOn(queueService, 'dashboardTickets')
+        .spyOn(queueService, "dashboardTickets")
         .mockResolvedValue([
           inProgressTicket,
           calledTicket,
@@ -192,22 +200,26 @@ describe('QueueService', () => {
     });
   });
 
-  describe('startTicket', () => {
-    it('throws when the ticket does not exist', async () => {
+  describe("startTicket", () => {
+    it("throws when the ticket does not exist", async () => {
       ticketRepo.findOne.mockResolvedValue(null);
 
-      await expect(queueService.startTicket(99)).rejects.toThrow('Ticket no encontrado');
+      await expect(queueService.startTicket(99)).rejects.toThrow(
+        "Ticket no encontrado",
+      );
       expect(ticketRepo.save).not.toHaveBeenCalled();
     });
 
-    it('throws when the ticket status is not CALLED', async () => {
+    it("throws when the ticket status is not CALLED", async () => {
       ticketRepo.findOne.mockResolvedValue({ id: 7, status: Status.WAITING });
 
-      await expect(queueService.startTicket(7)).rejects.toThrow('Solo se puede iniciar desde CALLED');
+      await expect(queueService.startTicket(7)).rejects.toThrow(
+        "Solo se puede iniciar desde CALLED",
+      );
       expect(ticketRepo.save).not.toHaveBeenCalled();
     });
 
-    it('updates the ticket status and timestamps when starting attention', async () => {
+    it("updates the ticket status and timestamps when starting attention", async () => {
       const ticket = {
         id: 11,
         status: Status.CALLED,
@@ -233,27 +245,29 @@ describe('QueueService', () => {
     });
   });
 
-  describe('completeTicket', () => {
-    it('throws when the ticket does not exist', async () => {
+  describe("completeTicket", () => {
+    it("throws when the ticket does not exist", async () => {
       ticketRepo.findOne.mockResolvedValue(null);
 
-      await expect(queueService.completeTicket(1)).rejects.toThrow('Ticket no encontrado');
-      expect(ticketRepo.save).not.toHaveBeenCalled();
-    });
-
-    it('throws when the ticket status is not IN_PROGRESS', async () => {
-      ticketRepo.findOne.mockResolvedValue({ id: 2, status: Status.WAITING });
-
-      await expect(queueService.completeTicket(2)).rejects.toThrow(
-        'Solo se puede completar desde IN_PROGRESS',
+      await expect(queueService.completeTicket(1)).rejects.toThrow(
+        "Ticket no encontrado",
       );
       expect(ticketRepo.save).not.toHaveBeenCalled();
     });
 
-    it('finalizes the ticket, calculating attention and wait durations', async () => {
-      const startedAt = new Date('2024-01-02T12:00:00Z');
-      const calledAt = new Date('2024-01-02T11:55:00Z');
-      const createdAt = new Date('2024-01-02T11:40:00Z');
+    it("throws when the ticket status is not IN_PROGRESS", async () => {
+      ticketRepo.findOne.mockResolvedValue({ id: 2, status: Status.WAITING });
+
+      await expect(queueService.completeTicket(2)).rejects.toThrow(
+        "Solo se puede completar desde IN_PROGRESS",
+      );
+      expect(ticketRepo.save).not.toHaveBeenCalled();
+    });
+
+    it("finalizes the ticket, calculating attention and wait durations", async () => {
+      const startedAt = new Date("2024-01-02T12:00:00Z");
+      const calledAt = new Date("2024-01-02T11:55:00Z");
+      const createdAt = new Date("2024-01-02T11:40:00Z");
       const ticket = {
         id: 3,
         status: Status.IN_PROGRESS,
@@ -268,7 +282,7 @@ describe('QueueService', () => {
       ticketRepo.findOne.mockResolvedValue(ticket);
       ticketRepo.save.mockImplementation(async (entity: any) => entity);
 
-      const completionTime = new Date('2024-01-02T12:00:30Z');
+      const completionTime = new Date("2024-01-02T12:00:30Z");
       jest.useFakeTimers().setSystemTime(completionTime);
 
       const result = await queueService.completeTicket(3);

@@ -258,6 +258,18 @@ export default function ReportsPage() {
 
   // ===== KPIs desde summary
   const kpis = {
+    productiveAttentions:
+      summary?.totals.productiveAttentions ??
+      summary?.totals.attended ??
+      0,
+    excludedShortAttentions:
+      summary?.totals.excludedShortAttentions ?? 0,
+    completedTotal:
+      summary?.totals.completedTotal ??
+      summary?.totals.attended ??
+      0,
+    exclusionRate:
+      summary?.totals.exclusionRate ?? 0,
     attended: summary?.totals.attended ?? 0,
     total: summary?.totals.total ?? 0,
     averageWaitMin:
@@ -577,17 +589,37 @@ export default function ReportsPage() {
         {error && <div className="text-sm text-red-600">Error: {error}</div>}
 
         {/* KPIs principales (desde backend) */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tickets Procesados</CardTitle>
+              <CardTitle className="text-sm font-medium">Atenciones productivas</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{numberFormatter.format(kpis.attended)}</div>
+              <div className="text-2xl font-bold">
+                {numberFormatter.format(kpis.productiveAttentions)}
+              </div>
               <div className="flex items-center text-xs text-muted-foreground">
                 <TrendingUp className="h-3 w-3 mr-1 text-green-500" />
-                Completados en el período
+                Finalizadas que suman a productividad
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Atenciones breves excluidas</CardTitle>
+              <Clock className="h-4 w-4 text-amber-500" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-600">
+                {numberFormatter.format(kpis.excludedShortAttentions)}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Menores a 1 minuto · {percentFormatter.format(kpis.exclusionRate)}%
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                Total finalizadas: {numberFormatter.format(kpis.completedTotal)}
               </div>
             </CardContent>
           </Card>
@@ -1035,9 +1067,29 @@ export default function ReportsPage() {
                                 </span>
                               </span>
                               <span>
-                                Completados: {" "}
+                                Productivas: {" "}
                                 <span className="font-medium text-gray-900">
-                                  {numberFormatter.format(operator.completedTickets)}
+                                  {numberFormatter.format(
+                                    operator.productiveAttentions ??
+                                      operator.completedTickets,
+                                  )}
+                                </span>
+                              </span>
+                              <span>
+                                Breves excluidas: {" "}
+                                <span className="font-medium text-amber-700">
+                                  {numberFormatter.format(
+                                    operator.excludedShortAttentions ?? 0,
+                                  )}
+                                </span>
+                              </span>
+                              <span>
+                                Finalizadas: {" "}
+                                <span className="font-medium text-gray-900">
+                                  {numberFormatter.format(
+                                    operator.completedTotal ??
+                                      operator.completedTickets,
+                                  )}
                                 </span>
                               </span>
                               <span>
@@ -1049,7 +1101,13 @@ export default function ReportsPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4 xl:grid-cols-8">
+                          <div className="grid grid-cols-2 gap-4 text-center md:grid-cols-5 xl:grid-cols-9">
+                            <div>
+                              <div className="font-bold">
+                                {percentFormatter.format(operator.exclusionRate ?? 0)}%
+                              </div>
+                              <div className="text-xs text-gray-600">Exclusión breve</div>
+                            </div>
                             <div>
                               <div className="font-bold">{formatPercentage(operator.attendanceRatePct)}</div>
                               <div className="text-xs text-gray-600">Tasa finalización</div>

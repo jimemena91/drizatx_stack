@@ -20,6 +20,7 @@ import { SystemSettingsService } from '../../modules/system-settings/system-sett
 import { QueueEventsService } from '../queue-events/queue-events.service';
 import { AuditLog, type AuditLogActorSnapshot } from '../../entities/audit-log.entity';
 import { Status } from '../../common/enums/status.enum'; // ⬅️ enum fuente de verdad (incluye ABSENT)
+import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
 
 const isTruthyBoolean = (value: unknown): boolean => value === true || value === 1 || value === '1';
 
@@ -70,6 +71,7 @@ export class TicketsService {
     @InjectRepository(AuditLog)
     private readonly auditRepo: Repository<AuditLog>,
     private readonly queueEvents: QueueEventsService,
+    private readonly metricsPolicy: MetricsPolicyService,
   ) {}
 
   private readonly logger = new Logger(TicketsService.name);
@@ -704,6 +706,16 @@ export class TicketsService {
       const ms = t.completedAt.getTime() - t.startedAt.getTime();
       t.attentionDuration = Math.max(0, Math.round(ms / 1000));
     }
+
+    const metricsEvaluation = this.metricsPolicy.evaluate({
+      attentionDurationSeconds: t.attentionDuration ?? null,
+      serviceId: t.serviceId ?? null,
+      operatorId: t.operatorId ?? null,
+    });
+
+    t.countsForMetrics = metricsEvaluation.countsForMetrics;
+    t.metricsExclusionReason = metricsEvaluation.exclusionReason;
+
     return this.ticketRepo.save(t);
   }
 
