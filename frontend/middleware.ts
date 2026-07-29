@@ -22,6 +22,7 @@ const PUBLIC_PATHS = [
   "/sitemap.xml",
   "/_next",
   "/assets",
+  "/branding",
   "/public",
   "/api/health",
 ];
