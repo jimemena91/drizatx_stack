@@ -1,0 +1,22 @@
+DRIZATX — RECURSOS PARA LA INTERFAZ
+
+1. drizatx-logo-fondo-claro.png
+   Logo completo con BY DRIZA negro.
+   Usar sobre fondos blancos o claros: inicio de sesión, encabezado y portada.
+
+2. drizatx-logo-fondo-oscuro.png
+   Logo completo con BY DRIZA blanco.
+   Usar sobre fondos violetas, negros o muy oscuros.
+
+3. drizatx-logo-512.png
+   Versión completa más liviana para uso general dentro del sistema.
+
+4. drizatx-marca-512.png
+   TX sola en lienzo cuadrado transparente. Para menú lateral abierto,
+   pantalla de carga o espacios compactos.
+
+5. drizatx-marca-128.png, drizatx-marca-64.png y drizatx-marca-32.png
+   Tamaños optimizados para navegación, botones, avatar del sistema y controles.
+
+Todos los PNG tienen fondo transparente.
+No estirar ni cambiar la proporción del logo.
