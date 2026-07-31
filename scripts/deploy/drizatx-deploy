@@ -32,6 +32,7 @@ Uso:
   ./scripts/deploy/drizatx-deploy inspect <cliente>
   ./scripts/deploy/drizatx-deploy prepare <cliente>
   ./scripts/deploy/drizatx-deploy deploy <cliente> <manifest>
+  ./scripts/deploy/drizatx-deploy deploy --dry-run <cliente> <manifest>
   ./scripts/deploy/drizatx-deploy list
   ./scripts/deploy/drizatx-deploy help
 
@@ -54,6 +55,11 @@ Comandos disponibles:
       Requiere el manifest exacto, recrea solo el frontend,
       valida HTTP y ejecuta rollback automático si falla.
 
+  deploy --dry-run <cliente> <manifest>
+      Ejecuta las mismas validaciones previas del despliegue real,
+      muestra el plan de ejecución y termina antes de modificar
+      imágenes, contenedores o servicios productivos.
+
   list
       Lista las configuraciones de clientes disponibles.
 
@@ -65,6 +71,7 @@ Ejemplos:
   ./scripts/deploy/drizatx-deploy inspect cruzverde
   ./scripts/deploy/drizatx-deploy prepare cruzverde
   ./scripts/deploy/drizatx-deploy deploy cruzverde /ruta/manifest.env
+  ./scripts/deploy/drizatx-deploy deploy --dry-run cruzverde /ruta/manifest.env
   ./scripts/deploy/drizatx-deploy inspect martinez
   ./scripts/deploy/drizatx-deploy list
 
@@ -134,6 +141,7 @@ prepare_client() {
 deploy_client() {
   local client_key="${1:-}"
   local manifest_file="${2:-}"
+  local execution_mode="${3:-apply}"
 
   [ -n "$client_key" ] ||
     drizatx_fail "Debe indicar el cliente"
@@ -152,7 +160,15 @@ deploy_client() {
   drizatx_section "CONFIGURACIÓN VALIDADA"
   drizatx_print_client_config
 
-  drizatx_deploy_frontend "$manifest_file"
+  case "$execution_mode" in
+    apply|dry-run)
+      ;;
+    *)
+      drizatx_fail         "Modo de despliegue inválido: $execution_mode"
+      ;;
+  esac
+
+  drizatx_deploy_frontend     "$manifest_file"     "$execution_mode"
 }
 
 main() {
@@ -169,7 +185,12 @@ main() {
       ;;
     deploy)
       shift
-      deploy_client "${1:-}" "${2:-}"
+
+      if [ "${1:-}" = "--dry-run" ]; then
+        deploy_client           "${2:-}"           "${3:-}"           "dry-run"
+      else
+        deploy_client           "${1:-}"           "${2:-}"           "apply"
+      fi
       ;;
     list)
       list_clients

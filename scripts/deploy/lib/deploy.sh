@@ -211,6 +211,15 @@ FAILURE
 
 drizatx_deploy_frontend() {
   local manifest_file="${1:?Falta el manifest}"
+  local execution_mode="${2:-apply}"
+
+  case "$execution_mode" in
+    apply|dry-run)
+      ;;
+    *)
+      drizatx_fail         "Modo de despliegue inválido: $execution_mode"
+      ;;
+  esac
 
   local deploy_started_at
   local deploy_dir
@@ -354,6 +363,45 @@ drizatx_deploy_frontend() {
   echo "Imagen preparada: $prepared_image"
   echo "Imagen preparada ID: $built_image_id"
   echo "Imagen activa actual: $current_active_image"
+
+  if [ "$execution_mode" = "dry-run" ]; then
+    drizatx_section "DEPLOY — DRY RUN"
+
+    echo "Simulación terminada correctamente."
+    echo
+    echo "Cliente:"
+    echo "$CLIENT_NAME"
+    echo
+    echo "Commit candidato:"
+    echo "$source_head"
+    echo
+    echo "Imagen candidata:"
+    echo "$prepared_image"
+    echo
+    echo "ID de imagen candidata:"
+    echo "$built_image_id"
+    echo
+    echo "Imagen productiva actual:"
+    echo "$current_active_image"
+    echo
+    echo "Acciones que ejecutaría un deploy real:"
+    echo "- proteger el estado productivo"
+    echo "- etiquetar la imagen candidata como $FRONTEND_IMAGE"
+    echo "- recrear exclusivamente $FRONTEND_CONTAINER"
+    echo "- comprobar que backend y MySQL no cambien"
+    echo "- comprobar la imagen activa del frontend"
+    echo "- validar la respuesta HTTP"
+    echo "- ejecutar rollback automático ante fallos"
+    echo
+    echo "Acciones omitidas por dry-run:"
+    echo "- no se modificaron etiquetas de imágenes"
+    echo "- no se crearon registros de deploy"
+    echo "- no se recrearon contenedores"
+    echo "- no se reiniciaron servicios"
+    echo "- no se modificaron redes ni bases de datos"
+
+    return 0
+  fi
 
   drizatx_section "DEPLOY — PROTEGER ESTADO PRODUCTIVO"
 
