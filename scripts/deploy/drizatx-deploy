@@ -31,7 +31,8 @@ Comandos disponibles:
 
   inspect <cliente>
       Carga y valida la configuración.
-      Inspecciona host, worktree, rama, Compose y contenedores.
+      Ejecuta un preflight completo de solo lectura:
+      repositorio, Compose, contenedores, red y puertos.
       No modifica archivos, imágenes, contenedores ni datos.
 
   list
@@ -57,6 +58,10 @@ list_clients() {
 
   for config_file in "$SCRIPT_DIR"/clients/*.conf; do
     [ -e "$config_file" ] || continue
+
+    [ "$(basename "$config_file")" = "template.conf" ] &&
+      continue
+
     basename "$config_file" .conf
   done
 }
@@ -76,8 +81,7 @@ inspect_client() {
   drizatx_section "CONFIGURACIÓN VALIDADA"
   drizatx_print_client_config
 
-  drizatx_validate_read_only_environment
-  drizatx_validate_expected_containers
+  drizatx_run_preflight
 
   drizatx_section "RESULTADO"
   echo "Inspección terminada correctamente."
