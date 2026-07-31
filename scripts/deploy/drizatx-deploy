@@ -21,6 +21,9 @@ source "$SCRIPT_DIR/lib/security.sh"
 # shellcheck source=lib/prepare.sh
 source "$SCRIPT_DIR/lib/prepare.sh"
 
+# shellcheck source=lib/deploy.sh
+source "$SCRIPT_DIR/lib/deploy.sh"
+
 usage() {
   cat <<'USAGE'
 DrizaTx Deployment Framework
@@ -28,6 +31,7 @@ DrizaTx Deployment Framework
 Uso:
   ./scripts/deploy/drizatx-deploy inspect <cliente>
   ./scripts/deploy/drizatx-deploy prepare <cliente>
+  ./scripts/deploy/drizatx-deploy deploy <cliente> <manifest>
   ./scripts/deploy/drizatx-deploy list
   ./scripts/deploy/drizatx-deploy help
 
@@ -45,6 +49,11 @@ Comandos disponibles:
       inicia un preview temporal y valida su respuesta HTTP.
       No reemplaza el frontend productivo.
 
+  deploy <cliente> <manifest>
+      Despliega exclusivamente una imagen validada por prepare.
+      Requiere el manifest exacto, recrea solo el frontend,
+      valida HTTP y ejecuta rollback automático si falla.
+
   list
       Lista las configuraciones de clientes disponibles.
 
@@ -55,11 +64,12 @@ Ejemplos:
 
   ./scripts/deploy/drizatx-deploy inspect cruzverde
   ./scripts/deploy/drizatx-deploy prepare cruzverde
+  ./scripts/deploy/drizatx-deploy deploy cruzverde /ruta/manifest.env
   ./scripts/deploy/drizatx-deploy inspect martinez
   ./scripts/deploy/drizatx-deploy list
 
-El comando prepare no reemplaza producción.
-Deploy y rollback se incorporarán en etapas posteriores.
+Prepare no reemplaza producción.
+Deploy requiere una preparación validada y posee rollback automático.
 USAGE
 }
 
@@ -121,6 +131,30 @@ prepare_client() {
   drizatx_prepare_frontend
 }
 
+deploy_client() {
+  local client_key="${1:-}"
+  local manifest_file="${2:-}"
+
+  [ -n "$client_key" ] ||
+    drizatx_fail "Debe indicar el cliente"
+
+  [ -n "$manifest_file" ] ||
+    drizatx_fail "Debe indicar el manifest exacto"
+
+  drizatx_require_command git
+  drizatx_require_command docker
+  drizatx_require_command curl
+  drizatx_require_command sha256sum
+
+  drizatx_load_client_config "$client_key"
+  drizatx_validate_client_config
+
+  drizatx_section "CONFIGURACIÓN VALIDADA"
+  drizatx_print_client_config
+
+  drizatx_deploy_frontend "$manifest_file"
+}
+
 main() {
   local command="${1:-help}"
 
@@ -132,6 +166,10 @@ main() {
     prepare)
       shift
       prepare_client "${1:-}"
+      ;;
+    deploy)
+      shift
+      deploy_client "${1:-}" "${2:-}"
       ;;
     list)
       list_clients
