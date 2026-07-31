@@ -18,12 +18,16 @@ source "$SCRIPT_DIR/lib/config.sh"
 # shellcheck source=lib/security.sh
 source "$SCRIPT_DIR/lib/security.sh"
 
+# shellcheck source=lib/prepare.sh
+source "$SCRIPT_DIR/lib/prepare.sh"
+
 usage() {
   cat <<'USAGE'
 DrizaTx Deployment Framework
 
 Uso:
   ./scripts/deploy/drizatx-deploy inspect <cliente>
+  ./scripts/deploy/drizatx-deploy prepare <cliente>
   ./scripts/deploy/drizatx-deploy list
   ./scripts/deploy/drizatx-deploy help
 
@@ -35,6 +39,12 @@ Comandos disponibles:
       repositorio, Compose, contenedores, red y puertos.
       No modifica archivos, imágenes, contenedores ni datos.
 
+  prepare <cliente>
+      Ejecuta el preflight, protege la imagen activa,
+      construye una imagen frontend versionada,
+      inicia un preview temporal y valida su respuesta HTTP.
+      No reemplaza el frontend productivo.
+
   list
       Lista las configuraciones de clientes disponibles.
 
@@ -44,10 +54,12 @@ Comandos disponibles:
 Ejemplos:
 
   ./scripts/deploy/drizatx-deploy inspect cruzverde
+  ./scripts/deploy/drizatx-deploy prepare cruzverde
   ./scripts/deploy/drizatx-deploy inspect martinez
   ./scripts/deploy/drizatx-deploy list
 
-Por seguridad, esta primera versión no implementa deploy ni rollback.
+El comando prepare no reemplaza producción.
+Deploy y rollback se incorporarán en etapas posteriores.
 USAGE
 }
 
@@ -88,6 +100,27 @@ inspect_client() {
   echo "No se modificaron archivos, imágenes, contenedores ni datos."
 }
 
+prepare_client() {
+  local client_key="${1:-}"
+
+  [ -n "$client_key" ] ||
+    drizatx_fail "Debe indicar el cliente"
+
+  drizatx_require_command git
+  drizatx_require_command docker
+  drizatx_require_command curl
+  drizatx_require_command df
+  drizatx_require_command sha256sum
+
+  drizatx_load_client_config "$client_key"
+  drizatx_validate_client_config
+
+  drizatx_section "CONFIGURACIÓN VALIDADA"
+  drizatx_print_client_config
+
+  drizatx_prepare_frontend
+}
+
 main() {
   local command="${1:-help}"
 
@@ -95,6 +128,10 @@ main() {
     inspect)
       shift
       inspect_client "${1:-}"
+      ;;
+    prepare)
+      shift
+      prepare_client "${1:-}"
       ;;
     list)
       list_clients
