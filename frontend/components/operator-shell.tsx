@@ -28,7 +28,7 @@ export function OperatorShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-svh w-full flex-col">
         <header className="border-b border-slate-200/60 bg-white/80 backdrop-blur-sm transition dark:border-slate-800/60 dark:bg-slate-950/70">
           <div className="mx-auto flex w-full max-w-screen-2xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-            <Logo variant="gradient" showText size="md" />
+            <Logo display="mark" size="md" />
             <div className="flex items-center gap-4">
               <span className="hidden text-sm font-semibold text-slate-600 dark:text-slate-200 sm:inline">
                 {operatorName}

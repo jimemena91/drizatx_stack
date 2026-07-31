@@ -3,7 +3,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { VariantProps, cva } from "class-variance-authority"
-import { PanelLeftIcon, Sparkles } from "lucide-react"
+import { PanelLeftIcon } from "lucide-react"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -674,8 +674,8 @@ function SidebarMenuSubButton({
    Header “brand” helper
    ====================== */
 function SidebarBrandHeader({
-  title = "DrZaTx",
-  subtitle = "ATLITUDE Dashboard",
+  title = "DrizaTx",
+  subtitle = "Sistema de Gestión",
   className,
 }: {
   title?: string
@@ -684,13 +684,23 @@ function SidebarBrandHeader({
 }) {
   return (
     <SidebarHeader className={cn("relative px-5 pt-6 pb-4", className)}>
-      <div className="flex items-center space-x-3">
-        <div className="w-12 h-12 rounded-2xl bg-white/25 backdrop-blur-sm flex items-center justify-center border border-white/30 shadow-lg">
-          <Sparkles className="w-6 h-6 text-white" />
+      <div className="flex items-center gap-3">
+        <div className="flex size-14 shrink-0 items-center justify-center">
+          <img
+            src="/branding/drizatx-marca-128.png"
+            alt=""
+            aria-hidden="true"
+            width={56}
+            height={56}
+            className="size-14 object-contain drop-shadow-lg"
+          />
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-white drop-shadow-sm">{title}</h1>
-          <p className="text-sm text-white/85">{subtitle}</p>
+
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold text-white drop-shadow-sm">
+            {title}
+          </h1>
+          <p className="truncate text-sm text-white/85">{subtitle}</p>
         </div>
       </div>
     </SidebarHeader>
