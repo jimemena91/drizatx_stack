@@ -1,0 +1,109 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+umask 022
+
+SCRIPT_DIR="$(
+  cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &&
+  pwd
+)"
+
+export DRIZATX_DEPLOY_ROOT="$SCRIPT_DIR"
+
+# shellcheck source=lib/common.sh
+source "$SCRIPT_DIR/lib/common.sh"
+
+# shellcheck source=lib/config.sh
+source "$SCRIPT_DIR/lib/config.sh"
+
+# shellcheck source=lib/security.sh
+source "$SCRIPT_DIR/lib/security.sh"
+
+usage() {
+  cat <<'USAGE'
+DrizaTx Deployment Framework
+
+Uso:
+  ./scripts/deploy/drizatx-deploy inspect <cliente>
+  ./scripts/deploy/drizatx-deploy list
+  ./scripts/deploy/drizatx-deploy help
+
+Comandos disponibles:
+
+  inspect <cliente>
+      Carga y valida la configuración.
+      Inspecciona host, worktree, rama, Compose y contenedores.
+      No modifica archivos, imágenes, contenedores ni datos.
+
+  list
+      Lista las configuraciones de clientes disponibles.
+
+  help
+      Muestra esta ayuda.
+
+Ejemplos:
+
+  ./scripts/deploy/drizatx-deploy inspect cruzverde
+  ./scripts/deploy/drizatx-deploy inspect martinez
+  ./scripts/deploy/drizatx-deploy list
+
+Por seguridad, esta primera versión no implementa deploy ni rollback.
+USAGE
+}
+
+list_clients() {
+  local config_file
+
+  drizatx_section "CLIENTES CONFIGURADOS"
+
+  for config_file in "$SCRIPT_DIR"/clients/*.conf; do
+    [ -e "$config_file" ] || continue
+    basename "$config_file" .conf
+  done
+}
+
+inspect_client() {
+  local client_key="${1:-}"
+
+  [ -n "$client_key" ] ||
+    drizatx_fail "Debe indicar el cliente"
+
+  drizatx_require_command git
+  drizatx_require_command docker
+
+  drizatx_load_client_config "$client_key"
+  drizatx_validate_client_config
+
+  drizatx_section "CONFIGURACIÓN VALIDADA"
+  drizatx_print_client_config
+
+  drizatx_validate_read_only_environment
+  drizatx_validate_expected_containers
+
+  drizatx_section "RESULTADO"
+  echo "Inspección terminada correctamente."
+  echo "No se modificaron archivos, imágenes, contenedores ni datos."
+}
+
+main() {
+  local command="${1:-help}"
+
+  case "$command" in
+    inspect)
+      shift
+      inspect_client "${1:-}"
+      ;;
+    list)
+      list_clients
+      ;;
+    help|-h|--help)
+      usage
+      ;;
+    *)
+      usage
+      echo
+      drizatx_fail "Comando desconocido: $command"
+      ;;
+  esac
+}
+
+main "$@"
