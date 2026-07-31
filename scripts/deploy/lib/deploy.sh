@@ -185,6 +185,30 @@ ROLLBACK
   echo "HTTP: $DRIZATX_DEPLOY_HTTP_CODE"
 }
 
+drizatx_deploy_abort_with_rollback() {
+  local rollback_image_id="${1:?Falta la imagen de rollback}"
+  local deploy_record="${2:?Falta el registro}"
+  local failure_status="${3:?Falta el estado del fallo}"
+  local failure_message="${4:?Falta el mensaje del fallo}"
+
+  cat >>"$deploy_record" <<FAILURE
+DEPLOY_STATUS="$failure_status"
+DEPLOY_FAILED_AT="$(date -u +%Y%m%dT%H%M%SZ)"
+FAILURE_MESSAGE="$failure_message"
+FAILURE
+
+  drizatx_deploy_rollback_frontend \
+    "$rollback_image_id" \
+    "$deploy_record"
+
+  sha256sum \
+    "$deploy_record" \
+    >"${deploy_record}.sha256"
+
+  drizatx_fail \
+    "$failure_message; rollback ejecutado"
+}
+
 drizatx_deploy_frontend() {
   local manifest_file="${1:?Falta el manifest}"
 
@@ -442,37 +466,53 @@ RECORD
 
   drizatx_section "DEPLOY — VALIDAR CONTENEDORES AISLADOS"
 
-  [ "$(
+  if [ "$(
     docker inspect \
       --format '{{.Id}}' \
       "$BACKEND_CONTAINER"
-  )" = "$backend_id_before" ] ||
-    drizatx_fail \
+  )" != "$backend_id_before" ]; then
+    drizatx_deploy_abort_with_rollback \
+      "$current_active_image" \
+      "$deploy_record" \
+      "BACKEND_RECREATED" \
       "El backend fue recreado inesperadamente"
+  fi
 
-  [ "$(
+  if [ "$(
     docker inspect \
       --format '{{.Id}}' \
       "$DB_CONTAINER"
-  )" = "$db_id_before" ] ||
-    drizatx_fail \
+  )" != "$db_id_before" ]; then
+    drizatx_deploy_abort_with_rollback \
+      "$current_active_image" \
+      "$deploy_record" \
+      "DATABASE_RECREATED" \
       "MySQL fue recreado inesperadamente"
+  fi
 
-  [ "$(
+  if [ "$(
     docker inspect \
       --format '{{.State.StartedAt}}' \
       "$BACKEND_CONTAINER"
-  )" = "$backend_started_before" ] ||
-    drizatx_fail \
+  )" != "$backend_started_before" ]; then
+    drizatx_deploy_abort_with_rollback \
+      "$current_active_image" \
+      "$deploy_record" \
+      "BACKEND_RESTARTED" \
       "El backend fue reiniciado inesperadamente"
+  fi
 
-  [ "$(
+  if [ "$(
     docker inspect \
       --format '{{.State.StartedAt}}' \
       "$DB_CONTAINER"
-  )" = "$db_started_before" ] ||
-    drizatx_fail \
+  )" != "$db_started_before" ]; then
+    drizatx_deploy_abort_with_rollback \
+      "$current_active_image" \
+      "$deploy_record" \
+      "DATABASE_RESTARTED" \
       "MySQL fue reiniciado inesperadamente"
+  fi
 
   container_id_after="$(
     docker inspect \
@@ -480,9 +520,13 @@ RECORD
       "$FRONTEND_CONTAINER"
   )"
 
-  [ "$container_id_after" != "$container_id_before" ] ||
-    drizatx_fail \
+  if [ "$container_id_after" = "$container_id_before" ]; then
+    drizatx_deploy_abort_with_rollback \
+      "$current_active_image" \
+      "$deploy_record" \
+      "FRONTEND_NOT_RECREATED" \
       "El frontend no fue recreado"
+  fi
 
   deployed_image_id="$(
     drizatx_container_image_id \
