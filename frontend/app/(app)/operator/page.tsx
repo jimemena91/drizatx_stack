@@ -18,6 +18,7 @@ import { getDefaultRouteForRole } from "@/lib/auth-utils";
 import { useQueueStatus } from "@/hooks/use-queue-status";
 import { useQueueRealtime } from "@/hooks/use-queue-realtime";
 import { browserNotificationService } from "@/lib/browser/browserNotification.service";
+import { operatorAlertService } from "@/lib/pwa/operator-alert.service";
 import { useTicketActions } from "@/hooks/use-ticket-actions";
 import { useServices } from "@/hooks/use-services";
 import {
@@ -953,8 +954,12 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
     }
 
     browserNotificationService.updateWaitingCount(waitingTicketsCount);
+    void operatorAlertService.updateWaitingCount(waitingTicketsCount);
 
-    return () => browserNotificationService.restore();
+    return () => {
+      browserNotificationService.restore();
+      void operatorAlertService.clear();
+    };
   }, [normalizedRoleSet, waitingTicketsCount]);
 
   const absentTicketsCount = filteredAbsentTickets.length;

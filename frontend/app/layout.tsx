@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   title: "DrizaTx - Sistema Integral de Gestión de Colas",
   description: "Optimiza flujos de personas en entornos de atención masiva con tecnología DrizaTx",
   generator: "v0.dev",
+  manifest: "/manifest.webmanifest",
+  applicationName: "DrizaTx Operador",
+  icons: {
+    icon: "/drizatx-icon-512.png",
+    apple: "/drizatx-icon-512.png",
+  },
 }
 
 // 👇 usa `variable` para exponer --font-inter
