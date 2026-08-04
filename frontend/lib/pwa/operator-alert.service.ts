@@ -56,6 +56,7 @@ class OperatorAlertService {
       icon: "/drizatx-icon-512.png",
       badge: "/drizatx-icon-512.png",
       tag: "drizatx-waiting-tickets",
+      requireInteraction: true,
     })
 
     notification.onclick = () => {
