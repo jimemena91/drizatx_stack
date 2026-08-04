@@ -18,6 +18,8 @@ const PUBLIC_PATHS = [
   "/terminal", // 👈 la terminal es pública
   "/mobile",
   "/favicon.ico",
+  "/manifest.webmanifest",
+  "/drizatx-icon-512.png",
   "/robots.txt",
   "/sitemap.xml",
   "/_next",
