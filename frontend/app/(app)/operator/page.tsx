@@ -939,13 +939,11 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
   );
 
   const waitingTicketsCount = useMemo(() => {
-    const aggregated = aggregatedQueueEntries.reduce((sum, service) => {
-      const value = Number((service as any)?.waitingCount);
-      return sum + (Number.isFinite(value) ? value : 0);
-    }, 0);
-    if (aggregated > 0) return aggregated;
-    return filteredNextTickets.length;
-  }, [aggregatedQueueEntries, filteredNextTickets]);
+  return aggregatedQueueEntries.reduce((sum, service) => {
+    const value = Number((service as any)?.waitingCount);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+}, [aggregatedQueueEntries]);
 
   useEffect(() => {
     if (!normalizedRoleSet.has(Role.OPERATOR)) {
