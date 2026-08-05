@@ -319,7 +319,7 @@ export class TicketsService {
     const { clientId, mobilePhone, priority } = options;
     const client = clientId ? await this.clientsService.findOne(clientId) : null;
 
-    return this.dataSource.transaction(async (manager) => {
+    const savedTicket = await this.dataSource.transaction(async (manager) => {
       try {
         // 1) Reservar correlativo con lock de fila (service_counters)
         const { service, nextNumber, issuedDate } = await this.servicesService.reserveNextTicketNumber(
@@ -390,6 +390,13 @@ export class TicketsService {
         throw e; // deja que Nest lo transforme en 500; el log ya nos dice la causa real
       }
     });
+
+    this.queueEvents.emitQueueUpdated({
+      ticketId: savedTicket.id,
+      serviceId: savedTicket.serviceId,
+    });
+
+    return savedTicket;
   }
 
   private async computeEstimatedWaitTime(
