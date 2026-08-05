@@ -15,8 +15,12 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   applicationName: "DrizaTx Operador",
   icons: {
-    icon: "/drizatx-icon-512.png",
+    icon: [
+      { url: "/favicon.ico", type: "image/x-icon" },
+      { url: "/icons/drizatx-dark.ico", type: "image/x-icon" },
+    ],
     apple: "/drizatx-icon-512.png",
+    shortcut: "/favicon.ico",
   },
 }
 
