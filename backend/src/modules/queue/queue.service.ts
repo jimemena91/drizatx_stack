@@ -12,6 +12,7 @@ import { ServicesService } from '../../modules/services/services.service';
 import { ClientsService } from '../../modules/clients/clients.service';
 import { TicketsService } from '../../modules/tickets/tickets.service';
 import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
+import { QueueEventsService } from '../queue-events/queue-events.service';
 
 type DashboardServiceSummary = {
   serviceId: number;
@@ -57,6 +58,7 @@ export class QueueService {
     private readonly clientsService: ClientsService,
     private readonly ticketsService: TicketsService,
     private readonly metricsPolicy: MetricsPolicyService,
+    private readonly queueEvents: QueueEventsService,
   ) {}
 
   private normalizePriorityLevel(input: unknown): number | null {
@@ -82,7 +84,7 @@ export class QueueService {
   async enqueue(serviceId: number, clientId?: number): Promise<Ticket> {
     const client = clientId ? await this.clientsService.findOne(clientId) : undefined;
 
-    return this.dataSource.transaction(async (manager) => {
+    const savedTicket = await this.dataSource.transaction(async (manager) => {
       const { service, nextNumber, issuedDate } = await this.servicesService.reserveNextTicketNumber(
         manager,
         serviceId,
@@ -118,6 +120,13 @@ export class QueueService {
       (saved as Ticket & { service?: ServiceEntity }).service = service;
       return saved;
     });
+
+    this.queueEvents.emitQueueUpdated({
+      ticketId: savedTicket.id,
+      serviceId: savedTicket.serviceId,
+    });
+
+    return savedTicket;
   }
 
   // Estimación básica: WAITING * estimatedTime del servicio
