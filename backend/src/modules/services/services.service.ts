@@ -4,6 +4,7 @@ import { Repository, EntityManager, SelectQueryBuilder } from 'typeorm';
 import { Service } from '../../entities/service.entity';
 import { OperatorService } from '../../entities/operator-service.entity';
 import { Status } from '../../common/enums/status.enum';
+import { BusinessDateService } from '../business-date/business-date.service';
 
 type ServiceOperatorAssignment = {
   id: number;
@@ -20,6 +21,7 @@ export class ServicesService {
     private readonly serviceRepo: Repository<Service>,
     @InjectRepository(OperatorService)
     private readonly operatorServiceRepo: Repository<OperatorService>,
+    private readonly businessDate: BusinessDateService,
   ) {}
 
   private maxAttentionTimeColumnSupported: boolean | null = null;
@@ -532,18 +534,6 @@ export class ServicesService {
     }
   }
 
-  private async resolveCurrentDate(manager: EntityManager): Promise<string> {
-    const type = String(manager.connection.options.type ?? '').toLowerCase();
-    const query =
-      type === 'sqlite' || type === 'better-sqlite3'
-        ? "SELECT DATE('now') AS currentDate"
-        : 'SELECT CURRENT_DATE() AS currentDate';
-
-    const [row] = await manager.query(query);
-    const normalized = this.normalizeDateInput(row?.currentDate ?? row?.currentdate ?? row?.CURRENTDATE);
-    return normalized ?? this.formatDate(new Date());
-  }
-
   private async reserveNextTicketNumberLegacy(
     manager: EntityManager,
     serviceId: number,
@@ -1006,7 +996,7 @@ export class ServicesService {
     const service = await manager.getRepository(Service).findOne({ where: { id: serviceId } });
     if (!service) throw new NotFoundException('Servicio no encontrado');
 
-    const today = await this.resolveCurrentDate(manager);
+    const today = this.businessDate.getBusinessDate();
 
     const lockClause = this.supportsPessimisticWrite(manager) ? ' FOR UPDATE' : '';
 
