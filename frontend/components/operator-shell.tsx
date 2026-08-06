@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, type MouseEvent, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
 
 import { Logo } from "@/components/logo";
@@ -10,18 +9,15 @@ import { useAuth } from "@/contexts/auth-context";
 
 export function OperatorShell({ children }: { children: ReactNode }) {
   const { state, logout } = useAuth();
-  const router = useRouter();
-
   const operatorName = useMemo(() => {
     return state.user?.name?.trim() || state.user?.email || "Operador";
   }, [state.user?.email, state.user?.name]);
 
-  const handleLogout = useCallback(async (event?: MouseEvent<HTMLButtonElement>) => {
+  const handleLogout = useCallback((event?: MouseEvent<HTMLButtonElement>) => {
     event?.preventDefault();
     event?.stopPropagation();
-    await logout();
-    window.location.href = "/logout";
-  }, [logout, router]);
+    logout();
+  }, [logout]);
 
   return (
     <div className="min-h-svh w-full bg-hero dark:bg-hero-dark">

@@ -601,44 +601,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Logout
-    // Logout: limpia cookies del backend y estado local
-    const logout = async () => {
-      try {
-        const base = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL)
-        await fetch(`${base.replace(/\/$/, "")}/api/auth/logout`, {
-          method: "POST",
-          credentials: "include",
-          mode: "cors",
-          cache: "no-store",
-        })
-      } catch {
-        /* ignore */
-      }
+  // Logout: limpia inmediatamente el estado local y no bloquea la navegación.
+  const logout = () => {
+    try {
+      const base = resolveApiBaseUrl(process.env.NEXT_PUBLIC_API_URL)
 
-      persistUser(null)
-      persistToken(null)
-      persistPermissions(null)
-
-      try {
-        apiClient.setAuthToken(null)
-        localStorage.removeItem(USER_STORAGE_KEY)
-        localStorage.removeItem(TOKEN_STORAGE_KEY)
-        localStorage.removeItem(PERMISSIONS_STORAGE_KEY)
-        localStorage.removeItem("access_token")
-        localStorage.removeItem("token")
-        localStorage.removeItem("user")
-        sessionStorage.clear()
-      } catch {}
-
-      document.cookie = "drizatx-auth=; Max-Age=0; Path=/; SameSite=Lax"
-      document.cookie = "drizatx-role=; Max-Age=0; Path=/; SameSite=Lax"
-
-      setAuthCookie(false)
-      dispatch({ type: "LOGOUT" })
-
-      window.location.replace("/login")
+      void fetch(`${base.replace(/\/$/, "")}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+        mode: "cors",
+        cache: "no-store",
+        keepalive: true,
+      }).catch(() => undefined)
+    } catch {
+      // El endpoint /logout también elimina las cookies HTTP-only.
     }
+
+    persistUser(null)
+    persistToken(null)
+    persistPermissions(null)
+
+    try {
+      apiClient.setAuthToken(null)
+      localStorage.removeItem(USER_STORAGE_KEY)
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
+      localStorage.removeItem(PERMISSIONS_STORAGE_KEY)
+      localStorage.removeItem("access_token")
+      localStorage.removeItem("token")
+      localStorage.removeItem("user")
+      sessionStorage.clear()
+    } catch {}
+
+    document.cookie = "drizatx-auth=; Max-Age=0; Path=/; SameSite=Lax"
+    document.cookie = "drizatx-role=; Max-Age=0; Path=/; SameSite=Lax"
+
+    setAuthCookie(false)
+    dispatch({ type: "LOGOUT" })
+
+    // Punto único de salida: elimina también cookies HTTP-only y redirige a login.
+    window.location.replace("/logout")
+  }
 
 
   // Sincronización de permisos (solo si autenticado y NO público)
