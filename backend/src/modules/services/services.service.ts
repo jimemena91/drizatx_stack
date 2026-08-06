@@ -988,6 +988,41 @@ export class ServicesService {
    * Usa la tabla `service_counters` con bloqueo de fila (SELECT ... FOR UPDATE)
    * para evitar colisiones en concurrencia.
    */
+  private async recoverLastSequenceForBusinessDate(
+    manager: EntityManager,
+    service: Service,
+    businessDate: string,
+  ): Promise<number> {
+    const rows = await manager.query(
+      `SELECT number
+       FROM tickets
+       WHERE service_id = ?
+         AND issued_for_date = ?`,
+      [service.id, businessDate],
+    );
+
+    const prefix = this.makeSafePrefix(service);
+    let maximum = 0;
+
+    for (const row of rows ?? []) {
+      const number = String(row?.number ?? '');
+
+      if (!number.startsWith(prefix)) continue;
+
+      const suffix = number.slice(prefix.length);
+
+      if (!/^\d+$/.test(suffix)) continue;
+
+      const sequence = Number(suffix);
+
+      if (Number.isSafeInteger(sequence) && sequence > maximum) {
+        maximum = sequence;
+      }
+    }
+
+    return maximum;
+  }
+
   async reserveNextTicketNumber(
     manager: EntityManager,
     serviceId: number,
@@ -1017,10 +1052,17 @@ export class ServicesService {
 
     let current = 0;
     let counterDate = today;
+
     if (!row) {
+      current = await this.recoverLastSequenceForBusinessDate(
+        manager,
+        service,
+        today,
+      );
+
       await manager.query(
-        'INSERT INTO service_counters (service_id, counter_date, last_seq) VALUES (?, ?, 0)',
-        [serviceId, today],
+        'INSERT INTO service_counters (service_id, counter_date, last_seq) VALUES (?, ?, ?)',
+        [serviceId, today, current],
       );
     } else {
       current = Number(row.last_seq) || 0;
@@ -1029,10 +1071,16 @@ export class ServicesService {
 
     if (counterDate !== today) {
       await this.persistDailyTotal(manager, serviceId, counterDate, current);
-      current = 0;
+
+      current = await this.recoverLastSequenceForBusinessDate(
+        manager,
+        service,
+        today,
+      );
+
       await manager.query(
-        'UPDATE service_counters SET counter_date = ?, last_seq = 0 WHERE service_id = ?',
-        [today, serviceId],
+        'UPDATE service_counters SET counter_date = ?, last_seq = ? WHERE service_id = ?',
+        [today, current, serviceId],
       );
     }
 
