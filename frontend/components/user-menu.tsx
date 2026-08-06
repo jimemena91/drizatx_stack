@@ -1,6 +1,5 @@
 "use client"
 import { useAuth } from "@/contexts/auth-context"
-import { useRouter } from "next/navigation"
 import { useCallback, type MouseEvent } from "react"
 import { RoleBadge } from "@/components/role-badge"
 import {
@@ -18,18 +17,15 @@ import { PermissionGuard } from "@/components/permission-guard"
 
 export function UserMenu() {
   const { state, logout } = useAuth()
-  const router = useRouter()
-
   if (!state.user) return null
 
   const isOperator = state.user.role === "OPERATOR"
 
-  const handleLogout = useCallback(async (event?: MouseEvent<HTMLElement>) => {
+  const handleLogout = useCallback((event?: MouseEvent<HTMLElement>) => {
     event?.preventDefault()
     event?.stopPropagation()
-    await logout()
-    window.location.href = "/logout"
-  }, [logout, router])
+    logout()
+  }, [logout])
 
   const initials =
     state.user.name
