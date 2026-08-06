@@ -14,6 +14,7 @@ const IS_DEMO = false;
  */
 const PUBLIC_PATHS = [
   "/login",
+  "/logout",
   "/display",
   "/terminal", // 👈 la terminal es pública
   "/mobile",
