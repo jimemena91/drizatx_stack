@@ -13,6 +13,7 @@ import { ClientsService } from '../../modules/clients/clients.service';
 import { TicketsService } from '../../modules/tickets/tickets.service';
 import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
 import { QueueEventsService } from '../queue-events/queue-events.service';
+import { BusinessDateService } from '../business-date/business-date.service';
 
 type DashboardServiceSummary = {
   serviceId: number;
@@ -59,6 +60,7 @@ export class QueueService {
     private readonly ticketsService: TicketsService,
     private readonly metricsPolicy: MetricsPolicyService,
     private readonly queueEvents: QueueEventsService,
+    private readonly businessDate: BusinessDateService,
   ) {}
 
   private normalizePriorityLevel(input: unknown): number | null {
@@ -274,7 +276,9 @@ export class QueueService {
   }
 
   // Tickets visibles en dashboard
-  async dashboardTickets(): Promise<Ticket[]> {
+  async dashboardTickets(
+    businessDate = this.businessDate.getBusinessDate(),
+  ): Promise<Ticket[]> {
     const statuses = [Status.CALLED, Status.IN_PROGRESS, Status.WAITING, Status.ABSENT];
 
     return this.ticketRepo
@@ -294,7 +298,9 @@ export class QueueService {
         'service.updatedAt',
       ])
       .where('ticket.status IN (:...statuses)', { statuses })
-      .andWhere('ticket.issued_for_date = CURRENT_DATE()')
+      .andWhere('ticket.issued_for_date = :businessDate', {
+        businessDate,
+      })
       .orderBy('ticket.priority_level', 'DESC')
       .addOrderBy('COALESCE(ticket.requeued_at, ticket.created_at)', 'ASC')
       .addOrderBy('ticket.id', 'ASC')
@@ -306,12 +312,11 @@ export class QueueService {
    * Devuelve: { services: [{ serviceId, serviceName, waitingCount, avgWaitTime, inProgressCount, completedCountToday }], updatedAt }
    */
   async getDashboard(): Promise<QueueDashboardResponse> {
-    // Ventana de "hoy" sin depender de funciones del motor
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const nextDay = new Date(startOfDay);
-    nextDay.setDate(startOfDay.getDate() + 1);
+    const {
+      businessDate,
+      start: startOfDay,
+      end: nextDay,
+    } = this.businessDate.getBusinessDayRange();
 
     const dashboardQuery = this.dataSource
       .createQueryBuilder()
@@ -356,13 +361,14 @@ export class QueueService {
       .leftJoin(
         Ticket,
         't',
-        't.service_id = s.id AND t.issued_for_date = CURRENT_DATE()',
+        't.service_id = s.id AND t.issued_for_date = :businessDate',
       )
       .groupBy('s.id')
       .addGroupBy('s.name')
       .addGroupBy('s.priority_level')
       .orderBy('s.priority_level', 'ASC')
       .addOrderBy('s.id', 'ASC')
+      .setParameter('businessDate', businessDate)
       .setParameter('waitingStatus', Status.WAITING)
       .setParameter('inProgressStatuses', [Status.IN_PROGRESS, Status.CALLED])
       .setParameter('completedStatus', Status.COMPLETED)
@@ -372,7 +378,7 @@ export class QueueService {
 
     const [rows, dashboardTickets, recentlyCompletedTickets, servicesCatalog] = await Promise.all([
       dashboardQuery.getRawMany(),
-      this.dashboardTickets(),
+      this.dashboardTickets(businessDate),
       this.ticketRepo
         .createQueryBuilder('ticket')
         .leftJoinAndSelect('ticket.operator', 'operator')
