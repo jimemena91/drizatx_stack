@@ -13,6 +13,7 @@ import { ClientsService } from '../../modules/clients/clients.service';
 import { TicketsService } from '../../modules/tickets/tickets.service';
 import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
 import { QueueEventsService } from '../queue-events/queue-events.service';
+import { BusinessDateService } from '../business-date/business-date.service';
 
 type DashboardServiceSummary = {
   serviceId: number;
@@ -59,6 +60,7 @@ export class QueueService {
     private readonly ticketsService: TicketsService,
     private readonly metricsPolicy: MetricsPolicyService,
     private readonly queueEvents: QueueEventsService,
+    private readonly businessDate: BusinessDateService,
   ) {}
 
   private normalizePriorityLevel(input: unknown): number | null {
@@ -273,35 +275,9 @@ export class QueueService {
     return this.ticketRepo.save(ticket);
   }
 
-  /**
-   * Fecha comercial de DrizaTx en Mendoza.
-   *
-   * No debe depender de CURRENT_DATE() de MySQL porque el servidor y
-   * la base trabajan en UTC, mientras la jornada comercial es Argentina/Mendoza.
-   */
-  private resolveBusinessDate(): string {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/Argentina/Mendoza',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(new Date());
-
-    const values = new Map(parts.map((part) => [part.type, part.value]));
-    const year = values.get('year');
-    const month = values.get('month');
-    const day = values.get('day');
-
-    if (!year || !month || !day) {
-      throw new Error('No se pudo resolver la fecha comercial de Mendoza');
-    }
-
-    return `${year}-${month}-${day}`;
-  }
-
   // Tickets visibles en dashboard
   async dashboardTickets(
-    businessDate = this.resolveBusinessDate(),
+    businessDate = this.businessDate.getBusinessDate(),
   ): Promise<Ticket[]> {
     const statuses = [Status.CALLED, Status.IN_PROGRESS, Status.WAITING, Status.ABSENT];
 
@@ -336,14 +312,11 @@ export class QueueService {
    * Devuelve: { services: [{ serviceId, serviceName, waitingCount, avgWaitTime, inProgressCount, completedCountToday }], updatedAt }
    */
   async getDashboard(): Promise<QueueDashboardResponse> {
-    const businessDate = this.resolveBusinessDate();
-
-    // Ventana temporal usada por métricas.
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const nextDay = new Date(startOfDay);
-    nextDay.setDate(startOfDay.getDate() + 1);
+    const {
+      businessDate,
+      start: startOfDay,
+      end: nextDay,
+    } = this.businessDate.getBusinessDayRange();
 
     const dashboardQuery = this.dataSource
       .createQueryBuilder()

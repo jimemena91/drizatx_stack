@@ -21,6 +21,7 @@ import { RealtimeModule } from "./modules/realtime/realtime.module";
 import { TerminalModule } from "./modules/terminal/terminal.module";
 import { PrintModule } from "./modules/print/print.module";
 import { DailyClosingModule } from "./modules/daily-closing/daily-closing.module";
+import { BusinessDateModule } from "./modules/business-date/business-date.module";
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { DailyClosingModule } from "./modules/daily-closing/daily-closing.module
     TerminalModule,
     PrintModule,
     DailyClosingModule,
+    BusinessDateModule,
   ],
   providers: [DatabaseConfig],
 })
