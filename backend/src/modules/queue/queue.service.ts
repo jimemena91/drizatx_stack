@@ -273,8 +273,36 @@ export class QueueService {
     return this.ticketRepo.save(ticket);
   }
 
+  /**
+   * Fecha comercial de DrizaTx en Mendoza.
+   *
+   * No debe depender de CURRENT_DATE() de MySQL porque el servidor y
+   * la base trabajan en UTC, mientras la jornada comercial es Argentina/Mendoza.
+   */
+  private resolveBusinessDate(): string {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Argentina/Mendoza',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+
+    const values = new Map(parts.map((part) => [part.type, part.value]));
+    const year = values.get('year');
+    const month = values.get('month');
+    const day = values.get('day');
+
+    if (!year || !month || !day) {
+      throw new Error('No se pudo resolver la fecha comercial de Mendoza');
+    }
+
+    return `${year}-${month}-${day}`;
+  }
+
   // Tickets visibles en dashboard
-  async dashboardTickets(): Promise<Ticket[]> {
+  async dashboardTickets(
+    businessDate = this.resolveBusinessDate(),
+  ): Promise<Ticket[]> {
     const statuses = [Status.CALLED, Status.IN_PROGRESS, Status.WAITING, Status.ABSENT];
 
     return this.ticketRepo
@@ -294,7 +322,9 @@ export class QueueService {
         'service.updatedAt',
       ])
       .where('ticket.status IN (:...statuses)', { statuses })
-      .andWhere('ticket.issued_for_date = CURRENT_DATE()')
+      .andWhere('ticket.issued_for_date = :businessDate', {
+        businessDate,
+      })
       .orderBy('ticket.priority_level', 'DESC')
       .addOrderBy('COALESCE(ticket.requeued_at, ticket.created_at)', 'ASC')
       .addOrderBy('ticket.id', 'ASC')
@@ -306,7 +336,9 @@ export class QueueService {
    * Devuelve: { services: [{ serviceId, serviceName, waitingCount, avgWaitTime, inProgressCount, completedCountToday }], updatedAt }
    */
   async getDashboard(): Promise<QueueDashboardResponse> {
-    // Ventana de "hoy" sin depender de funciones del motor
+    const businessDate = this.resolveBusinessDate();
+
+    // Ventana temporal usada por métricas.
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
@@ -356,13 +388,14 @@ export class QueueService {
       .leftJoin(
         Ticket,
         't',
-        't.service_id = s.id AND t.issued_for_date = CURRENT_DATE()',
+        't.service_id = s.id AND t.issued_for_date = :businessDate',
       )
       .groupBy('s.id')
       .addGroupBy('s.name')
       .addGroupBy('s.priority_level')
       .orderBy('s.priority_level', 'ASC')
       .addOrderBy('s.id', 'ASC')
+      .setParameter('businessDate', businessDate)
       .setParameter('waitingStatus', Status.WAITING)
       .setParameter('inProgressStatuses', [Status.IN_PROGRESS, Status.CALLED])
       .setParameter('completedStatus', Status.COMPLETED)
@@ -372,7 +405,7 @@ export class QueueService {
 
     const [rows, dashboardTickets, recentlyCompletedTickets, servicesCatalog] = await Promise.all([
       dashboardQuery.getRawMany(),
-      this.dashboardTickets(),
+      this.dashboardTickets(businessDate),
       this.ticketRepo
         .createQueryBuilder('ticket')
         .leftJoinAndSelect('ticket.operator', 'operator')
