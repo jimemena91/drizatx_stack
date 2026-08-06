@@ -5,6 +5,7 @@ import {
   DailyClosingRepository,
 } from './daily-closing.repository';
 import { DailyClosingEventsService } from './daily-closing-events.service';
+import { BusinessDateService } from '../business-date/business-date.service';
 
 export type DailyClosingResult = DailyClosingCounts & {
   closureDate: string;
@@ -17,13 +18,15 @@ export class DailyClosingService {
   constructor(
     private readonly repository: DailyClosingRepository,
     private readonly events: DailyClosingEventsService,
+    private readonly businessDate: BusinessDateService,
   ) {}
 
   async run(options?: {
     closureDate?: string;
     executedBy?: string;
   }): Promise<DailyClosingResult> {
-    const closureDate = options?.closureDate ?? this.resolveBusinessDate();
+    const closureDate =
+      options?.closureDate ?? this.businessDate.getBusinessDate();
     const executedBy = options?.executedBy ?? 'system';
 
     this.events.started(closureDate);
@@ -84,16 +87,4 @@ export class DailyClosingService {
     }
   }
 
-  private resolveBusinessDate(): string {
-    const now = new Date();
-    const argentinaNow = new Date(
-      now.toLocaleString('en-US', { timeZone: 'America/Argentina/Mendoza' }),
-    );
-
-    const year = argentinaNow.getFullYear();
-    const month = String(argentinaNow.getMonth() + 1).padStart(2, '0');
-    const day = String(argentinaNow.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  }
 }
