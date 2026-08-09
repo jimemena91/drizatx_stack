@@ -148,7 +148,10 @@ class AudioService {
   }
 
   async playTicketCalled(_ticketNumber?: string, _serviceName?: string): Promise<boolean> {
-    return await this.playSound("ticket-called")
+    const displayGain = 1.8
+    return await this.playSound("ticket-called", {
+      volume: this.config.volume * displayGain,
+    })
   }
 
   async playAttentionAlert(): Promise<boolean> {
