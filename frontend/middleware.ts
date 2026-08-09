@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
   "/_next",
   "/assets",
   "/branding",
+  "/icons",
   "/public",
   "/api/health",
 ];
