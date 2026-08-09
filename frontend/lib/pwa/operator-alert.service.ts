@@ -1,6 +1,5 @@
 "use client"
 
-import { audioService } from "@/lib/audio-service"
 
 type NavigatorWithBadge = Navigator & {
   setAppBadge?: (contents?: number) => Promise<void>
@@ -30,7 +29,6 @@ class OperatorAlertService {
 
     if (normalizedCount > this.lastWaitingCount) {
       await this.notify(normalizedCount)
-      await audioService.playAttentionAlert()
     }
 
     this.lastWaitingCount = normalizedCount
