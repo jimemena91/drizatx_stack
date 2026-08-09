@@ -14,10 +14,13 @@ const IS_DEMO = false;
  */
 const PUBLIC_PATHS = [
   "/login",
+  "/logout",
   "/display",
   "/terminal", // 👈 la terminal es pública
   "/mobile",
   "/favicon.ico",
+  "/manifest.webmanifest",
+  "/drizatx-icon-512.png",
   "/robots.txt",
   "/sitemap.xml",
   "/_next",

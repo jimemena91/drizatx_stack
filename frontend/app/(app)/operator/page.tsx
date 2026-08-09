@@ -16,6 +16,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/auth-context";
 import { getDefaultRouteForRole } from "@/lib/auth-utils";
 import { useQueueStatus } from "@/hooks/use-queue-status";
+import { useQueueRealtime } from "@/hooks/use-queue-realtime";
+import { browserNotificationService } from "@/lib/browser/browserNotification.service";
+import { operatorAlertService } from "@/lib/pwa/operator-alert.service";
 import { useTicketActions } from "@/hooks/use-ticket-actions";
 import { useServices } from "@/hooks/use-services";
 import {
@@ -632,6 +635,8 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
     }
   }, [authReady, queueIsApiMode, refetch, getQueueStatus]);
 
+  useQueueRealtime(refreshQueue);
+
   useEffect(() => {
     if (queueHasSnapshot) return;
     if (queueIsApiMode && !authReady) return;
@@ -934,13 +939,26 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
   );
 
   const waitingTicketsCount = useMemo(() => {
-    const aggregated = aggregatedQueueEntries.reduce((sum, service) => {
-      const value = Number((service as any)?.waitingCount);
-      return sum + (Number.isFinite(value) ? value : 0);
-    }, 0);
-    if (aggregated > 0) return aggregated;
-    return filteredNextTickets.length;
-  }, [aggregatedQueueEntries, filteredNextTickets]);
+  return aggregatedQueueEntries.reduce((sum, service) => {
+    const value = Number((service as any)?.waitingCount);
+    return sum + (Number.isFinite(value) ? value : 0);
+  }, 0);
+}, [aggregatedQueueEntries]);
+
+  useEffect(() => {
+    if (!normalizedRoleSet.has(Role.OPERATOR)) {
+      browserNotificationService.restore();
+      return;
+    }
+
+    browserNotificationService.updateWaitingCount(waitingTicketsCount);
+    void operatorAlertService.updateWaitingCount(waitingTicketsCount);
+
+    return () => {
+      browserNotificationService.restore();
+      void operatorAlertService.clear();
+    };
+  }, [normalizedRoleSet, waitingTicketsCount]);
 
   const absentTicketsCount = filteredAbsentTickets.length;
 
