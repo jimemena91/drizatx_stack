@@ -2076,8 +2076,7 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
   return (
     <div className="flex min-h-full w-full flex-1 flex-col text-slate-900">
       <div className="flex flex-1 flex-col gap-3 p-3 sm:gap-3 sm:p-3 lg:gap-5 lg:p-3">
-        {/* Contenedores necesarios para conservar el padding global al 100% de zoom */}
-        <div className="flex flex-1 flex-col gap-3 p-3 sm:gap-3 sm:p-3 lg:gap-5 lg:p-3">
+        {/* Contenedor principal de la interfaz del operador */}
           {/* Acción principal: llamar siguiente */}
           <section className="isolate grid w-full grid-cols-1 gap-6 lg:gap-8 xl:gap-10">
             <Card
@@ -2773,103 +2772,8 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
             </Card>
           </section>
 
-          {/* Detalle + rendimiento */}
-          <section className="grid w-full gap-3 sm:gap-6 md:grid-cols-[1.35fr,1fr]">
-            <Card className="w-full rounded-2xl sm:rounded-3xl border-0 shadow-lg ring-1 ring-gray-100">
-              <CardHeader className="p-3 sm:p-6">
-                <CardTitle className="text-xl font-semibold text-gray-900">
-                  Detalle del ticket activo
-                </CardTitle>
-                <CardDescription>
-                  Información clave del turno que estás gestionando.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6 pt-0">
-                {currentTicket ? (
-                  <div className="space-y-5">
-                    <div className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-wide text-indigo-500">
-                            Turno
-                          </p>
-                          <p className="text-3xl font-semibold text-indigo-900">
-                            {currentTicket.number}
-                          </p>
-                          <p className="text-sm text-indigo-600">
-                            {currentTicket.service?.name ?? "Servicio sin nombre"}
-                          </p>
-                        </div>
-                        {currentTicketStatusVisual && (
-                          <span
-                            className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${currentTicketStatusVisual.tone}`}
-                          >
-                            {currentTicketStatusVisual.label}
-                          </span>
-                        )}
-                      </div>
-                      {currentTicketStatusVisual && (
-                        <p className="mt-2 text-xs text-indigo-600/80">
-                          {currentTicketStatusVisual.helper}
-                        </p>
-                      )}
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="space-y-1">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">
-                          Cliente
-                        </p>
-                        <p className="text-base font-semibold text-gray-900">
-                          {currentTicket.client?.name ?? "Cliente sin registrar"}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">
-                          Tiempo en espera
-                        </p>
-                        <p className="text-lg font-semibold text-gray-900">
-                          {waitMinutes(currentTicket)} minutos
-                        </p>
-                      </div>
-                      {showTimingInsights && attentionElapsedSeconds !== null && (
-                        <div className="space-y-1">
-                          <p className="text-xs uppercase tracking-wide text-gray-400">
-                            Tiempo en atención
-                          </p>
-                          <p className="text-lg font-semibold text-gray-900">
-                            {formatSecondsVerbose(attentionElapsedSeconds)}
-                          </p>
-                        </div>
-                      )}
-                      <div className="space-y-1 sm:col-span-2">
-                        <p className="text-xs uppercase tracking-wide text-gray-400">
-                          Notas
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          {currentTicket.notes?.length
-                            ? currentTicket.notes
-                            : "Sin notas adicionales registradas."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-3 rounded-2xl sm:rounded-3xl border border-dashed border-indigo-200 p-6 sm:p-8 text-center">
-                    <Phone className="h-10 w-10 text-indigo-500" />
-                    <div className="space-y-1">
-                      <p className="text-lg font-semibold text-gray-900">
-                        Sin ticket activo
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Usa el botón "Llamar siguiente ticket" para recibir un
-                        nuevo turno.
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
+          {/* Rendimiento del turno */}
+          <section className="w-full">
             {showAdministrativeInsights && (
               <div className="relative w-full overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-600 via-fuchsia-600 to-rose-600 p-3 sm:p-6 text-white shadow-lg">
                 <div className="absolute inset-y-0 right-[-40%] h-[140%] w-[70%] rounded-full bg-white/10 blur-3xl" />
@@ -3071,7 +2975,6 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
               </AlertDescription>
             </Alert>
           )}
-        </div>
       </div>
     </div>
   );
