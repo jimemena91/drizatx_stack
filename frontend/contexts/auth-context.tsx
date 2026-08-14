@@ -1,11 +1,12 @@
 "use client"
 
-import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from "react"
+import { createContext, useContext, useReducer, useEffect, useRef, useState, type ReactNode } from "react"
 import { usePathname } from "next/navigation"
 import { Role, type User, type AuthState, type LoginCredentials, type Permission } from "@/lib/types"
 import { normalizeRole, normalizeRoles } from "@/lib/auth-utils"
 import { isApiMode } from "@/lib/api-mode"
 import { apiClient, ApiError, type RoleWithPermissions, normalizePermissionArray } from "@/lib/api-client"
+import { SessionIdleWarning } from "@/components/session-idle-warning"
 
 // --- Flags de entorno
 const DEMO_MODE = false
@@ -13,6 +14,32 @@ const DEMO_MODE = false
 // --- Público (no llamar API ni pedir permisos)
 const PUBLIC_PREFIXES = ["/terminal", "/display", "/mobile"]
 const isPublicPath = (p: string) => PUBLIC_PREFIXES.some((x) => p === x || p.startsWith(x))
+
+// --- Política de inactividad de sesiones autenticadas
+//
+// Después de 55 minutos sin actividad se bloquea la interfaz.
+// Si no hay confirmación durante los siguientes 5 minutos,
+// se reutiliza el logout centralizado.
+const DEFAULT_IDLE_TIMEOUT_MS = 60 * 60 * 1000
+const DEFAULT_IDLE_WARNING_MS = 5 * 60 * 1000
+
+function readPositiveDuration(raw: string | undefined, fallback: number) {
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+const IDLE_TIMEOUT_MS = readPositiveDuration(
+  process.env.NEXT_PUBLIC_SESSION_IDLE_TIMEOUT_MS,
+  DEFAULT_IDLE_TIMEOUT_MS,
+)
+
+const IDLE_WARNING_MS = Math.min(
+  readPositiveDuration(
+    process.env.NEXT_PUBLIC_SESSION_IDLE_WARNING_MS,
+    DEFAULT_IDLE_WARNING_MS,
+  ),
+  IDLE_TIMEOUT_MS,
+)
 
 // --- Storage keys
 const USER_STORAGE_KEY = "drizatx-auth-user"
@@ -345,6 +372,12 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const [idleWarningOpen, setIdleWarningOpen] = useState(false)
+  const [idleRemainingSeconds, setIdleRemainingSeconds] = useState(
+    Math.ceil(IDLE_WARNING_MS / 1000),
+  )
+  const lastActivityAtRef = useRef(Date.now())
+  const idleWarningOpenRef = useRef(false)
   const [state, dispatch] = useReducer(reducer, initialState)
   const pathname = usePathname()
   const lastAppliedTokenRef = useRef<string | null>(null)
@@ -661,6 +694,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [state.isAuthenticated, pathname])
 
+  // Política global de inactividad para áreas autenticadas.
+  //
+  // Mientras la advertencia no está visible, una interacción real
+  // reinicia el reloj.
+  //
+  // Una vez que aparece "¿Seguís ahí?", la sesión queda bloqueada:
+  // mover el mouse o tocar el teclado NO alcanza. El usuario debe
+  // confirmar explícitamente mediante "Sí, continuar sesión".
+  useEffect(() => {
+    if (!state.isAuthenticated || isPublicPath(pathname)) {
+      idleWarningOpenRef.current = false
+      setIdleWarningOpen(false)
+      return
+    }
+
+    lastActivityAtRef.current = Date.now()
+    idleWarningOpenRef.current = false
+    setIdleWarningOpen(false)
+    setIdleRemainingSeconds(Math.ceil(IDLE_WARNING_MS / 1000))
+
+    const registerActivity = () => {
+      if (idleWarningOpenRef.current) return
+      lastActivityAtRef.current = Date.now()
+    }
+
+    const events: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "touchstart",
+    ]
+
+    for (const event of events) {
+      window.addEventListener(event, registerActivity, { passive: true })
+    }
+
+    const interval = window.setInterval(() => {
+      const idleFor = Date.now() - lastActivityAtRef.current
+      const remaining = IDLE_TIMEOUT_MS - idleFor
+
+      if (remaining <= 0) {
+        window.clearInterval(interval)
+        idleWarningOpenRef.current = false
+        setIdleWarningOpen(false)
+        logout()
+        return
+      }
+
+      if (remaining <= IDLE_WARNING_MS) {
+        idleWarningOpenRef.current = true
+        setIdleWarningOpen(true)
+        setIdleRemainingSeconds(Math.max(0, Math.ceil(remaining / 1000)))
+      }
+    }, 1000)
+
+    return () => {
+      window.clearInterval(interval)
+
+      for (const event of events) {
+        window.removeEventListener(event, registerActivity)
+      }
+    }
+  }, [state.isAuthenticated, pathname])
+
+  const continueIdleSession = () => {
+    lastActivityAtRef.current = Date.now()
+    idleWarningOpenRef.current = false
+    setIdleWarningOpen(false)
+    setIdleRemainingSeconds(Math.ceil(IDLE_WARNING_MS / 1000))
+  }
+
   // Sincronización de permisos (solo si autenticado y NO público)
   useEffect(() => {
     if (!state.isAuthenticated || isPublicPath(pathname)) {
@@ -711,7 +814,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return state.permissions.includes(permission)
   }
 
-  return <AuthContext.Provider value={{ state, login, logout, hasPermission }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ state, login, logout, hasPermission }}>
+    {children}
+    <SessionIdleWarning
+      open={idleWarningOpen}
+      remainingSeconds={idleRemainingSeconds}
+      onContinue={continueIdleSession}
+    />
+  </AuthContext.Provider>
 }
 
 export function useAuth() {

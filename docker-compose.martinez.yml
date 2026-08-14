@@ -55,6 +55,8 @@ services:
 
         NEXT_PUBLIC_SMS_ENABLED: "false"
         NEXT_PUBLIC_PUSH_ENABLED: "false"
+        NEXT_PUBLIC_SESSION_IDLE_TIMEOUT_MS: "3600000"
+        NEXT_PUBLIC_SESSION_IDLE_WARNING_MS: "300000"
 
     environment:
       # Next.js también lo necesita en runtime para next.config.mjs
@@ -64,6 +66,8 @@ services:
       NEXT_PUBLIC_BASE_URL: "https://martinez.app.drizatx.com"
       NEXT_PUBLIC_SMS_ENABLED: "false"
       NEXT_PUBLIC_PUSH_ENABLED: "false"
+      NEXT_PUBLIC_SESSION_IDLE_TIMEOUT_MS: "3600000"
+      NEXT_PUBLIC_SESSION_IDLE_WARNING_MS: "300000"
 
     container_name: drizatx-martinez-frontend
     restart: unless-stopped
