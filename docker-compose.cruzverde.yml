@@ -48,6 +48,8 @@ services:
         NEXT_PUBLIC_API_URL: "https://cruzverde.api.drizatx.com"
         NEXT_PUBLIC_BASE_URL: "https://cruzverde.app.drizatx.com"
         BACKEND_URL: "http://drizatx-cruzverde-backend:3001"
+        NEXT_PUBLIC_SESSION_IDLE_TIMEOUT_MS: "3600000"
+        NEXT_PUBLIC_SESSION_IDLE_WARNING_MS: "300000"
     container_name: drizatx-cruzverde-frontend
     restart: unless-stopped
     depends_on:
@@ -56,6 +58,8 @@ services:
       NEXT_PUBLIC_API_URL: "https://cruzverde.api.drizatx.com"
       NEXT_PUBLIC_BASE_URL: "https://cruzverde.app.drizatx.com"
       BACKEND_URL: "http://drizatx-cruzverde-backend:3001"
+      NEXT_PUBLIC_SESSION_IDLE_TIMEOUT_MS: "3600000"
+      NEXT_PUBLIC_SESSION_IDLE_WARNING_MS: "300000"
     ports:
       - "3220:3000"
     networks:
