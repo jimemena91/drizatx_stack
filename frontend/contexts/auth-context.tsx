@@ -643,6 +643,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
 
+  // Una respuesta 401 en una request autenticada significa que la sesión
+  // dejó de ser válida (por ejemplo, JWT expirado). Centralizamos la salida
+  // para evitar que la UI quede aparentemente logueada con una API inutilizable.
+  useEffect(() => {
+    if (!state.isAuthenticated || isPublicPath(pathname)) {
+      apiClient.setUnauthorizedHandler(null)
+      return
+    }
+
+    apiClient.setUnauthorizedHandler(() => {
+      logout()
+    })
+
+    return () => {
+      apiClient.setUnauthorizedHandler(null)
+    }
+  }, [state.isAuthenticated, pathname])
+
   // Sincronización de permisos (solo si autenticado y NO público)
   useEffect(() => {
     if (!state.isAuthenticated || isPublicPath(pathname)) {

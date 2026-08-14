@@ -878,9 +878,27 @@ function normalizePermissionDefinition(entry: any): PermissionDefinition | null 
 class ApiClient {
   /** Token global para Authorization: Bearer <token> */
   private authToken: string | null = null;
+  private unauthorizedHandler: (() => void) | null = null;
+  private unauthorizedNotified = false;
 
   setAuthToken(token: string | null) {
     this.authToken = token ?? null;
+
+    // Un login nuevo habilita nuevamente la detección de sesión expirada.
+    if (token) {
+      this.unauthorizedNotified = false;
+    }
+  }
+
+  setUnauthorizedHandler(handler: (() => void) | null) {
+    this.unauthorizedHandler = handler;
+  }
+
+  private notifyUnauthorized() {
+    if (this.unauthorizedNotified) return;
+
+    this.unauthorizedNotified = true;
+    this.unauthorizedHandler?.();
   }
 
   private normalizeBase(raw?: string) {
@@ -961,6 +979,11 @@ class ApiClient {
 
       if (!ok) {
         const msg = (data && (data.message || data.error)) || `HTTP ${res.status}`;
+
+        if (res.status === 401 && effectiveToken) {
+          this.notifyUnauthorized();
+        }
+
         throw new ApiError(res.status, typeof msg === "string" ? msg : JSON.stringify(msg), data);
       }
       return data as T;
