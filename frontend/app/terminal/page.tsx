@@ -569,16 +569,20 @@ export default function TerminalPage() {
                   "cursor-pointer",
                   "min-h-[220px]",
                   "h-full",
-                  "hover:shadow-xl",
+                  "border border-[#8FD8C3]",
+                  "bg-gradient-to-br from-white to-[#EAF8F3]",
+                  "shadow-[0_10px_30px_-18px_rgba(85,163,139,0.45)]",
+                  "hover:border-[#7EDCC0]",
+                  "hover:shadow-[0_18px_40px_-16px_rgba(85,163,139,0.55)]",
                   "transition-all",
                   "duration-300",
                   "hover:scale-105",
-                  isSelected && "ring-2 ring-blue-500 shadow-lg"
+                  isSelected && "ring-2 ring-[#55A38B] shadow-lg"
                 )}
                 onClick={() => handleServiceSelect(service.id)}
               >
                 <CardContent className="flex h-full flex-col items-center justify-center gap-8 p-8 text-center">
-                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-r from-blue-500 to-purple-600">
+                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-r from-[#55A38B] to-[#7EDCC0]">
                     <ServiceIcon className="h-12 w-12 text-white" />
                   </div>
                   <h3 className="text-3xl lg:text-4xl font-bold">{service.name}</h3>
