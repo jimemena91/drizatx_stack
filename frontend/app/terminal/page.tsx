@@ -618,33 +618,13 @@ export default function TerminalPage() {
                   </div>
                   {isPriorityService(generatedService) && <PriorityAudienceIcons size="sm" className="mt-1" />}
                   {hasConfiguredLocation && <p className="text-sm text-gray-600">Lugar: {kioskLocationName}</p>}
-                  <p className="text-xs text-gray-500">Fecha: {ticketCreatedDate}</p>
                 </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg text-sm text-gray-700">
-                  {brandDisplayName}: esté atentx a la pantalla; por ahí lo llamamos.
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-800">
+                  <p className="font-semibold">
+                    Ticket impreso. Esté atento a la pantalla: por ahí lo llamamos.
+                  </p>
                 </div>
-
-                {thankYouMessage && (
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-900 rounded-md p-4 text-sm">
-                    <p className="font-semibold">{thankYouMessage}</p>
-                    <p className="mt-2 text-xs text-emerald-700">
-                      Cuando se imprima, volveremos a inicio automáticamente.
-                    </p>
-                  </div>
-                )}
-
-                {printMessage && (
-                  <div className="bg-green-50 border border-green-200 text-green-800 rounded-md p-4 text-sm">
-                    <p className="font-semibold">{printMessage}</p>
-                    {printTimestamp && (
-                      <p className="mt-1 text-xs text-green-700">
-                        Impreso (sin hora en ticket) • {printTimestamp.toLocaleTimeString()}
-                      </p>
-                    )}
-                    <p className="mt-2 text-xs text-green-700">Redirigiendo a la pantalla inicial…</p>
-                  </div>
-                )}
 
                 <div className="flex gap-2">
                   <Button
