@@ -302,7 +302,6 @@ export default function DisplayPage() {
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
   const { liveTicket } = useDisplaySocket({ clientKey: "staging", screen: "display" })
-  const [lastAnnouncedTicket, setLastAnnouncedTicket] = useState<string | null>(null)
   const [showAudioControls, setShowAudioControls] = useState(false)
   const [isNewTicket, setIsNewTicket] = useState(false)
   const [audioConfig, setAudioConfig] = useState(audioService.getConfig())
@@ -391,30 +390,9 @@ export default function DisplayPage() {
   /** datos de cola + audio */
   useEffect(() => {
     let isMounted = true
-    let audioResetTimeout: ReturnType<typeof setTimeout> | null = null
 
-    const handleStatusUpdate = (status: typeof queueStatus) => {
+    const handleStatusUpdate = (_status: typeof queueStatus) => {
       if (!isMounted) return
-
-      const audioTicket = status.calledTickets?.[0] ?? null
-      const audioKey = audioTicket
-        ? `${audioTicket.id}-${audioTicket.status}`
-        : null
-
-      if (audioKey && audioKey !== lastAnnouncedTicket) {
-        setLastAnnouncedTicket(audioKey)
-        setIsNewTicket(true)
-        setIsPlayingAudio(true)
-
-        const svcName = audioTicket?.service?.name ?? "Servicio"
-        audioService.playTicketCalled(audioTicket.number, svcName)
-
-        if (audioResetTimeout) clearTimeout(audioResetTimeout)
-        audioResetTimeout = setTimeout(() => {
-          setIsNewTicket(false)
-          setIsPlayingAudio(false)
-        }, 4200)
-      }
     }
 
     const updateQueueStatus = () => {
@@ -467,10 +445,27 @@ export default function DisplayPage() {
       clearInterval(dataInterval)
       if (announcementTimer) clearInterval(announcementTimer)
       if (displayEventsSource) displayEventsSource.close()
-      if (audioResetTimeout) clearTimeout(audioResetTimeout)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastAnnouncedTicket, rotationMs, currentAnnouncements.length])
+  }, [rotationMs, currentAnnouncements.length])
+
+  /** audio por cada evento ticket.called */
+  useEffect(() => {
+    if (!liveTicket) return
+
+    const svcName = liveTicket.service?.name ?? "Servicio"
+
+    setIsNewTicket(true)
+    setIsPlayingAudio(true)
+    void audioService.playTicketCalled(liveTicket.number, svcName)
+
+    const timer = setTimeout(() => {
+      setIsNewTicket(false)
+      setIsPlayingAudio(false)
+    }, 4200)
+
+    return () => clearTimeout(timer)
+  }, [liveTicket])
 
   /** handlers */
   const handleScreenClick = async () => {
