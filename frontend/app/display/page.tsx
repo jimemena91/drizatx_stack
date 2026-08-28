@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Volume2, CloudSun } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -302,6 +302,8 @@ export default function DisplayPage() {
 
   const [queueStatus, setQueueStatus] = useState(getQueueStatus())
   const { liveTicket } = useDisplaySocket({ clientKey: "staging", screen: "display" })
+  const announcedCalledIdsRef = useRef<Set<string>>(new Set())
+  const calledSnapshotInitializedRef = useRef(false)
   const [showAudioControls, setShowAudioControls] = useState(false)
   const [isNewTicket, setIsNewTicket] = useState(false)
   const [audioConfig, setAudioConfig] = useState(audioService.getConfig())
@@ -391,8 +393,41 @@ export default function DisplayPage() {
   useEffect(() => {
     let isMounted = true
 
-    const handleStatusUpdate = (_status: typeof queueStatus) => {
+    const handleStatusUpdate = (status: typeof queueStatus) => {
       if (!isMounted) return
+
+      const calledTickets = status.calledTickets ?? []
+      const currentIds = new Set(calledTickets.map((ticket) => String(ticket.id)))
+
+      for (const id of announcedCalledIdsRef.current) {
+        if (!currentIds.has(id)) announcedCalledIdsRef.current.delete(id)
+      }
+
+      if (!calledSnapshotInitializedRef.current) {
+        for (const ticket of calledTickets) {
+          announcedCalledIdsRef.current.add(String(ticket.id))
+        }
+        calledSnapshotInitializedRef.current = true
+        return
+      }
+
+      for (const ticket of calledTickets) {
+        const id = String(ticket.id)
+        if (announcedCalledIdsRef.current.has(id)) continue
+
+        announcedCalledIdsRef.current.add(id)
+
+        const svcName = ticket.service?.name ?? "Servicio"
+        setIsNewTicket(true)
+        setIsPlayingAudio(true)
+        void audioService.playTicketCalled(ticket.number, svcName)
+
+        setTimeout(() => {
+          if (!isMounted) return
+          setIsNewTicket(false)
+          setIsPlayingAudio(false)
+        }, 4200)
+      }
     }
 
     const updateQueueStatus = () => {
@@ -452,6 +487,10 @@ export default function DisplayPage() {
   /** audio por cada evento ticket.called */
   useEffect(() => {
     if (!liveTicket) return
+
+    const id = String(liveTicket.id)
+    if (announcedCalledIdsRef.current.has(id)) return
+    announcedCalledIdsRef.current.add(id)
 
     const svcName = liveTicket.service?.name ?? "Servicio"
 
