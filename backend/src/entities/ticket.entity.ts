@@ -63,6 +63,9 @@ export class Ticket {
   @Column({ name: 'started_at', type: 'timestamp', nullable: true })
   startedAt?: Date | null;
 
+  @Column({ name: 'attention_start_source', type: 'varchar', length: 20, nullable: true })
+  attentionStartSource?: 'MANUAL' | 'AUTO' | null;
+
   @Column({ name: 'completed_at', type: 'timestamp', nullable: true })
   completedAt?: Date | null;
 

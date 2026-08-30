@@ -556,6 +556,7 @@ export class TicketsService {
     t.calledAt = new Date();
     t.requeuedAt = null;
     t.startedAt = null;
+    t.attentionStartSource = null;
     t.completedAt = null;
     t.attentionDuration = null;
 
@@ -618,6 +619,7 @@ export class TicketsService {
           calledAt: now,
           requeuedAt: null as any,
           startedAt: null as any,
+          attentionStartSource: null as any,
           completedAt: null as any,
           attentionDuration: null as any,
         })
@@ -678,6 +680,7 @@ export class TicketsService {
     next.calledAt = new Date();
     next.requeuedAt = null;
     next.startedAt = null;
+    next.attentionStartSource = null;
     next.completedAt = null;
     next.attentionDuration = null;
 
@@ -688,17 +691,95 @@ export class TicketsService {
 
   /** Inicia la atención: CALLED -> IN_PROGRESS */
   async startAttention(ticketId: number): Promise<Ticket> {
-    const t = await this.findOne(ticketId);
-    if (t.status !== Status.CALLED) {
-      throw new ConflictException('Solo se puede iniciar atención desde CALLED');
-    }
-    if (!t.operatorId) {
-      throw new ConflictException('El ticket debe tener un operador asignado');
-    }
-    t.status = Status.IN_PROGRESS;
-    t.startedAt = new Date();
-    t.attentionDuration = null;
-    return this.ticketRepo.save(t);
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const ticketRepo = manager.getRepository(Ticket);
+
+      const t = await ticketRepo.findOne({
+        where: { id: ticketId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!t) {
+        throw new NotFoundException('Ticket no encontrado');
+      }
+
+      if (t.status !== Status.CALLED) {
+        throw new ConflictException('Solo se puede iniciar atención desde CALLED');
+      }
+
+      if (!t.operatorId) {
+        throw new ConflictException('El ticket debe tener un operador asignado');
+      }
+
+      t.status = Status.IN_PROGRESS;
+      t.startedAt = new Date();
+      t.attentionStartSource = 'MANUAL';
+      t.attentionDuration = null;
+
+      return ticketRepo.save(t);
+    });
+
+    this.queueEvents.emitQueueUpdated({
+      ticketId: saved.id,
+      operatorId: saved.operatorId ?? null,
+      serviceId: saved.serviceId ?? null,
+    });
+
+    return saved;
+  }
+
+  async autoStartCalledTicket(
+    ticketId: number,
+    businessDate: string,
+    timeoutSeconds: number,
+  ): Promise<Ticket | null> {
+    const saved = await this.dataSource.transaction(async (manager) => {
+      const ticketRepo = manager.getRepository(Ticket);
+
+      const t = await ticketRepo.findOne({
+        where: { id: ticketId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!t) return null;
+      if (t.status !== Status.CALLED) return null;
+      if (!t.operatorId) return null;
+      if (!t.calledAt) return null;
+
+      const issuedForDate =
+        t.issuedForDate instanceof Date
+          ? t.issuedForDate.toISOString().slice(0, 10)
+          : String(t.issuedForDate).slice(0, 10);
+
+      if (issuedForDate !== businessDate) return null;
+
+      const elapsedSeconds = Math.floor(
+        (Date.now() - t.calledAt.getTime()) / 1000,
+      );
+
+      if (elapsedSeconds < timeoutSeconds) return null;
+
+      t.status = Status.IN_PROGRESS;
+      t.startedAt = new Date();
+      t.attentionStartSource = 'AUTO';
+      t.attentionDuration = null;
+
+      return ticketRepo.save(t);
+    });
+
+    if (!saved) return null;
+
+    this.queueEvents.emitQueueUpdated({
+      ticketId: saved.id,
+      operatorId: saved.operatorId ?? null,
+      serviceId: saved.serviceId ?? null,
+    });
+
+    this.logger.log(
+      `Ticket ${saved.number ?? saved.id} auto-iniciado desde CALLED`,
+    );
+
+    return saved;
   }
 
   /** Finaliza: IN_PROGRESS -> COMPLETED */
@@ -850,9 +931,14 @@ export class TicketsService {
       });
       if (!t) throw new NotFoundException('Ticket no existe');
 
-      const allowedOrigins = [Status.CALLED, Status.IN_PROGRESS];
-      if (!allowedOrigins.includes(t.status)) {
-        throw new ConflictException('Solo se puede marcar ausente un ticket en CALLED o IN_PROGRESS');
+      const canMarkAbsent =
+        t.status === Status.CALLED ||
+        (t.status === Status.IN_PROGRESS && t.attentionStartSource === 'AUTO');
+
+      if (!canMarkAbsent) {
+        throw new ConflictException(
+          'Solo se puede marcar ausente desde CALLED o desde un inicio automático',
+        );
       }
 
       const previousStatus = t.status;
@@ -892,6 +978,7 @@ export class TicketsService {
       t.requeuedAt = new Date(); // ⬅️ clave para mandarlo “al final”
       t.calledAt = null;
       t.startedAt = null;
+      t.attentionStartSource = null;
 
       await m.save(t);
       return t;

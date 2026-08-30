@@ -52,6 +52,13 @@ describe('TicketsService.callTicket', () => {
       {} as any,
       systemSettings as any,
       {} as any,
+      {
+        emitTicketCalled: jest.fn(),
+        emitQueueUpdated: jest.fn(),
+      } as any,
+      {
+        evaluate: jest.fn(),
+      } as any,
     );
   });
 
@@ -230,6 +237,13 @@ describe('TicketsService.findNextTicketForGlobalQueue', () => {
       {} as any,
       systemSettings as any,
       {} as any,
+      {
+        emitTicketCalled: jest.fn(),
+        emitQueueUpdated: jest.fn(),
+      } as any,
+      {
+        evaluate: jest.fn(),
+      } as any,
     );
   });
 
@@ -258,9 +272,9 @@ describe('TicketsService.findNextTicketForGlobalQueue', () => {
   });
 
   it('applies alternation window for priorities 5..1 when configured', async () => {
-    const olderTicket = { id: 3, priority: 2 } as any;
-    const urgentTicket = { id: 4, priority: 5 } as any;
-    const windowTicket = { id: 5, priority: 3 } as any;
+    const olderTicket = { id: 3, priorityLevel: 2 } as any;
+    const urgentTicket = { id: 4, priorityLevel: 5 } as any;
+    const windowTicket = { id: 5, priorityLevel: 3 } as any;
 
     ticketRepo.createQueryBuilder
       .mockImplementationOnce(() => makeBuilder({ one: null }))
@@ -294,5 +308,374 @@ describe('TicketsService.findNextTicketForGlobalQueue', () => {
 
     expect(result).toBe(urgentTicket);
     expect(ticketRepo.createQueryBuilder).toHaveBeenCalledTimes(3);
+  });
+});
+
+
+describe('TicketsService.autoStartCalledTicket', () => {
+  let ticketsService: TicketsService;
+  let transactionRepo: any;
+  let dataSource: any;
+  let queueEvents: any;
+
+  beforeEach(() => {
+    transactionRepo = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+    };
+
+    const manager = {
+      getRepository: jest.fn().mockReturnValue(transactionRepo),
+    };
+
+    dataSource = {
+      transaction: jest.fn(async (callback: any) => callback(manager)),
+    };
+
+    queueEvents = {
+      emitQueueUpdated: jest.fn(),
+    };
+
+    ticketsService = new TicketsService(
+      dataSource,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      queueEvents,
+      {} as any,
+    );
+  });
+
+  it('auto-starts an expired CALLED ticket from the current business date', async () => {
+    const calledAt = new Date(Date.now() - 120_000);
+
+    const ticket = {
+      id: 31,
+      number: 'A31',
+      status: Status.CALLED,
+      operatorId: 8,
+      serviceId: 2,
+      issuedForDate: new Date('2026-08-17T00:00:00.000Z'),
+      calledAt,
+      startedAt: null,
+      attentionDuration: 10,
+    } as any;
+
+    transactionRepo.findOne.mockResolvedValue(ticket);
+    transactionRepo.save.mockImplementation(async (entity: any) => entity);
+
+    const result = await ticketsService.autoStartCalledTicket(
+      31,
+      '2026-08-17',
+      30,
+    );
+
+    expect(result?.status).toBe(Status.IN_PROGRESS);
+    expect(result?.startedAt).toBeInstanceOf(Date);
+    expect(result?.attentionStartSource).toBe('AUTO');
+    expect(result?.attentionDuration).toBeNull();
+    expect(transactionRepo.save).toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).toHaveBeenCalledWith({
+      ticketId: 31,
+      operatorId: 8,
+      serviceId: 2,
+    });
+  });
+
+  it('does nothing when the CALLED ticket has not reached timeout', async () => {
+    transactionRepo.findOne.mockResolvedValue({
+      id: 32,
+      status: Status.CALLED,
+      operatorId: 8,
+      serviceId: 2,
+      issuedForDate: new Date('2026-08-17T00:00:00.000Z'),
+      calledAt: new Date(),
+    });
+
+    const result = await ticketsService.autoStartCalledTicket(
+      32,
+      '2026-08-17',
+      120,
+    );
+
+    expect(result).toBeNull();
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).not.toHaveBeenCalled();
+  });
+
+  it('does nothing for a ticket from a previous business date', async () => {
+    transactionRepo.findOne.mockResolvedValue({
+      id: 33,
+      status: Status.CALLED,
+      operatorId: 8,
+      serviceId: 2,
+      issuedForDate: new Date('2026-08-16T00:00:00.000Z'),
+      calledAt: new Date(Date.now() - 300_000),
+    });
+
+    const result = await ticketsService.autoStartCalledTicket(
+      33,
+      '2026-08-17',
+      30,
+    );
+
+    expect(result).toBeNull();
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).not.toHaveBeenCalled();
+  });
+
+  it('does nothing when another transition already changed the ticket', async () => {
+    transactionRepo.findOne.mockResolvedValue({
+      id: 34,
+      status: Status.ABSENT,
+      operatorId: null,
+      serviceId: 2,
+      issuedForDate: new Date('2026-08-17T00:00:00.000Z'),
+      calledAt: new Date(Date.now() - 300_000),
+    });
+
+    const result = await ticketsService.autoStartCalledTicket(
+      34,
+      '2026-08-17',
+      30,
+    );
+
+    expect(result).toBeNull();
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketsService.startAttention', () => {
+  let ticketsService: TicketsService;
+  let transactionRepo: any;
+  let dataSource: any;
+  let queueEvents: any;
+
+  beforeEach(() => {
+    transactionRepo = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+    };
+
+    const manager = {
+      getRepository: jest.fn().mockReturnValue(transactionRepo),
+    };
+
+    dataSource = {
+      transaction: jest.fn(async (callback: any) => callback(manager)),
+    };
+
+    queueEvents = {
+      emitQueueUpdated: jest.fn(),
+    };
+
+    ticketsService = new TicketsService(
+      dataSource,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      queueEvents,
+      {} as any,
+    );
+  });
+
+  it('changes CALLED to IN_PROGRESS atomically', async () => {
+    const ticket = {
+      id: 21,
+      status: Status.CALLED,
+      operatorId: 7,
+      serviceId: 3,
+      startedAt: null,
+      attentionDuration: 45,
+    } as any;
+
+    transactionRepo.findOne.mockResolvedValue(ticket);
+    transactionRepo.save.mockImplementation(async (entity: any) => entity);
+
+    const result = await ticketsService.startAttention(ticket.id);
+
+    expect(transactionRepo.findOne).toHaveBeenCalledWith({
+      where: { id: ticket.id },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    expect(result.status).toBe(Status.IN_PROGRESS);
+    expect(result.startedAt).toBeInstanceOf(Date);
+    expect(result.attentionStartSource).toBe('MANUAL');
+    expect(result.attentionDuration).toBeNull();
+
+    expect(queueEvents.emitQueueUpdated).toHaveBeenCalledWith({
+      ticketId: 21,
+      operatorId: 7,
+      serviceId: 3,
+    });
+  });
+
+  it('does not start a ticket that is no longer CALLED', async () => {
+    transactionRepo.findOne.mockResolvedValue({
+      id: 22,
+      status: Status.ABSENT,
+      operatorId: null,
+      serviceId: 3,
+    });
+
+    await expect(
+      ticketsService.startAttention(22),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).not.toHaveBeenCalled();
+  });
+
+  it('does not start a CALLED ticket without an assigned operator', async () => {
+    transactionRepo.findOne.mockResolvedValue({
+      id: 23,
+      status: Status.CALLED,
+      operatorId: null,
+      serviceId: 3,
+    });
+
+    await expect(
+      ticketsService.startAttention(23),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).not.toHaveBeenCalled();
+  });
+
+  it('throws NotFoundException when the ticket does not exist', async () => {
+    transactionRepo.findOne.mockResolvedValue(null);
+
+    await expect(
+      ticketsService.startAttention(999),
+    ).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+    expect(queueEvents.emitQueueUpdated).not.toHaveBeenCalled();
+  });
+});
+
+describe('TicketsService.markAbsent', () => {
+  let ticketsService: TicketsService;
+  let transactionRepo: any;
+  let dataSource: any;
+
+  beforeEach(() => {
+    transactionRepo = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+    };
+
+    const manager = {
+      getRepository: jest.fn().mockReturnValue(transactionRepo),
+    };
+
+    dataSource = {
+      transaction: jest.fn(async (callback: any) => callback(manager)),
+    };
+
+    ticketsService = new TicketsService(
+      dataSource,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {
+        emitTicketCalled: jest.fn(),
+        emitQueueUpdated: jest.fn(),
+      } as any,
+      {} as any,
+    );
+
+    jest
+      .spyOn(ticketsService as any, 'buildOperatorAuditSnapshot')
+      .mockResolvedValue({
+        operatorId: 7,
+        snapshot: null,
+      });
+
+    jest
+      .spyOn(ticketsService as any, 'recordTicketStatusChange')
+      .mockResolvedValue(undefined);
+  });
+
+  it('allows CALLED to become ABSENT', async () => {
+    const ticket = {
+      id: 41,
+      status: Status.CALLED,
+      operatorId: 7,
+      serviceId: 2,
+      absentAt: null,
+    } as any;
+
+    transactionRepo.findOne.mockResolvedValue(ticket);
+    transactionRepo.save.mockImplementation(async (entity: any) => entity);
+
+    const result = await ticketsService.markAbsent(41);
+
+    expect(transactionRepo.findOne).toHaveBeenCalledWith({
+      where: { id: 41 },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    expect(result.status).toBe(Status.ABSENT);
+    expect(result.operatorId).toBeNull();
+    expect(result.absentAt).toBeInstanceOf(Date);
+    expect(transactionRepo.save).toHaveBeenCalled();
+  });
+
+  it('rejects MANUAL IN_PROGRESS to ABSENT', async () => {
+    transactionRepo.findOne.mockResolvedValue({
+      id: 42,
+      status: Status.IN_PROGRESS,
+      attentionStartSource: 'MANUAL',
+      operatorId: 7,
+      serviceId: 2,
+    });
+
+    await expect(
+      ticketsService.markAbsent(42),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(transactionRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('allows AUTO IN_PROGRESS to become ABSENT', async () => {
+    const ticket = {
+      id: 43,
+      status: Status.IN_PROGRESS,
+      attentionStartSource: 'AUTO',
+      operatorId: 7,
+      serviceId: 2,
+      absentAt: null,
+    } as any;
+
+    transactionRepo.findOne.mockResolvedValue(ticket);
+    transactionRepo.save.mockImplementation(async (entity: any) => entity);
+
+    const result = await ticketsService.markAbsent(43);
+
+    expect(result.status).toBe(Status.ABSENT);
+    expect(result.operatorId).toBeNull();
+    expect(result.absentAt).toBeInstanceOf(Date);
+    expect(transactionRepo.save).toHaveBeenCalled();
   });
 });

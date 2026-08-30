@@ -179,6 +179,7 @@ export interface Ticket {
   createdAt: string | Date
   calledAt: string | Date | null
   startedAt: string | Date | null
+  attentionStartSource?: "MANUAL" | "AUTO" | null
   completedAt: string | Date | null
   attentionDuration?: number | null
   operatorId: number | null
