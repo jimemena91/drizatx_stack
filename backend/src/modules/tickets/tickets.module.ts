@@ -19,12 +19,15 @@ import { ClientsModule } from '../../modules/clients/clients.module';
 import { SystemSettingsModule } from '../../modules/system-settings/system-settings.module';
 import { QueueEventsModule } from '../queue-events/queue-events.module';
 import { MetricsPolicyModule } from '../metrics-policy/metrics-policy.module';
+import { BusinessDateModule } from '../business-date/business-date.module';
+import { CalledAutoStartScheduler } from './called-auto-start.scheduler';
 
 @Module({
   imports: [
     // 👇 AQUI va TODO lo que necesites inyectar con @InjectRepository(...)
     QueueEventsModule,
     MetricsPolicyModule,
+    BusinessDateModule,
     TypeOrmModule.forFeature([
       Ticket,
       ServiceEntity,
@@ -39,7 +42,7 @@ import { MetricsPolicyModule } from '../metrics-policy/metrics-policy.module';
     ClientsModule,
     SystemSettingsModule,
   ],
-  providers: [TicketsService, PermissionsGuard],
+  providers: [TicketsService, PermissionsGuard, CalledAutoStartScheduler],
   controllers: [TicketsController],
   exports: [TicketsService, TypeOrmModule],
 })
