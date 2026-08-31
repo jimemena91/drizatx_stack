@@ -340,7 +340,11 @@ const PRIMARY_STATUS_SEQUENCE: Status[] = [
   Status.COMPLETED,
 ];
 
-const isTransitionAllowed = (from: Status | null, to: Status): boolean => {
+const isTransitionAllowed = (
+  from: Status | null,
+  to: Status,
+  attentionStartSource?: "MANUAL" | "AUTO" | null,
+): boolean => {
   if (!from) return false;
   switch (to) {
     case Status.CALLED:
@@ -350,7 +354,10 @@ const isTransitionAllowed = (from: Status | null, to: Status): boolean => {
     case Status.COMPLETED:
       return from === Status.IN_PROGRESS;
     case Status.ABSENT:
-      return from === Status.CALLED || from === Status.IN_PROGRESS;
+      return (
+        from === Status.CALLED ||
+        (from === Status.IN_PROGRESS && attentionStartSource === "AUTO")
+      );
     case Status.WAITING:
       return from === Status.ABSENT;
     default:
@@ -2014,7 +2021,11 @@ function OperatorContent({ operatorId }: { operatorId: number | null }) {
     const isLoading = statusLoading === action.status;
     const currentStatus = currentTicket?.status ?? null;
     const transitionAllowed = currentStatus
-      ? isTransitionAllowed(currentStatus, action.status)
+      ? isTransitionAllowed(
+          currentStatus,
+          action.status,
+          currentTicket?.attentionStartSource,
+        )
       : false;
     const disabled =
       isLoading ||

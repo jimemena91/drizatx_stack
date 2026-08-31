@@ -13,6 +13,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3001"
+      CALLED_AUTO_START_SECONDS: "60"
       COOKIE_DOMAIN: ".drizatx.com"
 
       # Conectamos al MySQL EXISTENTE (ya creado fuera de este compose)
