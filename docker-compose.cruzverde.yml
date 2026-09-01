@@ -27,6 +27,7 @@ services:
       NODE_ENV: production
       JWT_SECRET: driza-super-secret-2025
       PORT: 3001
+      CALLED_AUTO_START_SECONDS: "60"
       DATABASE_HOST: db
       DATABASE_PORT: 3306
       DATABASE_USERNAME: driza_cruzverde
