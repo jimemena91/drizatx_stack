@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReportsController } from './reports.controller';
 import { ReportsService } from './reports.service';
+import { ReportsExcelService } from './reports-excel.service';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 
 import { Ticket } from '../../entities/ticket.entity';
@@ -14,7 +15,7 @@ import { ReportSnapshot } from '../../entities/report-snapshot.entity';
     TypeOrmModule.forFeature([Ticket, Service, Operator, ReportSnapshot]),
   ],
   controllers: [ReportsController],
-  providers: [ReportsService, PermissionsGuard],
+  providers: [ReportsService, ReportsExcelService, PermissionsGuard],
   exports: [ReportsService],
 })
 export class ReportsModule {}
