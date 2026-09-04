@@ -6,6 +6,7 @@ import { Service } from '../../entities/service.entity';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsService } from './reports.service';
 import { rankOperators } from './reports-ranking.util';
+import { dateTokenInTimeZone } from './reports-date.util';
 
 @Injectable()
 export class ReportsExcelService {
@@ -31,13 +32,6 @@ export class ReportsExcelService {
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-zA-Z0-9]+/g, '_')
       .replace(/^_+|_+$/g, '') || 'Reporte';
-  }
-
-  private dateToken(value?: string) {
-    if (!value) return null;
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return null;
-    return date.toISOString().slice(0, 10);
   }
 
   private duration(seconds: number | null | undefined) {
@@ -298,8 +292,8 @@ export class ReportsExcelService {
     ]);
     this.autosize(filtersSheet, 20, 80);
 
-    const fromToken = this.dateToken(q.from);
-    const toToken = this.dateToken(q.to);
+    const fromToken = dateTokenInTimeZone(q.from, q.tz);
+    const toToken = dateTokenInTimeZone(q.to, q.tz);
     const parts = ['DrizaTx', this.sanitizeFilePart(clientName)];
     if (q.serviceId) parts.push(this.sanitizeFilePart(labels.serviceName));
     if (q.operatorId) parts.push(this.sanitizeFilePart(labels.operatorName));
