@@ -6,7 +6,10 @@ import { Service } from '../../entities/service.entity';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsService } from './reports.service';
 import { rankOperators } from './reports-ranking.util';
-import { dateTokenInTimeZone } from './reports-date.util';
+import {
+  dateTokenInTimeZone,
+  formatDateTimeInTimeZone,
+} from './reports-date.util';
 
 @Injectable()
 export class ReportsExcelService {
@@ -109,6 +112,16 @@ export class ReportsExcelService {
     const clientName = this.getClientName();
     const rankedOperators = rankOperators(summary.operators);
     const generatedAt = new Date();
+    const reportTimeZone = q.tz ?? 'America/Argentina/Mendoza';
+    const formattedFrom = q.from
+      ? formatDateTimeInTimeZone(q.from, reportTimeZone) ?? q.from
+      : 'Sin límite';
+    const formattedTo = q.to
+      ? formatDateTimeInTimeZone(q.to, reportTimeZone) ?? q.to
+      : 'Sin límite';
+    const formattedGeneratedAt =
+      formatDateTimeInTimeZone(generatedAt, reportTimeZone) ??
+      generatedAt.toISOString();
 
     const workbook = new Excel.Workbook();
     workbook.creator = 'DrizaTx';
@@ -123,8 +136,8 @@ export class ReportsExcelService {
     this.styleTitleRow(summarySheet.getRow(1));
 
     summarySheet.addRow(['Cliente', clientName]);
-    summarySheet.addRow(['Período desde', q.from ?? 'Sin límite']);
-    summarySheet.addRow(['Período hasta', q.to ?? 'Sin límite']);
+    summarySheet.addRow(['Período desde', formattedFrom]);
+    summarySheet.addRow(['Período hasta', formattedTo]);
     summarySheet.addRow(['Servicio', labels.serviceName]);
     summarySheet.addRow(['Operador', labels.operatorName]);
     summarySheet.addRow([]);
@@ -264,8 +277,8 @@ export class ReportsExcelService {
     const filtersHeader = filtersSheet.addRow(['Campo', 'Valor']);
     this.styleHeaderRow(filtersHeader);
     filtersSheet.addRow(['Cliente', clientName]);
-    filtersSheet.addRow(['Desde', q.from ?? 'Sin límite']);
-    filtersSheet.addRow(['Hasta', q.to ?? 'Sin límite']);
+    filtersSheet.addRow(['Desde', formattedFrom]);
+    filtersSheet.addRow(['Hasta', formattedTo]);
     filtersSheet.addRow(['Servicio', labels.serviceName]);
     filtersSheet.addRow(['Service ID', q.serviceId ?? 'Todos']);
     filtersSheet.addRow(['Operador', labels.operatorName]);
@@ -273,8 +286,8 @@ export class ReportsExcelService {
     filtersSheet.addRow(['Ticket desde', q.ticketNumberFrom ?? 'Sin límite']);
     filtersSheet.addRow(['Ticket hasta', q.ticketNumberTo ?? 'Sin límite']);
     filtersSheet.addRow(['Granularidad', q.granularity ?? 'day']);
-    filtersSheet.addRow(['Zona horaria', q.tz ?? 'America/Argentina/Mendoza']);
-    filtersSheet.addRow(['Generado', generatedAt.toISOString()]);
+    filtersSheet.addRow(['Zona horaria', reportTimeZone]);
+    filtersSheet.addRow(['Generado', formattedGeneratedAt]);
     filtersSheet.addRow([]);
     const methodologyTitle = filtersSheet.addRow(['Metodología']);
     this.styleSectionRow(methodologyTitle);
