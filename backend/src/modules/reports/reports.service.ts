@@ -67,16 +67,26 @@ export class ReportsService {
     };
 
     const created   = pick('createdAt','created_at','created','fecha_creacion','createdTime');
-    // “inicio de atención”: probamos varios sinónimos; si no está, luego caeremos a created
+    // Inicio productivo real: priorizamos started_at.
+    // Los nombres restantes quedan como fallback para compatibilidad legacy.
     const attended  = pick(
+      'startedAt','started_at',
+      'attentionStartAt','attention_started_at',
+      'startServiceAt','start_service_at',
       'attendedAt','attended_at',
       'servedAt','served_at',
-      'calledAt','called_at',
-      'startedAt','started_at',
-      'startServiceAt','start_service_at',
-      'attentionStartAt','attention_started_at'
+      'calledAt','called_at'
     );
-    const closed    = pick('closedAt','closed_at','finishedAt','finished_at','endedAt','ended_at','resolvedAt','resolved_at');
+
+    // Fin productivo real: priorizamos completed_at.
+    // closed_at queda solo como fallback legacy.
+    const closed    = pick(
+      'completedAt','completed_at',
+      'finishedAt','finished_at',
+      'endedAt','ended_at',
+      'resolvedAt','resolved_at',
+      'closedAt','closed_at'
+    );
     const status    = pick('status','state','ticket_status');
     const number    = pick('number','ticketNumber','ticket_number','turn_number','turno');
     const operatorId= pick('operatorId','operator_id','agentId','agent_id','userId','user_id');
