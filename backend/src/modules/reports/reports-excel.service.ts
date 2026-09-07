@@ -156,7 +156,14 @@ export class ReportsExcelService {
     summarySheet.addRow(['Tiempo medio de espera', this.duration(summary.kpis.tmeSec), 'min']);
     summarySheet.addRow(['Tiempo medio de atención', this.duration(summary.kpis.tmaSec), 'min']);
     summarySheet.addRow(['Tiempo total medio', this.duration(summary.kpis.leadSec), 'min']);
-    summarySheet.addRow(['Pico de actividad', summary.kpis.peakBucket ?? 'Sin datos', '']);
+    summarySheet.addRow([
+      'Pico de actividad',
+      summary.kpis.peakBucket
+        ? formatDateTimeInTimeZone(summary.kpis.peakBucket, reportTimeZone) ??
+          summary.kpis.peakBucket
+        : 'Sin datos',
+      '',
+    ]);
     summarySheet.addRow([]);
 
     if (q.operatorId) {
@@ -264,8 +271,11 @@ export class ReportsExcelService {
     ]);
     this.styleHeaderRow(activityHeader);
     throughput.forEach((item) => {
+      const formattedBucket =
+        formatDateTimeInTimeZone(item.bucket, reportTimeZone) ?? item.bucket;
+
       activitySheet.addRow([
-        item.bucket,
+        formattedBucket,
         item.attended,
         this.duration(item.avgWaitSec),
       ]);
