@@ -103,11 +103,14 @@ export class ReportsExcelService {
 
   async build(q: ReportsQueryDto) {
     const Excel = (await import('exceljs')).default;
-    const [summary, throughput, labels] = await Promise.all([
-      this.reports.summary(q),
-      this.reports.throughput(q),
-      this.resolveFilterLabels(q),
-    ]);
+    const [summary, throughput, serviceMetrics, attentionDetails, labels] =
+      await Promise.all([
+        this.reports.summary(q),
+        this.reports.throughput(q),
+        this.reports.serviceMetrics(q),
+        this.reports.attentionDetails(q),
+        this.resolveFilterLabels(q),
+      ]);
 
     const clientName = this.getClientName();
     const rankedOperators = rankOperators(summary.operators);
@@ -262,6 +265,82 @@ export class ReportsExcelService {
     operatorsSheet.autoFilter = { from: 'A1', to: 'M1' };
     this.autosize(operatorsSheet, 12, 30);
 
+    const servicesSheet = workbook.addWorksheet('Servicios');
+    servicesSheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const servicesHeader = servicesSheet.addRow([
+      'Servicio',
+      'Tickets gestionados',
+      'Atenciones productivas',
+      'Excluidas',
+      'Espera promedio (min)',
+      'Atención promedio (min)',
+    ]);
+    this.styleHeaderRow(servicesHeader);
+
+    serviceMetrics.forEach((service) => {
+      servicesSheet.addRow([
+        service.serviceName,
+        service.totalTickets,
+        service.productiveAttentions,
+        service.excludedShortAttentions,
+        this.duration(service.avgWaitSec),
+        this.duration(service.avgHandleSec),
+      ]);
+    });
+
+    servicesSheet.autoFilter = { from: 'A1', to: 'F1' };
+    this.autosize(servicesSheet, 14, 30);
+
+    const attentionsSheet = workbook.addWorksheet('Atenciones');
+    attentionsSheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const attentionsHeader = attentionsSheet.addRow([
+      'Ticket',
+      'Servicio',
+      'Operador',
+      'Estado',
+      'Creado',
+      'Llamado',
+      'Inicio atención',
+      'Fin atención',
+      'Duración (min)',
+      'Cuenta para métricas',
+      'Motivo exclusión',
+      'Inicio',
+    ]);
+    this.styleHeaderRow(attentionsHeader);
+
+    attentionDetails.forEach((ticket) => {
+      attentionsSheet.addRow([
+        ticket.number,
+        ticket.serviceName,
+        ticket.operatorName ?? 'Sin operador',
+        ticket.status,
+        ticket.createdAt
+          ? formatDateTimeInTimeZone(ticket.createdAt, reportTimeZone) ??
+            ticket.createdAt
+          : null,
+        ticket.calledAt
+          ? formatDateTimeInTimeZone(ticket.calledAt, reportTimeZone) ??
+            ticket.calledAt
+          : null,
+        ticket.startedAt
+          ? formatDateTimeInTimeZone(ticket.startedAt, reportTimeZone) ??
+            ticket.startedAt
+          : null,
+        ticket.completedAt
+          ? formatDateTimeInTimeZone(ticket.completedAt, reportTimeZone) ??
+            ticket.completedAt
+          : null,
+        this.duration(ticket.attentionDurationSec),
+        ticket.countsForMetrics ? 'Sí' : 'No',
+        ticket.metricsExclusionReason ?? '',
+        ticket.attentionStartSource ?? '',
+      ]);
+    });
+
+    attentionsSheet.autoFilter = { from: 'A1', to: 'L1' };
+    this.autosize(attentionsSheet, 14, 34);
+
     const activitySheet = workbook.addWorksheet('Actividad');
     activitySheet.views = [{ state: 'frozen', ySplit: 1 }];
     const activityHeader = activitySheet.addRow([
@@ -317,10 +396,42 @@ export class ReportsExcelService {
 
     const fromToken = dateTokenInTimeZone(q.from, q.tz);
     const toToken = dateTokenInTimeZone(q.to, q.tz);
-    const parts = ['DrizaTx', this.sanitizeFilePart(clientName)];
-    if (q.serviceId) parts.push(this.sanitizeFilePart(labels.serviceName));
-    if (q.operatorId) parts.push(this.sanitizeFilePart(labels.operatorName));
-    if (fromToken && toToken) {
+
+    const sanitizedClientName = this.sanitizeFilePart(clientName);
+    const clientFilePart = sanitizedClientName
+      .replace(/^DrizaTx_?/i, '')
+      .replace(/^_+|_+$/g, '');
+
+    const parts = ['DrizaTx'];
+
+    if (clientFilePart) {
+      parts.push(clientFilePart);
+    }
+
+    if (q.serviceId) {
+      parts.push(this.sanitizeFilePart(labels.serviceName));
+    }
+
+    if (q.operatorId) {
+      parts.push(this.sanitizeFilePart(labels.operatorName));
+    }
+
+    const isFullMonth =
+      fromToken &&
+      toToken &&
+      /^\\d{4}-\\d{2}-01$/.test(fromToken) &&
+      (() => {
+        const [year, month] = fromToken.split('-').map(Number);
+        const lastDay = new Date(Date.UTC(year, month, 0))
+          .toISOString()
+          .slice(0, 10);
+
+        return toToken === lastDay;
+      })();
+
+    if (isFullMonth && fromToken) {
+      parts.push(fromToken.slice(0, 7));
+    } else if (fromToken && toToken) {
       parts.push(`${fromToken}_al_${toToken}`);
     } else if (fromToken) {
       parts.push(`desde_${fromToken}`);
