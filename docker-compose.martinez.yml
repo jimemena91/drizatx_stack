@@ -12,6 +12,7 @@ services:
       - "host.docker.internal:host-gateway"
     environment:
       NODE_ENV: production
+      REPORT_CLIENT_NAME: "Martinez"
       PORT: "3001"
       CALLED_AUTO_START_SECONDS: "60"
       COOKIE_DOMAIN: ".drizatx.com"
