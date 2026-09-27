@@ -2,6 +2,7 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Ticket } from '../../entities/ticket.entity';
+import { Service } from '../../entities/service.entity';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportSnapshot } from '../../entities/report-snapshot.entity';
 import { CreateSnapshotDto, ListSnapshotsQueryDto } from './dto/create-snapshot.dto';
@@ -67,16 +68,26 @@ export class ReportsService {
     };
 
     const created   = pick('createdAt','created_at','created','fecha_creacion','createdTime');
-    // “inicio de atención”: probamos varios sinónimos; si no está, luego caeremos a created
+    // Inicio productivo real: priorizamos started_at.
+    // Los nombres restantes quedan como fallback para compatibilidad legacy.
     const attended  = pick(
+      'startedAt','started_at',
+      'attentionStartAt','attention_started_at',
+      'startServiceAt','start_service_at',
       'attendedAt','attended_at',
       'servedAt','served_at',
-      'calledAt','called_at',
-      'startedAt','started_at',
-      'startServiceAt','start_service_at',
-      'attentionStartAt','attention_started_at'
+      'calledAt','called_at'
     );
-    const closed    = pick('closedAt','closed_at','finishedAt','finished_at','endedAt','ended_at','resolvedAt','resolved_at');
+
+    // Fin productivo real: priorizamos completed_at.
+    // closed_at queda solo como fallback legacy.
+    const closed    = pick(
+      'completedAt','completed_at',
+      'finishedAt','finished_at',
+      'endedAt','ended_at',
+      'resolvedAt','resolved_at',
+      'closedAt','closed_at'
+    );
     const status    = pick('status','state','ticket_status');
     const number    = pick('number','ticketNumber','ticket_number','turn_number','turno');
     const operatorId= pick('operatorId','operator_id','agentId','agent_id','userId','user_id');
@@ -548,6 +559,141 @@ export class ReportsService {
       this.logger.error('throughput failed', err);
       throw err;
     }
+  }
+
+
+  // =========================================================
+  // SERVICE METRICS
+  // Dataset reutilizable para pantalla/exportaciones.
+  // =========================================================
+  async serviceMetrics(q: ReportsQueryDto) {
+    this.ensureValidRange(q);
+
+    const cols = await this.resolveTicketColumns();
+
+    if (!cols.created || !cols.serviceId) return [];
+
+    const created = `t.${cols.created}`;
+    const serviceId = `t.${cols.serviceId}`;
+    const status = cols.status ? `t.${cols.status}` : 't.status';
+    const hasAttended = !!cols.attended;
+    const attended = hasAttended ? `t.${cols.attended}` : created;
+    const closed = cols.closed ? `t.${cols.closed}` : null;
+
+    const qb = this.ticketsRepo
+      .createQueryBuilder('t')
+      .leftJoin(Service, 'service', `service.id = ${serviceId}`)
+      .select(`${serviceId}`, 'serviceId')
+      .addSelect('service.name', 'serviceName')
+      .addSelect('COUNT(*)', 'totalTickets')
+      .addSelect(
+        `SUM(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN 1 ELSE 0 END)`,
+        'productiveAttentions',
+      )
+      .addSelect(
+        `SUM(CASE WHEN ${status} = 'COMPLETED' AND t.metrics_exclusion_reason = 'SHORT_ATTENTION' THEN 1 ELSE 0 END)`,
+        'excludedShortAttentions',
+      );
+
+    if (hasAttended) {
+      qb.addSelect(
+        `AVG(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN TIMESTAMPDIFF(SECOND, ${created}, ${attended}) END)`,
+        'avgWaitSec',
+      );
+    } else {
+      qb.addSelect('NULL', 'avgWaitSec');
+    }
+
+    if (hasAttended && closed) {
+      qb.addSelect(
+        `AVG(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN TIMESTAMPDIFF(SECOND, ${attended}, ${closed}) END)`,
+        'avgHandleSec',
+      );
+    } else {
+      qb.addSelect('NULL', 'avgHandleSec');
+    }
+
+    if (q.from) qb.andWhere(`${attended} >= :from`, { from: q.from });
+    if (q.to) qb.andWhere(`${attended} <= :to`, { to: q.to });
+
+    this.applyFilters(qb, q, cols);
+
+    const rows = await qb
+      .groupBy(serviceId)
+      .addGroupBy('service.name')
+      .orderBy('productiveAttentions', 'DESC')
+      .getRawMany<{
+        serviceId: string;
+        serviceName: string | null;
+        totalTickets: string;
+        productiveAttentions: string;
+        excludedShortAttentions: string;
+        avgWaitSec: string | null;
+        avgHandleSec: string | null;
+      }>();
+
+    return rows.map((row) => ({
+      serviceId: Number(row.serviceId),
+      serviceName: row.serviceName ?? `Servicio ${row.serviceId}`,
+      totalTickets: Number(row.totalTickets ?? 0),
+      productiveAttentions: Number(row.productiveAttentions ?? 0),
+      excludedShortAttentions: Number(row.excludedShortAttentions ?? 0),
+      avgWaitSec:
+        row.avgWaitSec != null ? Math.round(Number(row.avgWaitSec)) : null,
+      avgHandleSec:
+        row.avgHandleSec != null ? Math.round(Number(row.avgHandleSec)) : null,
+    }));
+  }
+
+  // =========================================================
+  // ATTENTION DETAILS
+  // Detalle auditable del mismo conjunto filtrado.
+  // No recalcula la clasificación productiva.
+  // =========================================================
+  async attentionDetails(q: ReportsQueryDto) {
+    this.ensureValidRange(q);
+
+    const cols = await this.resolveTicketColumns();
+
+    if (!cols.created) return [];
+
+    const hasAttended = !!cols.attended;
+    const rangeColumn = hasAttended
+      ? `t.${cols.attended}`
+      : `t.${cols.created}`;
+
+    const qb = this.ticketsRepo
+      .createQueryBuilder('t')
+      .leftJoinAndSelect('t.service', 'service')
+      .leftJoinAndSelect('t.operator', 'operator');
+
+    if (q.from) qb.andWhere(`${rangeColumn} >= :from`, { from: q.from });
+    if (q.to) qb.andWhere(`${rangeColumn} <= :to`, { to: q.to });
+
+    this.applyFilters(qb, q, cols);
+
+    const tickets = await qb
+      .orderBy(rangeColumn, 'ASC')
+      .addOrderBy('t.id', 'ASC')
+      .getMany();
+
+    return tickets.map((ticket) => ({
+      id: ticket.id,
+      number: ticket.number,
+      serviceId: ticket.serviceId,
+      serviceName: ticket.service?.name ?? `Servicio ${ticket.serviceId}`,
+      operatorId: ticket.operatorId ?? null,
+      operatorName: ticket.operator?.name ?? null,
+      status: ticket.status,
+      createdAt: ticket.createdAt?.toISOString?.() ?? null,
+      calledAt: ticket.calledAt?.toISOString?.() ?? null,
+      startedAt: ticket.startedAt?.toISOString?.() ?? null,
+      completedAt: ticket.completedAt?.toISOString?.() ?? null,
+      attentionDurationSec: ticket.attentionDuration ?? null,
+      countsForMetrics: Boolean(ticket.countsForMetrics),
+      metricsExclusionReason: ticket.metricsExclusionReason ?? null,
+      attentionStartSource: ticket.attentionStartSource ?? null,
+    }));
   }
 
   // ---------- Snapshots ----------
