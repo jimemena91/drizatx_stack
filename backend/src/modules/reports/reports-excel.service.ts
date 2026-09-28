@@ -364,38 +364,6 @@ export class ReportsExcelService {
     activitySheet.autoFilter = { from: 'A1', to: 'C1' };
     this.autosize(activitySheet, 16, 28);
 
-    const filtersSheet = workbook.addWorksheet('Filtros y metodología');
-    const filtersHeader = filtersSheet.addRow(['Campo', 'Valor']);
-    this.styleHeaderRow(filtersHeader);
-    filtersSheet.addRow(['Cliente', clientName]);
-    filtersSheet.addRow(['Desde', formattedFrom]);
-    filtersSheet.addRow(['Hasta', formattedTo]);
-    filtersSheet.addRow(['Servicio', labels.serviceName]);
-    filtersSheet.addRow(['Service ID', q.serviceId ?? 'Todos']);
-    filtersSheet.addRow(['Operador', labels.operatorName]);
-    filtersSheet.addRow(['Operator ID', q.operatorId ?? 'Todos']);
-    filtersSheet.addRow(['Ticket desde', q.ticketNumberFrom ?? 'Sin límite']);
-    filtersSheet.addRow(['Ticket hasta', q.ticketNumberTo ?? 'Sin límite']);
-    filtersSheet.addRow(['Granularidad', q.granularity ?? 'day']);
-    filtersSheet.addRow(['Zona horaria', reportTimeZone]);
-    filtersSheet.addRow(['Generado', formattedGeneratedAt]);
-    filtersSheet.addRow([]);
-    const methodologyTitle = filtersSheet.addRow(['Metodología']);
-    this.styleSectionRow(methodologyTitle);
-    filtersSheet.addRow([
-      'Atenciones productivas',
-      'Solo tickets que el backend clasifica con counts_for_metrics = true.',
-    ]);
-    filtersSheet.addRow([
-      'Índice de desempeño',
-      '50% volumen productivo normalizado + 30% efectividad + 20% continuidad/ocupación.',
-    ]);
-    filtersSheet.addRow([
-      'Métricas faltantes',
-      'Si una métrica opcional no está disponible, su peso se redistribuye entre las disponibles.',
-    ]);
-    this.autosize(filtersSheet, 20, 80);
-
     const fromToken = dateTokenInTimeZone(q.from, q.tz);
     const toToken = dateTokenInTimeZone(q.to, q.tz);
 
