@@ -14,6 +14,8 @@ type ResolvedCols = {
   created?: string;
   attended?: string; // inicio de atención (si no existe, caeremos a created)
   closed?: string;
+  absent?: string;
+  dailyClosed?: string;
   status?: string;
   number?: string;
   operatorId?: string;
@@ -88,12 +90,63 @@ export class ReportsService {
       'resolvedAt','resolved_at',
       'closedAt','closed_at'
     );
+    const absent    = pick('absentAt','absent_at');
+    const dailyClosed = pick('closedAt','closed_at');
     const status    = pick('status','state','ticket_status');
     const number    = pick('number','ticketNumber','ticket_number','turn_number','turno');
     const operatorId= pick('operatorId','operator_id','agentId','agent_id','userId','user_id');
     const serviceId = pick('serviceId','service_id','queueId','queue_id');
 
-    return { table, created, attended, closed, status, number, operatorId, serviceId };
+    return {
+      table,
+      created,
+      attended,
+      closed,
+      absent,
+      dailyClosed,
+      status,
+      number,
+      operatorId,
+      serviceId,
+    };
+  }
+
+  /**
+   * Columna temporal efectiva para incluir un ticket en el período del reporte.
+   *
+   * La fecha depende del evento que cerró/representa el ticket:
+   * - COMPLETED     -> inicio de atención
+   * - ABSENT        -> momento en que fue marcado ausente
+   * - DAILY_CLOSED  -> momento del cierre diario
+   * - otros         -> creación del ticket
+   */
+  private getReportRangeColumn(
+    cols: ResolvedCols,
+    status: string,
+    alias = 't',
+  ): string {
+    const created = cols.created
+      ? `${alias}.${cols.created}`
+      : `${alias}.created_at`;
+
+    const attended = cols.attended
+      ? `${alias}.${cols.attended}`
+      : created;
+
+    const absent = cols.absent
+      ? `${alias}.${cols.absent}`
+      : created;
+
+    const dailyClosed = cols.dailyClosed
+      ? `${alias}.${cols.dailyClosed}`
+      : created;
+
+    return `CASE
+      WHEN ${status} = 'ABSENT' THEN ${absent}
+      WHEN ${status} = 'DAILY_CLOSED' THEN ${dailyClosed}
+      WHEN ${status} = 'COMPLETED' THEN ${attended}
+      ELSE ${created}
+    END`;
   }
 
   /**
@@ -177,9 +230,11 @@ export class ReportsService {
             : `NULL as lead_sec`,
         ]);
 
-      // Rango: si hay attended, por attended; si no, por created
-      if (q.from) qb.andWhere(`${hasAttended ? attended : created} >= :from`, { from: q.from });
-      if (q.to)   qb.andWhere(`${hasAttended ? attended : created} <= :to`,   { to: q.to });
+      // El período usa la fecha efectiva del evento según el estado.
+      const rangeColumn = this.getReportRangeColumn(cols, status);
+
+      if (q.from) qb.andWhere(`${rangeColumn} >= :from`, { from: q.from });
+      if (q.to)   qb.andWhere(`${rangeColumn} <= :to`,   { to: q.to });
 
       this.applyFilters(qb, q, cols);
 
@@ -278,8 +333,10 @@ export class ReportsService {
       .select(`${operatorId} as operatorId`)
       .where(`${operatorId} IS NOT NULL`);
 
-    if (q.from) qb.andWhere(`${hasAttended ? attended! : created} >= :from`, { from: q.from });
-    if (q.to) qb.andWhere(`${hasAttended ? attended! : created} <= :to`, { to: q.to });
+    const rangeColumn = this.getReportRangeColumn(cols, status);
+
+    if (q.from) qb.andWhere(`${rangeColumn} >= :from`, { from: q.from });
+    if (q.to) qb.andWhere(`${rangeColumn} <= :to`, { to: q.to });
 
     this.applyFilters(qb, q, cols);
 
@@ -661,10 +718,8 @@ export class ReportsService {
 
     if (!cols.created) return [];
 
-    const hasAttended = !!cols.attended;
-    const rangeColumn = hasAttended
-      ? `t.${cols.attended}`
-      : `t.${cols.created}`;
+    const status = cols.status ? `t.${cols.status}` : `t.status`;
+    const rangeColumn = this.getReportRangeColumn(cols, status);
 
     const qb = this.ticketsRepo
       .createQueryBuilder('t')
