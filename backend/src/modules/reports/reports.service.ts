@@ -164,7 +164,8 @@ export class ReportsService {
           `SUM(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN 1 ELSE 0 END) as attended`,
           `SUM(CASE WHEN ${status} = 'COMPLETED' AND t.metrics_exclusion_reason = 'SHORT_ATTENTION' THEN 1 ELSE 0 END) as excluded_short_attentions`,
           `SUM(CASE WHEN ${status} = 'CANCELLED' THEN 1 ELSE 0 END) as cancelled`,
-          `SUM(CASE WHEN ${status} = 'ABANDONED' THEN 1 ELSE 0 END) as abandoned`,
+          `SUM(CASE WHEN ${status} = 'ABSENT' THEN 1 ELSE 0 END) as absent`,
+          `SUM(CASE WHEN ${status} = 'DAILY_CLOSED' THEN 1 ELSE 0 END) as daily_closed`,
           hasAttended
             ? `AVG(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN TIMESTAMPDIFF(SECOND, ${created}, ${attended}) END) as tme_sec`
             : `NULL as tme_sec`,
@@ -187,7 +188,8 @@ export class ReportsService {
         attended: string;
         excluded_short_attentions: string;
         cancelled: string;
-        abandoned: string;
+        absent: string;
+        daily_closed: string;
         tme_sec: string | null;
         tma_sec: string | null;
         lead_sec: string | null;
@@ -239,7 +241,9 @@ export class ReportsService {
           completedTotal: attentionMetrics.completedTotal,
           exclusionRate: attentionMetrics.exclusionRate,
           cancelled: Number(raw?.cancelled ?? 0),
-          abandoned: Number(raw?.abandoned ?? 0),
+          absent: Number(raw?.absent ?? 0),
+          dailyClosed: Number(raw?.daily_closed ?? 0),
+          abandoned: Number(raw?.absent ?? 0),
         },
         kpis: {
           tmeSec: raw?.tme_sec != null ? Math.round(Number(raw.tme_sec)) : null,
@@ -283,7 +287,7 @@ export class ReportsService {
       .addSelect(`SUM(CASE WHEN ${status} = 'COMPLETED' AND t.counts_for_metrics = 1 THEN 1 ELSE 0 END)`, 'completedTickets')
       .addSelect(`SUM(CASE WHEN ${status} = 'COMPLETED' AND t.metrics_exclusion_reason = 'SHORT_ATTENTION' THEN 1 ELSE 0 END)`, 'excludedShortAttentions')
       .addSelect(`SUM(CASE WHEN ${status} = 'CANCELLED' THEN 1 ELSE 0 END)`, 'cancelledTickets')
-      .addSelect(`SUM(CASE WHEN ${status} = 'ABANDONED' THEN 1 ELSE 0 END)`, 'abandonedTickets')
+      .addSelect(`SUM(CASE WHEN ${status} = 'ABSENT' THEN 1 ELSE 0 END)`, 'abandonedTickets')
       .addSelect(`MIN(${timeRef})`, 'firstActivityAt')
       .addSelect(`MAX(${timeRef})`, 'lastActivityAt')
       .addSelect(`TIMESTAMPDIFF(SECOND, MIN(${timeRef}), MAX(${timeRef}))`, 'activeSpanSec');

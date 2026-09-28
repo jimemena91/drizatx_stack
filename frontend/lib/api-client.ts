@@ -2298,6 +2298,8 @@ class ApiClient {
         attended: number;
         cancelled: number;
         abandoned: number;
+        absent: number;
+        dailyClosed: number;
         productiveAttentions?: number;
         excludedShortAttentions?: number;
         completedTotal?: number;

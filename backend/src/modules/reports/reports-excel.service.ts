@@ -153,6 +153,8 @@ export class ReportsExcelService {
     summarySheet.addRow(['Tickets del conjunto', summary.totals.total, 'tickets']);
     summarySheet.addRow(['Atenciones productivas', summary.totals.productiveAttentions, 'atenciones']);
     summarySheet.addRow(['Atenciones completadas', summary.totals.completedTotal, 'atenciones']);
+    summarySheet.addRow(['Ausentes', summary.totals.absent, 'tickets']);
+    summarySheet.addRow(['Cierres diarios', summary.totals.dailyClosed, 'tickets']);
     summarySheet.addRow(['Atenciones excluidas', summary.totals.excludedShortAttentions, 'atenciones']);
     const exclusionRow = summarySheet.addRow(['Tasa de exclusión', this.percent(summary.totals.exclusionRate), '%']);
     exclusionRow.getCell(2).numFmt = '0.0%';
@@ -303,7 +305,7 @@ export class ReportsExcelService {
       'Inicio atención',
       'Fin atención',
       'Duración (min)',
-      'Cuenta para métricas',
+      'Atención productiva',
       'Motivo exclusión',
       'Inicio',
     ]);
@@ -332,7 +334,7 @@ export class ReportsExcelService {
             ticket.completedAt
           : null,
         this.duration(ticket.attentionDurationSec),
-        ticket.countsForMetrics ? 'Sí' : 'No',
+        ticket.status === 'COMPLETED' && ticket.countsForMetrics ? 'Sí' : 'No',
         ticket.metricsExclusionReason ?? '',
         ticket.attentionStartSource ?? '',
       ]);

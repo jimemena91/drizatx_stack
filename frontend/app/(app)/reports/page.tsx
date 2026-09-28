@@ -1157,7 +1157,7 @@ export default function ReportsPage() {
                                 {numberFormatter.format(operator.cancelledTickets)}
                               </span>
                               {" · "}
-                              Abandonados: {" "}
+                              Ausentes: {" "}
                               <span className="font-medium text-gray-900">
                                 {numberFormatter.format(operator.abandonedTickets)}
                               </span>
