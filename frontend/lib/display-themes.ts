@@ -47,6 +47,14 @@ export type DisplayThemeSurface = {
   buttonBorder: string
 }
 
+/** Imagen que ocupa el lugar del logo mientras el tema está activo. */
+export type DisplayThemeEmblem = {
+  src: string
+  alt: string
+  /** Fondo del recuadro. Por defecto, blanco. */
+  background?: string
+}
+
 /** Colores de una tarjeta de turno. */
 export type DisplayTicketPalette = {
   /** Borde de la tarjeta (color o degradado CSS). */
@@ -90,11 +98,25 @@ export type DisplayThemeTickets = {
 export type DisplayThemeDefinition = {
   label: string
   header?: DisplayThemeHeader
+  /** Si el cliente no tiene logo, reemplaza a las iniciales; si lo tiene, se muestra al lado. */
+  emblem?: DisplayThemeEmblem
   surface?: DisplayThemeSurface
   tickets?: DisplayThemeTickets
 }
 
 export const FALLBACK_DISPLAY_THEME_ID = "marca"
+
+/** Lazo rosa de la lucha contra el cáncer de mama, como imagen incrustada (no depende de archivos). */
+const LAZO_ROSA =
+  "data:image/svg+xml;utf8," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<g fill="none" stroke-width="10" stroke-linejoin="round">' +
+      '<path d="M46 60 24 23.3" stroke="#BE185D"/>' +
+      '<path d="M18 60 39 25C44 16 39 6 32 6S20 16 25 25" stroke="#EC4899"/>' +
+      '<path d="M32.5 37.5 46 60" stroke="#DB2777"/>' +
+      "</g></svg>",
+  )
 
 export const DISPLAY_THEMES: Record<string, DisplayThemeDefinition> = {
   /** Colores de marca del cliente sobre la base oscura. Es el comportamiento histórico. */
@@ -122,6 +144,7 @@ export const DISPLAY_THEMES: Record<string, DisplayThemeDefinition> = {
   "octubre-rosa": {
     label: "Octubre rosa",
     header: { from: "#9D174D", to: "#DB2777", accent: "#FFFFFF", muted: "#FFFFFF" },
+    emblem: { src: LAZO_ROSA, alt: "Lazo rosa" },
     surface: {
       pageBackground: "linear-gradient(to bottom right, #FBCFE8, #F9A8D4, #F472B6)",
       text: "#500724",
@@ -215,6 +238,7 @@ export type ResolvedDisplayTheme = {
   id: string
   label: string
   header?: DisplayThemeHeader
+  emblem?: DisplayThemeEmblem
   /** Estilos por zona. Vacío cuando el tema usa la base oscura: no pisa nada. */
   styles: DisplayThemeStyles
   /** Estilos de los tickets. Sin definir cuando el tema usa los colores de siempre. */
@@ -321,6 +345,7 @@ export function resolveDisplayTheme(value: string | null | undefined): ResolvedD
     id,
     label: definition.label,
     header: definition.header,
+    emblem: definition.emblem,
     styles: buildStyles(definition.surface),
     tickets: buildTicketStyles(definition.tickets),
   }

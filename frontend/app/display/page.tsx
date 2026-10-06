@@ -18,7 +18,7 @@ import { useSystemSettings } from "@/hooks/use-system-settings"
 import { useDisplaySocket } from "@/hooks/use-display-socket"
 import type { TicketWithRelations } from "@/lib/types"
 import { normalizePriorityLevel } from "@/lib/priority"
-import { resolveDisplayTheme } from "@/lib/display-themes"
+import { resolveDisplayTheme, type DisplayThemeEmblem } from "@/lib/display-themes"
 
 /** Tipos locales mínimos para no romper el build si el tipo real no está importado */
 type NeutralPromotion = {
@@ -96,6 +96,7 @@ type DisplayBrandingHeaderProps = {
   theme: string
   accentColor?: string
   mutedColor?: string
+  emblem?: DisplayThemeEmblem
   weather?: {
     enabled: boolean
     location: string
@@ -118,6 +119,7 @@ function DisplayBrandingHeader({
   weather,
   accentColor,
   mutedColor,
+  emblem,
 }: DisplayBrandingHeaderProps) {
   const normalizedName = brandName.trim() || "DrizaTx"
   const normalizedTitle = title.trim() || "Centro de Atención al Cliente"
@@ -218,9 +220,23 @@ function DisplayBrandingHeader({
         ) : (
           <div
             className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm"
-            style={logoFallbackStyle}
+            style={emblem ? { ...logoFallbackStyle, background: emblem.background ?? "#FFFFFF" } : logoFallbackStyle}
           >
-            <span className="text-lg font-bold tracking-wide">{initials}</span>
+            {emblem ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={emblem.src} alt={emblem.alt} className="h-8 w-8 object-contain" />
+            ) : (
+              <span className="text-lg font-bold tracking-wide">{initials}</span>
+            )}
+          </div>
+        )}
+        {logoUrl && emblem && (
+          <div
+            className="flex h-10 w-10 items-center justify-center rounded-xl shadow-sm"
+            style={{ background: emblem.background ?? "#FFFFFF" }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={emblem.src} alt={emblem.alt} className="h-8 w-8 object-contain" />
           </div>
         )}
         <div className="flex flex-col justify-center gap-0.5">
@@ -759,6 +775,7 @@ export default function DisplayPage() {
             secondaryColor={displayTheme.header?.to ?? brandSecondaryColor}
             accentColor={displayTheme.header?.accent}
             mutedColor={displayTheme.header?.muted}
+            emblem={displayTheme.emblem}
             theme={signageTheme}
             weather={{
               enabled: signageShowWeather,
