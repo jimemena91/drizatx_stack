@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/dialog"
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { DISPLAY_THEME_OPTIONS, resolveDisplayTheme } from "@/lib/display-themes"
 
 import {
   Plus,
@@ -607,35 +608,19 @@ useEffect(() => {
     const secondary = (settingsForm.brandSecondaryColor || DEFAULT_SETTINGS_FORM.brandSecondaryColor).trim() ||
       DEFAULT_SETTINGS_FORM.brandSecondaryColor
 
-    if (settingsForm.signageTheme === "contrast") {
-      return {
-        background: `linear-gradient(135deg, ${primary}, ${secondary})`,
-        cardBackground: "rgba(255,255,255,0.12)",
-        textColor: "#f8fafc",
-        mutedText: "rgba(226,232,240,0.85)",
-        accentColor: secondary,
-        accentText: primary,
-      }
-    }
-
-    if (settingsForm.signageTheme === "minimal") {
-      return {
-        background: "#ffffff",
-        cardBackground: "#f8fafc",
-        textColor: "#0f172a",
-        mutedText: "#475569",
-        accentColor: secondary,
-        accentText: "#0f172a",
-      }
-    }
+    // Mismos colores que usa la pantalla de display para el tema elegido.
+    const theme = resolveDisplayTheme(settingsForm.signageTheme)
+    const headerFrom = theme.header?.from ?? primary
+    const headerTo = theme.header?.to ?? secondary
 
     return {
-      background: `linear-gradient(135deg, ${primary}1a, ${secondary}20)`,
-      cardBackground: "rgba(255,255,255,0.92)",
-      textColor: "#0f172a",
-      mutedText: "#475569",
-      accentColor: secondary,
-      accentText: "#0f172a",
+      background: String(theme.styles.page?.background ?? "linear-gradient(to bottom right, #020617, #0f172a, #1e293b)"),
+      cardBackground: String(theme.styles.card?.background ?? "rgba(2,6,23,0.7)"),
+      textColor: String(theme.styles.page?.color ?? "#f1f5f9"),
+      mutedText: String(theme.styles.mutedText?.color ?? "#94a3b8"),
+      accentColor: `linear-gradient(135deg, ${headerFrom}, ${headerTo})`,
+      accentText: theme.header?.accent ?? "#f8fafc",
+      label: theme.label,
     }
   }, [
     settingsForm.brandPrimaryColor,
@@ -2606,7 +2591,7 @@ useEffect(() => {
                                   style={{ color: signageThemePreview.mutedText }}
                                 >
                                   <span>Rotación {settingsForm.displayTimeout || DEFAULT_SETTINGS_FORM.displayTimeout}s</span>
-                                  <span>Tema: {settingsForm.signageTheme}</span>
+                                  <span>Tema: {signageThemePreview.label}</span>
                                 </div>
                               </div>
                             </div>
@@ -3375,7 +3360,7 @@ useEffect(() => {
                       <div>
                         <Label htmlFor="signage-theme">Tema de cartelería</Label>
                         <Select
-                          value={settingsForm.signageTheme}
+                          value={resolveDisplayTheme(settingsForm.signageTheme).id}
                           onValueChange={(value) => updateSettingField("signageTheme", value)}
                           disabled={disableSettingsForm}
                         >
@@ -3383,11 +3368,23 @@ useEffect(() => {
                             <SelectValue placeholder="Seleccionar tema" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="corporate">Corporativo</SelectItem>
-                            <SelectItem value="minimal">Minimalista</SelectItem>
-                            <SelectItem value="contrast">Alto contraste</SelectItem>
+                            {DISPLAY_THEME_OPTIONS.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          <Link
+                            className="underline"
+                            href={`/display?tema=${resolveDisplayTheme(settingsForm.signageTheme).id}`}
+                            target="_blank"
+                          >
+                            Ver este tema en la pantalla
+                          </Link>{" "}
+                          sin guardar cambios.
+                        </p>
                       </div>
                       <div className="flex items-center justify-between gap-3">
                         <div className="space-y-1">
