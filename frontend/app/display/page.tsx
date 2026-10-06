@@ -18,6 +18,7 @@ import { useSystemSettings } from "@/hooks/use-system-settings"
 import { useDisplaySocket } from "@/hooks/use-display-socket"
 import type { TicketWithRelations } from "@/lib/types"
 import { normalizePriorityLevel } from "@/lib/priority"
+import { resolveDisplayTheme } from "@/lib/display-themes"
 
 /** Tipos locales mínimos para no romper el build si el tipo real no está importado */
 type NeutralPromotion = {
@@ -93,6 +94,8 @@ type DisplayBrandingHeaderProps = {
   primaryColor: string
   secondaryColor: string
   theme: string
+  accentColor?: string
+  mutedColor?: string
   weather?: {
     enabled: boolean
     location: string
@@ -113,6 +116,8 @@ function DisplayBrandingHeader({
   secondaryColor,
   theme,
   weather,
+  accentColor,
+  mutedColor,
 }: DisplayBrandingHeaderProps) {
   const normalizedName = brandName.trim() || "DrizaTx"
   const normalizedTitle = title.trim() || "Centro de Atención al Cliente"
@@ -128,6 +133,7 @@ function DisplayBrandingHeader({
 
   const normalizedPrimary = primaryColor || "#0f172a"
   const normalizedSecondary = secondaryColor || "#22d3ee"
+  const accent = accentColor || normalizedSecondary
   const containerClasses = [
     "flex",
     "w-full",
@@ -155,11 +161,11 @@ function DisplayBrandingHeader({
     color: "#f8fafc",
     boxShadow: "0 18px 40px rgba(8, 15, 40, 0.55)",
   }
-  const subtitleColor = "rgba(148,160,184,0.85)"
+  const subtitleColor = mutedColor || "rgba(148,160,184,0.85)"
 
   const logoFallbackStyle: CSSProperties = {
     background: "rgba(15,23,42,0.85)",
-    color: normalizedSecondary,
+    color: accent,
     border: "1px solid rgba(148,163,184,0.4)",
     boxShadow: "0 8px 24px rgba(8,15,40,0.45)",
   }
@@ -220,7 +226,7 @@ function DisplayBrandingHeader({
         <div className="flex flex-col justify-center gap-0.5">
           <span
             className="truncate text-lg font-semibold sm:text-xl"
-            style={{ color: normalizedSecondary }}
+            style={{ color: accent }}
           >
             {normalizedName}
           </span>
@@ -240,7 +246,7 @@ function DisplayBrandingHeader({
           isPlaying={isPlayingAudio}
           type="announcement"
           className="text-slate-200"
-          style={{ color: secondaryColor || "#22d3ee" }}
+          style={{ color: accentColor || secondaryColor || "#22d3ee" }}
         />
         <div className="flex flex-col items-end leading-tight">
           <span className="text-xl font-bold sm:text-2xl">{currentTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
@@ -276,6 +282,16 @@ export default function DisplayPage() {
   const brandPrimaryColor = getSettingValue(settingsSource, "brandPrimaryColor", "#0f172a")
   const brandSecondaryColor = getSettingValue(settingsSource, "brandSecondaryColor", "#22d3ee")
   const signageTheme = getSettingValue(settingsSource, "signageTheme", "corporate")
+  // Tema visual: sale de la configuración. Con ?tema=<id> en la URL se previsualiza sin guardar nada.
+  const [themePreview, setThemePreview] = useState<string | null>(null)
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tema")
+    if (requested) setThemePreview(requested)
+  }, [])
+  const displayTheme = useMemo(
+    () => resolveDisplayTheme(themePreview ?? signageTheme),
+    [themePreview, signageTheme],
+  )
 
   const signageWeatherLocation = getSettingValue(settingsSource, "signageWeatherLocation", "Buenos Aires, AR")
   const signageWeatherLatitude = getSettingValue(settingsSource, "signageWeatherLatitude", "-34.6037")
@@ -672,6 +688,7 @@ export default function DisplayPage() {
       <div
         key={`promotion-media-${promotion?.id ?? activeCarouselIndex}`}
         className="relative flex h-full min-h-[45vh] w-full items-center justify-center overflow-hidden rounded-xl border border-slate-800/60 bg-slate-950/70"
+        style={displayTheme.styles.cardInner}
       >
         {isVideo ? (
           <video
@@ -725,6 +742,8 @@ export default function DisplayPage() {
   return (
     <div
       className="relative h-screen w-full overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-100"
+      style={displayTheme.styles.page}
+      data-display-theme={displayTheme.id}
       onClick={handleScreenClick}
     >
       <div className="grid h-full w-full grid-rows-[auto_1fr] gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5 xl:px-10 xl:py-7 2xl:gap-5 2xl:px-14 2xl:py-8">
@@ -736,8 +755,10 @@ export default function DisplayPage() {
             logoUrl={brandLogoUrl || undefined}
             currentTime={currentTime}
             isPlayingAudio={isPlayingAudio}
-            primaryColor={brandPrimaryColor}
-            secondaryColor={brandSecondaryColor}
+            primaryColor={displayTheme.header?.from ?? brandPrimaryColor}
+            secondaryColor={displayTheme.header?.to ?? brandSecondaryColor}
+            accentColor={displayTheme.header?.accent}
+            mutedColor={displayTheme.header?.muted}
             theme={signageTheme}
             weather={{
               enabled: signageShowWeather,
@@ -753,32 +774,33 @@ export default function DisplayPage() {
           className={`grid h-full min-h-0 gap-3 sm:gap-4 2xl:gap-5 ${displayMessagesEnabled ? "grid-cols-2" : "grid-cols-1"}`}
         >
           <section className="flex min-h-0 flex-col gap-3">
-            <div className="flex-1 rounded-3xl border border-slate-700/50 bg-slate-800/60 p-5 shadow-[0_35px_80px_rgba(15,23,42,0.55)]backdrop-blur-xl sm:p-6">
+            <div className="flex-1 rounded-3xl border border-slate-700/50 bg-slate-800/60 p-5 shadow-[0_35px_80px_rgba(15,23,42,0.55)]backdrop-blur-xl sm:p-6" style={displayTheme.styles.panel}>
               <AnimatedTicketDisplay
                 currentTicket={activeCalledTicket as unknown as TicketWithRelations}
                 calledTickets={calledTickets as unknown as TicketWithRelations[]}
                 recentlyCompletedTickets={attendedTickets as unknown as TicketWithRelations[]}
                 isNewTicket={isNewTicket}
                 audioEnabled={audioConfig.enabled}
+                ticketStyles={displayTheme.tickets}
               />
             </div>
           </section>
 
           {displayMessagesEnabled && (
             <section className="min-h-0">
-              <Card className="flex h-full flex-col rounded-3xl border border-slate-800/70 bg-slate-950/70 shadow-[0_24px_60px_rgba(8,15,40,0.55)]">
+              <Card className="flex h-full flex-col rounded-3xl border border-slate-800/70 bg-slate-950/70 shadow-[0_24px_60px_rgba(8,15,40,0.55)]" style={displayTheme.styles.card}>
                 <CardContent className="flex h-full flex-col p-0">
-                  <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto rounded-3xl border border-slate-800/60 bg-slate-950/70">
+                  <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto rounded-3xl border border-slate-800/60 bg-slate-950/70" style={displayTheme.styles.cardInner}>
                     {hasPromotions && activePromotion ? (
                       activePromotionMedia ?? (
-                        <div className="flex max-h-full flex-1 items-center justify-center p-6 text-center text-slate-200">
+                        <div className="flex max-h-full flex-1 items-center justify-center p-6 text-center text-slate-200" style={displayTheme.styles.text}>
                           <p className="max-h-full whitespace-pre-line break-words text-balance text-lg leading-relaxed">
                             {activePromotion.content || "Sin contenido disponible."}
                           </p>
                         </div>
                       )
                     ) : (
-                      <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-slate-400">
+                      <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-slate-400" style={displayTheme.styles.mutedText}>
                         <p className="whitespace-pre-line break-words text-balance">
                           No hay contenido para mostrar.
                         </p>
@@ -798,6 +820,7 @@ export default function DisplayPage() {
           <Button
             variant="outline"
             size="sm"
+            style={displayTheme.styles.button}
             onClick={() => setShowAudioControls(!showAudioControls)}
             className={`bg-slate-950/70 border border-slate-800/70 text-slate-100 hover:bg-slate-900 transition-all duration-300 shadow ${
               audioConfig.enabled ? "ring-2 ring-amber-400/60" : ""
@@ -817,6 +840,7 @@ export default function DisplayPage() {
           <Button
             variant="outline"
             size="sm"
+            style={displayTheme.styles.button}
             className="border border-slate-800/70 bg-slate-950/70 text-slate-100 shadow transition-colors hover:bg-slate-900"
           >
             Volver al Sistema
