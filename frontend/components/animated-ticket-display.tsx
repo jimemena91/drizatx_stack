@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { CheckCircle2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import type { TicketWithRelations } from "@/lib/types"
+import type { DisplayTicketStyles } from "@/lib/display-themes"
 
 interface AnimatedTicketDisplayProps {
   currentTicket: TicketWithRelations | null
@@ -11,6 +12,7 @@ interface AnimatedTicketDisplayProps {
   recentlyCompletedTickets: TicketWithRelations[]
   isNewTicket: boolean
   audioEnabled: boolean
+  ticketStyles?: DisplayTicketStyles
 }
 
 function getCompletedOrderTimestamp(ticket: TicketWithRelations) {
@@ -51,6 +53,7 @@ export function AnimatedTicketDisplay({
   recentlyCompletedTickets,
   isNewTicket,
   audioEnabled, // <- ahora se desestructura (aunque no lo usemos todavía)
+  ticketStyles,
 }: AnimatedTicketDisplayProps) {
   const [showPulse, setShowPulse] = useState(false)
   const [showGlow, setShowGlow] = useState(false)
@@ -108,18 +111,19 @@ export function AnimatedTicketDisplay({
 
   return (
     <Card
+      style={ticketStyles?.container}
       className={`relative h-full w-full max-w-full overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900/70 text-slate-100 shadow-[0_35px_80px_rgba(15,23,42,0.45)] backdrop-blur-xl transition-all duration-1000 ${
         showGlow ? "ring-2 ring-amber-300/60" : ""
       }`}
     >
       <CardContent className="relative flex h-full flex-col gap-6 overflow-visible p-4 sm:gap-7 sm:p-6">
         {showPulse && (
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-400/15 via-orange-500/10 to-amber-300/15" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-amber-400/15 via-orange-500/10 to-amber-300/15" style={ticketStyles?.pulse} />
         )}
 
         <div className="relative z-10 flex flex-1 flex-col gap-5 sm:gap-6">
           <div className="flex flex-col gap-4">
-            <span className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-200">
+            <span className="text-xs font-semibold uppercase tracking-[0.35em] text-amber-200" style={ticketStyles?.calledLabel}>
               Turnos en llamado
             </span>
 
@@ -129,6 +133,7 @@ export function AnimatedTicketDisplay({
                   const positionText = getPositionLabel(ticket)
                   const animationDelay = `${index * 0.3}s`
                   const isHeroTicket = index === 0
+                  const cardStyles = isHeroTicket ? ticketStyles?.hero : ticketStyles?.called
                   const heroCardBackground =
                     "bg-gradient-to-br from-amber-200 via-amber-300 to-amber-400 text-amber-950 shadow-[0_20px_45px_rgba(250,204,21,0.45)]"
                   const defaultCardBackground =
@@ -161,16 +166,19 @@ export function AnimatedTicketDisplay({
                       style={{
                         animation: `ticketEntrance 0.5s ease-out forwards`,
                         animationDelay,
+                        ...cardStyles?.frame,
                       }}
                     >
-                      <div className="pointer-events-none absolute inset-0 rounded-[1.55rem] bg-amber-100/35 blur-3xl opacity-50" />
+                      <div className="pointer-events-none absolute inset-0 rounded-[1.55rem] bg-amber-100/35 blur-3xl opacity-50" style={cardStyles?.glow} />
                       <div
+                        style={cardStyles?.body}
                         className={`relative z-10 flex items-center justify-between gap-3 rounded-[1.45rem] px-4 py-3 backdrop-blur-2xl sm:gap-4 sm:px-5 ${
                           isHeroTicket ? heroCardBackground : defaultCardBackground
                         }`}
                       >
                         <div className="flex flex-col gap-1">
                           <span
+                            style={cardStyles?.badge}
                             className={`inline-flex w-fit items-center gap-1 rounded-full px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.3em] ${
                               isHeroTicket ? heroBadgeClasses : defaultBadgeClasses
                             }`}
@@ -178,13 +186,14 @@ export function AnimatedTicketDisplay({
                             Llamando
                           </span>
                           <span
+                            style={cardStyles?.number}
                             className={`text-[clamp(1.35rem,3.2vw,1.85rem)] font-bold leading-tight tracking-tight ${
                               isHeroTicket ? heroNumberClasses : defaultNumberClasses
                             }`}
                           >
                             {ticket.number}
                           </span>
-                          <span className={isHeroTicket ? heroServiceClasses : defaultServiceClasses}>
+                          <span className={isHeroTicket ? heroServiceClasses : defaultServiceClasses} style={cardStyles?.service}>
                             {ticket.service?.name ?? "Servicio"}
                           </span>
                         </div>
@@ -195,6 +204,7 @@ export function AnimatedTicketDisplay({
                                 ? heroPuestoLabelClasses
                                 : defaultPuestoLabelClasses
                             }
+                            style={cardStyles?.puestoLabel}
                           >
                             Puesto
                           </span>
@@ -204,6 +214,7 @@ export function AnimatedTicketDisplay({
                                 ? heroPuestoValueClasses
                                 : defaultPuestoValueClasses
                             }
+                            style={cardStyles?.puestoValue}
                           >
                             {positionText}
                           </span>
@@ -214,18 +225,18 @@ export function AnimatedTicketDisplay({
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/50 px-4 py-6 text-center text-slate-400 backdrop-blur-xl">
+              <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-slate-700/60 bg-slate-900/50 px-4 py-6 text-center text-slate-400 backdrop-blur-xl" style={ticketStyles?.empty}>
                 <p className="text-xs font-semibold uppercase tracking-[0.35em]">
                   Sin turnos en llamado
                 </p>
-                <p className="text-sm text-slate-300">Esperando el próximo número.</p>
+                <p className="text-sm text-slate-300" style={ticketStyles?.emptyText}>Esperando el próximo número.</p>
               </div>
             )}
           </div>
 
           {displayedCompletedTickets.length > 0 && (
             <div className="flex flex-col gap-2.5">
-              <span className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200">
+              <span className="text-xs font-semibold uppercase tracking-[0.35em] text-emerald-200" style={ticketStyles?.attendedLabel}>
                 Turnos atendidos
               </span>
               {displayedCompletedTickets.map((ticket, index) => {
@@ -239,27 +250,28 @@ export function AnimatedTicketDisplay({
                     style={{
                       animation: `ticketEntrance 0.5s ease-out forwards`,
                       animationDelay,
+                      ...ticketStyles?.attended.frame,
                     }}
                   >
-                    <div className="pointer-events-none absolute inset-0 rounded-[1.55rem] bg-emerald-100/25 blur-3xl opacity-40" />
-                    <div className="relative z-10 flex items-center justify-between gap-3 rounded-[1.45rem] bg-gradient-to-br from-slate-950/85 via-slate-950/65 to-slate-950/85 px-4 py-3 text-white shadow-[0_14px_30px_rgba(15,23,42,0.55)] backdrop-blur-2xl sm:gap-4 sm:px-5">
+                    <div className="pointer-events-none absolute inset-0 rounded-[1.55rem] bg-emerald-100/25 blur-3xl opacity-40" style={ticketStyles?.attended.glow} />
+                    <div className="relative z-10 flex items-center justify-between gap-3 rounded-[1.45rem] bg-gradient-to-br from-slate-950/85 via-slate-950/65 to-slate-950/85 px-4 py-3 text-white shadow-[0_14px_30px_rgba(15,23,42,0.55)] backdrop-blur-2xl sm:gap-4 sm:px-5" style={ticketStyles?.attended.body}>
                       <div className="flex flex-col gap-1">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/90 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.28em] text-emerald-50 shadow-[0_10px_22px_rgba(5,150,105,0.4)]">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600/90 px-3 py-1 text-[0.55rem] font-semibold uppercase tracking-[0.28em] text-emerald-50 shadow-[0_10px_22px_rgba(5,150,105,0.4)]" style={ticketStyles?.attended.badge}>
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           Atendido
                         </span>
-                        <span className="text-[clamp(1.35rem,3.2vw,1.85rem)] font-bold leading-tight tracking-tight text-emerald-50 drop-shadow-[0_6px_18px_rgba(52,211,153,0.35)]">
+                        <span className="text-[clamp(1.35rem,3.2vw,1.85rem)] font-bold leading-tight tracking-tight text-emerald-50 drop-shadow-[0_6px_18px_rgba(52,211,153,0.35)]" style={ticketStyles?.attended.number}>
                           {ticket.number}
                         </span>
-                        <span className="text-xs text-emerald-100/90">
+                        <span className="text-xs text-emerald-100/90" style={ticketStyles?.attended.service}>
                           {ticket.service?.name ?? "Servicio"}
                         </span>
                       </div>
                       <div className="flex flex-col items-end gap-1 text-right">
-                        <span className="text-[0.55rem] uppercase tracking-[0.3em] text-emerald-100/80">
+                        <span className="text-[0.55rem] uppercase tracking-[0.3em] text-emerald-100/80" style={ticketStyles?.attended.puestoLabel}>
                           Puesto
                         </span>
-                        <span className="rounded-lg border border-emerald-100/50 bg-emerald-500/20 px-3 py-1 text-[clamp(1.2rem,2.8vw,1.7rem)] font-semibold leading-none text-emerald-50 shadow-[0_10px_22px_rgba(16,185,129,0.35)]">
+                        <span className="rounded-lg border border-emerald-100/50 bg-emerald-500/20 px-3 py-1 text-[clamp(1.2rem,2.8vw,1.7rem)] font-semibold leading-none text-emerald-50 shadow-[0_10px_22px_rgba(16,185,129,0.35)]" style={ticketStyles?.attended.puestoValue}>
                           {positionText}
                         </span>
                       </div>
@@ -275,15 +287,15 @@ export function AnimatedTicketDisplay({
           <div className="pointer-events-none absolute inset-0">
             <div
               className="absolute left-1/2 top-1/2 h-40 w-40 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-300/50"
-              style={{ animation: "callWave 2.4s ease-out infinite" }}
+              style={{ animation: "callWave 2.4s ease-out infinite", ...ticketStyles?.wave }}
             />
             <div
               className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-200/40"
-              style={{ animation: "callWave 2.4s ease-out infinite", animationDelay: "0.3s" }}
+              style={{ animation: "callWave 2.4s ease-out infinite", animationDelay: "0.3s", ...ticketStyles?.wave }}
             />
             <div
               className="absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber-100/30"
-              style={{ animation: "callWave 2.4s ease-out infinite", animationDelay: "0.6s" }}
+              style={{ animation: "callWave 2.4s ease-out infinite", animationDelay: "0.6s", ...ticketStyles?.wave }}
             />
           </div>
         )}
