@@ -19,6 +19,7 @@ import { useDisplaySocket } from "@/hooks/use-display-socket"
 import type { TicketWithRelations } from "@/lib/types"
 import { normalizePriorityLevel } from "@/lib/priority"
 import { resolveDisplayTheme, type DisplayThemeEmblem } from "@/lib/display-themes"
+import { HalloweenDecorations } from "@/components/halloween-decorations"
 
 /** Tipos locales mínimos para no romper el build si el tipo real no está importado */
 type NeutralPromotion = {
@@ -93,6 +94,7 @@ type DisplayBrandingHeaderProps = {
   isPlayingAudio: boolean
   primaryColor: string
   secondaryColor: string
+  transparentBackground?: boolean
   theme: string
   accentColor?: string
   mutedColor?: string
@@ -115,6 +117,7 @@ function DisplayBrandingHeader({
   isPlayingAudio,
   primaryColor,
   secondaryColor,
+  transparentBackground = false,
   theme,
   weather,
   accentColor,
@@ -159,7 +162,9 @@ function DisplayBrandingHeader({
     "text-slate-100",
   ].join(" ")
   const containerStyle: CSSProperties = {
-    background: `linear-gradient(135deg, ${normalizedPrimary}f0, ${normalizedSecondary}d9)`,
+    background: transparentBackground
+      ? `linear-gradient(135deg, ${normalizedPrimary}a8, ${normalizedSecondary}70)`
+      : `linear-gradient(135deg, ${normalizedPrimary}f0, ${normalizedSecondary}d9)`,
     color: "#f8fafc",
     boxShadow: "0 18px 40px rgba(8, 15, 40, 0.55)",
   }
@@ -762,7 +767,8 @@ export default function DisplayPage() {
       data-display-theme={displayTheme.id}
       onClick={handleScreenClick}
     >
-      <div className="grid h-full w-full grid-rows-[auto_1fr] gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5 xl:px-10 xl:py-7 2xl:gap-5 2xl:px-14 2xl:py-8">
+      {displayTheme.id === "halloween" && <HalloweenDecorations />}
+      <div className="relative z-[1] grid h-full w-full grid-rows-[auto_1fr] gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5 xl:px-10 xl:py-7 2xl:gap-5 2xl:px-14 2xl:py-8">
         <header className="min-h-0">
           <DisplayBrandingHeader
             brandName={brandDisplayName}
@@ -773,6 +779,7 @@ export default function DisplayPage() {
             isPlayingAudio={isPlayingAudio}
             primaryColor={displayTheme.header?.from ?? brandPrimaryColor}
             secondaryColor={displayTheme.header?.to ?? brandSecondaryColor}
+            transparentBackground={displayTheme.id === "halloween"}
             accentColor={displayTheme.header?.accent}
             mutedColor={displayTheme.header?.muted}
             emblem={displayTheme.emblem}
@@ -799,6 +806,7 @@ export default function DisplayPage() {
                 isNewTicket={isNewTicket}
                 audioEnabled={audioConfig.enabled}
                 ticketStyles={displayTheme.tickets}
+                halloween={displayTheme.id === "halloween"}
               />
             </div>
           </section>
