@@ -26,6 +26,8 @@ const PUBLIC_PATHS = [
   "/_next",
   "/assets",
   "/branding",
+  "/themes/halloween/display-background.webp",
+  "/uploads/display-messages/", // media de publicidades: el display es publico (sin sesion)
   "/icons",
   "/public",
   "/api/health",
