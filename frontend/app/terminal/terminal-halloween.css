@@ -39,10 +39,7 @@
     inset: 0;
     z-index: -1;
     pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(10, 6, 20, 0.2), rgba(10, 6, 20, 0.55)),
-      url("/themes/halloween/display-background.webp") center center / cover no-repeat,
-      #090611;
+    background: url("/themes/halloween/terminal-background.webp") center center / cover no-repeat, #090611;
   }
 
   /* Textos que el componente fija en grises/azules para fondo claro. */
@@ -66,30 +63,87 @@
   }
 
   /* Tarjetas de servicio / confirmación / DNI. */
+  /* Tarjetas neón: interior oscuro de vidrio + borde degradado violeta → naranja → rosa con brillo. */
   [data-terminal-theme="halloween"] [data-slot="card"] {
-    border-color: rgba(249, 115, 22, 0.55);
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    border: 3px solid transparent;
+    border-radius: 1.75rem;
+    background:
+      linear-gradient(180deg, rgba(16, 10, 28, 0.92), rgba(8, 6, 16, 0.95)) padding-box,
+      linear-gradient(150deg, #a855f7 0%, #f97316 42%, #fb923c 62%, #ec4899 100%) border-box;
     box-shadow:
-      0 0 0 1px rgba(249, 115, 22, 0.12),
-      0 18px 44px rgba(0, 0, 0, 0.5),
-      0 0 26px rgba(249, 115, 22, 0.16);
+      0 0 10px rgba(249, 115, 22, 0.7),
+      0 0 34px rgba(249, 115, 22, 0.42),
+      0 0 72px rgba(168, 85, 247, 0.34),
+      inset 0 0 20px rgba(249, 115, 22, 0.16);
   }
   [data-terminal-theme="halloween"] [data-slot="card"]:hover {
-    border-color: #fb923c;
     box-shadow:
-      0 0 0 1px rgba(251, 146, 60, 0.4),
-      0 22px 54px rgba(0, 0, 0, 0.55),
-      0 0 40px rgba(249, 115, 22, 0.38);
+      0 0 14px rgba(249, 115, 22, 0.9),
+      0 0 46px rgba(249, 115, 22, 0.6),
+      0 0 92px rgba(168, 85, 247, 0.48),
+      inset 0 0 24px rgba(249, 115, 22, 0.24);
+  }
+
+  /* Proporciones de la referencia: tarjetas de servicio más grandes. */
+  [data-terminal-theme="halloween"] .grid.max-w-6xl {
+    max-width: min(80rem, 78vw);
+  }
+  [data-terminal-theme="halloween"] [data-slot="card"].min-h-\[220px\] {
+    min-height: 22rem;
+  }
+
+  /* Encabezado más grande y más abajo. El espacio se descuenta del área de servicios
+     para que las tarjetas queden donde estaban, y en los demás pasos nada se superpone. */
+  [data-terminal-theme="halloween"] {
+    --hdr-shift: clamp(0px, 7vh, 4.5rem);
+  }
+  [data-terminal-theme="halloween"] > :first-child {
+    padding-top: var(--hdr-shift);
+  }
+  [data-terminal-theme="halloween"] .min-h-\[65vh\] {
+    min-height: calc(65vh - 2 * var(--hdr-shift));
+  }
+  [data-terminal-theme="halloween"] h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
+  [data-terminal-theme="halloween"] h1 + p {
+    font-size: 1.5rem;
+  }
+  [data-terminal-theme="halloween"] > :last-child p {
+    font-size: 1.15rem;
+    color: #ffffff;
   }
   [data-terminal-theme="halloween"] [data-slot="card"].ring-2 {
     --tw-ring-color: #fb923c;
   }
 
-  /* Ícono del servicio: del azul/violeta original al naranja/violeta Halloween. */
+  /* Títulos de servicio: mayúsculas, negrita y blanco puro. */
+  [data-terminal-theme="halloween"] [data-slot="card"] h3 {
+    color: #ffffff;
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+
+  /* Ícono del servicio: círculo violeta → naranja con aro luminoso. */
   [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500 {
-    background-image: linear-gradient(135deg, #fb923c 0%, #ea580c 55%, #a855f7 130%);
-    box-shadow: 0 0 26px rgba(249, 115, 22, 0.55);
+    width: 8.25rem;
+    height: 8.25rem;
+    border: 3px solid transparent;
+    background:
+      linear-gradient(135deg, #4c1d95 0%, #7c3aed 38%, #ea580c 100%) padding-box,
+      linear-gradient(135deg, #c084fc 0%, #fb923c 60%, #f472b6 100%) border-box;
+    box-shadow:
+      0 0 14px rgba(249, 115, 22, 0.75),
+      0 0 38px rgba(249, 115, 22, 0.45),
+      0 0 60px rgba(168, 85, 247, 0.35);
+  }
+  [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500 svg {
+    width: 4rem;
+    height: 4rem;
   }
 
   /* Botón principal "Obtener Número". */

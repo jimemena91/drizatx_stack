@@ -27,6 +27,7 @@ const PUBLIC_PATHS = [
   "/assets",
   "/branding",
   "/themes/halloween/display-background.webp",
+  "/themes/halloween/terminal-background.webp",
   "/uploads/display-messages/", // media de publicidades: el display es publico (sin sesion)
   "/icons",
   "/public",
