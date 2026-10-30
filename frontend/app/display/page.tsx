@@ -94,6 +94,7 @@ type DisplayBrandingHeaderProps = {
   isPlayingAudio: boolean
   primaryColor: string
   secondaryColor: string
+  transparentBackground?: boolean
   theme: string
   accentColor?: string
   mutedColor?: string
@@ -116,6 +117,7 @@ function DisplayBrandingHeader({
   isPlayingAudio,
   primaryColor,
   secondaryColor,
+  transparentBackground = false,
   theme,
   weather,
   accentColor,
@@ -160,7 +162,9 @@ function DisplayBrandingHeader({
     "text-slate-100",
   ].join(" ")
   const containerStyle: CSSProperties = {
-    background: `linear-gradient(135deg, ${normalizedPrimary}f0, ${normalizedSecondary}d9)`,
+    background: transparentBackground
+      ? `linear-gradient(135deg, ${normalizedPrimary}a8, ${normalizedSecondary}70)`
+      : `linear-gradient(135deg, ${normalizedPrimary}f0, ${normalizedSecondary}d9)`,
     color: "#f8fafc",
     boxShadow: "0 18px 40px rgba(8, 15, 40, 0.55)",
   }
@@ -775,6 +779,7 @@ export default function DisplayPage() {
             isPlayingAudio={isPlayingAudio}
             primaryColor={displayTheme.header?.from ?? brandPrimaryColor}
             secondaryColor={displayTheme.header?.to ?? brandSecondaryColor}
+            transparentBackground={displayTheme.id === "halloween"}
             accentColor={displayTheme.header?.accent}
             mutedColor={displayTheme.header?.muted}
             emblem={displayTheme.emblem}
