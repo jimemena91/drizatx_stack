@@ -1,4 +1,19 @@
+import type { CSSProperties } from "react"
 import styles from "./halloween-decorations.module.css"
+
+/**
+ * Contención crítica en línea (no depende del CSS module): la capa está fuera del flujo,
+ * recortada, detrás del contenido y sin interacción. Así, aunque se edite o se quite el CSS
+ * de la decoración, nunca puede empujar, tapar ni desplazar el contenido (tickets/publicidades).
+ */
+const LAYER_CONTAINMENT: CSSProperties = {
+  position: "absolute",
+  inset: 0,
+  overflow: "hidden",
+  pointerEvents: "none",
+  zIndex: 0,
+  contain: "layout paint",
+}
 
 /**
  * Decoración exclusivamente visual: nunca intercepta interacciones.
@@ -6,7 +21,7 @@ import styles from "./halloween-decorations.module.css"
  */
 export function HalloweenDecorations() {
   return (
-    <div className={styles.layer} aria-hidden="true" data-testid="halloween-decorations">
+    <div className={styles.layer} style={LAYER_CONTAINMENT} aria-hidden="true" data-testid="halloween-decorations">
       <div className={styles.moon} />
       <svg className={`${styles.web} ${styles.webLeft}`} viewBox="0 0 160 160">
         <path d="M0 0 H155 M0 0 V155 M0 0 L145 145 M0 0 L70 160 M0 0 L160 70" />

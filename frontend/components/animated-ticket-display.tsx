@@ -174,7 +174,11 @@ export function AnimatedTicketDisplay({
                     >
                       <div className="pointer-events-none absolute inset-0 rounded-[1.55rem] bg-amber-100/35 blur-3xl opacity-50" style={cardStyles?.glow} />
                       {halloween && isHeroTicket && isNewTicket && (
-                        <div className={halloweenStyles.effect} aria-hidden="true">
+                        <div
+                          className={halloweenStyles.effect}
+                          style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 20, borderRadius: "inherit" }}
+                          aria-hidden="true"
+                        >
                           <div className={halloweenStyles.flash} />
                           <svg className={halloweenStyles.web} viewBox="0 0 70 70">
                             <path d="M0 0 H70 M0 0 V70 M0 0 L65 65 M0 0 L35 70 M0 0 L70 35 M0 18 Q18 18 18 0 M0 36 Q36 36 36 0 M0 55 Q55 55 55 0" />
