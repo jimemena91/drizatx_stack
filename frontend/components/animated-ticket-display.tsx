@@ -5,7 +5,6 @@ import { CheckCircle2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import type { TicketWithRelations } from "@/lib/types"
 import type { DisplayTicketStyles } from "@/lib/display-themes"
-import halloweenStyles from "./halloween-number-effect.module.css"
 
 interface AnimatedTicketDisplayProps {
   currentTicket: TicketWithRelations | null
@@ -14,7 +13,6 @@ interface AnimatedTicketDisplayProps {
   isNewTicket: boolean
   audioEnabled: boolean
   ticketStyles?: DisplayTicketStyles
-  halloween?: boolean
 }
 
 function getCompletedOrderTimestamp(ticket: TicketWithRelations) {
@@ -56,7 +54,6 @@ export function AnimatedTicketDisplay({
   isNewTicket,
   audioEnabled, // <- ahora se desestructura (aunque no lo usemos todavía)
   ticketStyles,
-  halloween = false,
 }: AnimatedTicketDisplayProps) {
   const [showPulse, setShowPulse] = useState(false)
   const [showGlow, setShowGlow] = useState(false)
@@ -173,18 +170,6 @@ export function AnimatedTicketDisplay({
                       }}
                     >
                       <div className="pointer-events-none absolute inset-0 rounded-[1.55rem] bg-amber-100/35 blur-3xl opacity-50" style={cardStyles?.glow} />
-                      {halloween && isHeroTicket && isNewTicket && (
-                        <div className={halloweenStyles.effect} aria-hidden="true">
-                          <div className={halloweenStyles.flash} />
-                          <svg className={halloweenStyles.web} viewBox="0 0 70 70">
-                            <path d="M0 0 H70 M0 0 V70 M0 0 L65 65 M0 0 L35 70 M0 0 L70 35 M0 18 Q18 18 18 0 M0 36 Q36 36 36 0 M0 55 Q55 55 55 0" />
-                          </svg>
-                          <div className={halloweenStyles.spider}>
-                            <span className={halloweenStyles.thread} />
-                            <span className={halloweenStyles.spiderIcon}>🕷</span>
-                          </div>
-                        </div>
-                      )}
                       <div
                         style={cardStyles?.body}
                         className={`relative z-10 flex items-center justify-between gap-3 rounded-[1.45rem] px-4 py-3 backdrop-blur-2xl sm:gap-4 sm:px-5 ${

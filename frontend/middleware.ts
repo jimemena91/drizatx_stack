@@ -26,8 +26,6 @@ const PUBLIC_PATHS = [
   "/_next",
   "/assets",
   "/branding",
-  "/themes/halloween/display-background.webp",
-  "/uploads/display-messages/",
   "/icons",
   "/public",
   "/api/health",
