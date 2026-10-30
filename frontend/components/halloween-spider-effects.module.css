@@ -1,0 +1,19 @@
+.layer { position:absolute; inset:0; z-index:2; overflow:hidden; pointer-events:none; }
+.call { position:absolute; top:0; right:22%; width:48px; height:160px; transform:translateY(-180px); animation:descend 2.4s ease-in-out both; }
+.thread { position:absolute; top:0; left:23px; height:122px; width:1px; background:rgba(241,245,249,.70); }
+.spider { position:absolute; top:114px; left:0; width:48px; text-align:center; font-size:35px; line-height:46px; color:#1C1124; text-shadow:0 2px 4px #A855F7; }
+.crossing { position:absolute; left:0; bottom:20%; font-size:28px; line-height:1; animation:cross 2.3s ease-in-out both; }
+@keyframes descend {
+  0% { transform:translateY(-180px); opacity:0; }
+  12% { opacity:1; }
+  45% { transform:translateY(20px); opacity:1; }
+  72% { transform:translateY(15px); opacity:1; }
+  100% { transform:translateY(-180px); opacity:0; }
+}
+@keyframes cross {
+  0% { transform:translateX(-55px) rotate(-15deg); opacity:0; }
+  12% { opacity:1; }
+  85% { opacity:1; }
+  100% { transform:translateX(65vw) rotate(15deg); opacity:0; }
+}
+@media (prefers-reduced-motion:reduce) { .call,.crossing { animation:none; display:none; } }
