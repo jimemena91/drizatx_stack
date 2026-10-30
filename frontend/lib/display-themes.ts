@@ -202,7 +202,7 @@ export const DISPLAY_THEMES: Record<string, DisplayThemeDefinition> = {
   /** Halloween: estética temporal sin afectar la lógica de atención. */
   halloween: {
     label: "Halloween",
-    header: { from: "rgba(36, 16, 57, 0.66)", to: "rgba(234, 88, 12, 0.44)", accent: "#FFF7ED", muted: "#FED7AA" },
+    header: { from: "#241039", to: "#EA580C", accent: "#FFF7ED", muted: "#FED7AA" },
     surface: {
       pageBackground: "linear-gradient(180deg, rgba(10, 6, 20, 0.12), rgba(10, 6, 20, 0.35)), url('/themes/halloween/display-background.webp') center center / cover no-repeat, #090611",
       text: "#FFF7ED",
