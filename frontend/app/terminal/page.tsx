@@ -12,6 +12,7 @@ import { useSystemSettings } from "@/hooks/use-system-settings"
 import { sendTicketToPrinter } from "@/lib/print-service"
 import { cn } from "@/lib/utils"
 import { type Ticket as TicketType, type Service } from "@/lib/types"
+import "./terminal-halloween.css"
 
 const PRIORITY_AUDIENCE: Array<{ label: string; symbol: string }> = [
   { label: "Personas mayores", symbol: "🧓" },
@@ -156,6 +157,15 @@ export default function TerminalPage() {
 
   const kioskLocationName = useMemo(() => getSetting("kioskLocationName", "").trim(), [getSetting])
   const hasConfiguredLocation = kioskLocationName.length > 0
+
+  // Tema visual (solo estilos): sale de la misma configuración que el display (signageTheme).
+  // Con ?tema=<id> en la URL se previsualiza sin guardar nada.
+  const [themePreview, setThemePreview] = useState<string | null>(null)
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("tema")
+    if (requested) setThemePreview(requested)
+  }, [])
+  const isHalloweenTheme = (themePreview ?? getSetting("signageTheme", "corporate")) === "halloween"
 
   const brandDisplayName = useMemo(() => {
     const configuredName = getSetting("brandDisplayName", "").trim()
@@ -521,7 +531,7 @@ export default function TerminalPage() {
     )
 
   return (
-    <div className="flex-1 space-y-4">
+    <div className="flex-1 space-y-4" data-terminal-theme={isHalloweenTheme ? "halloween" : undefined}>
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900 mb-4">Terminal de Autoservicio</h1>
         <p className="text-gray-600 text-lg">Seleccione el servicio para obtener su turno.</p>
