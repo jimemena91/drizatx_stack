@@ -204,7 +204,7 @@ export const DISPLAY_THEMES: Record<string, DisplayThemeDefinition> = {
     label: "Halloween",
     header: { from: "#241039", to: "#EA580C", accent: "#FFF7ED", muted: "#FED7AA" },
     surface: {
-      pageBackground: "radial-gradient(ellipse at 50% -20%, #42195E 0%, #180B29 45%, #090611 100%)",
+      pageBackground: "radial-gradient(circle at 74% 12%, rgba(255, 153, 54, 0.23) 0%, rgba(255, 153, 54, 0.09) 11%, transparent 23%), radial-gradient(ellipse at 17% 74%, rgba(110, 39, 157, 0.26), transparent 48%), radial-gradient(ellipse at 50% -20%, #42195E 0%, #180B29 45%, #090611 100%)",
       text: "#FFF7ED",
       mutedText: "#E9D5FF",
       panelBackground: "rgba(26, 13, 42, 0.86)",
