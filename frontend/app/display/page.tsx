@@ -19,6 +19,7 @@ import { useDisplaySocket } from "@/hooks/use-display-socket"
 import type { TicketWithRelations } from "@/lib/types"
 import { normalizePriorityLevel } from "@/lib/priority"
 import { resolveDisplayTheme, type DisplayThemeEmblem } from "@/lib/display-themes"
+import { HalloweenDecorations } from "@/components/halloween-decorations"
 
 /** Tipos locales mínimos para no romper el build si el tipo real no está importado */
 type NeutralPromotion = {
@@ -762,7 +763,8 @@ export default function DisplayPage() {
       data-display-theme={displayTheme.id}
       onClick={handleScreenClick}
     >
-      <div className="grid h-full w-full grid-rows-[auto_1fr] gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5 xl:px-10 xl:py-7 2xl:gap-5 2xl:px-14 2xl:py-8">
+      {displayTheme.id === "halloween" && <HalloweenDecorations />}
+      <div className="relative z-[1] grid h-full w-full grid-rows-[auto_1fr] gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5 xl:px-10 xl:py-7 2xl:gap-5 2xl:px-14 2xl:py-8">
         <header className="min-h-0">
           <DisplayBrandingHeader
             brandName={brandDisplayName}
