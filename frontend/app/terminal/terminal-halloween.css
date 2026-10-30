@@ -1,0 +1,150 @@
+/**
+ * Terminal de autoservicio — tema Halloween.
+ *
+ * Solo estilos, y solo en pantalla: todo cuelga de [data-terminal-theme="halloween"]
+ * y está dentro de @media screen, así que no afecta la impresión del ticket
+ * (body.terminal-print-mode en globals.css) ni ningún otro tema.
+ * Reutiliza el fondo del display (/themes/halloween/display-background.webp).
+ */
+@media screen {
+  [data-terminal-theme="halloween"] {
+    position: relative;
+    isolation: isolate;
+
+    /* Variables de shadcn/tailwind v4: recolorean cards, botones e inputs de una vez. */
+    --foreground: #fff7ed;
+    --card: rgba(26, 13, 42, 0.74);
+    --card-foreground: #fff7ed;
+    --primary: #f97316;
+    --primary-foreground: #170a24;
+    --secondary: rgba(192, 132, 252, 0.18);
+    --secondary-foreground: #f3e8ff;
+    --muted: rgba(40, 22, 57, 0.7);
+    --muted-foreground: #e9d5ff;
+    --accent: #a855f7;
+    --accent-foreground: #ffffff;
+    --border: rgba(249, 115, 22, 0.5);
+    --input: rgba(249, 115, 22, 0.5);
+    --input-background: rgba(20, 11, 34, 0.8);
+    --ring: rgba(251, 146, 60, 0.6);
+    --background: #140b22;
+
+    color: #fff7ed;
+  }
+
+  /* Fondo a pantalla completa, detrás del contenido y sin afectar el layout. */
+  [data-terminal-theme="halloween"]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, rgba(10, 6, 20, 0.2), rgba(10, 6, 20, 0.55)),
+      url("/themes/halloween/display-background.webp") center center / cover no-repeat,
+      #090611;
+  }
+
+  /* Textos que el componente fija en grises/azules para fondo claro. */
+  [data-terminal-theme="halloween"] .text-gray-900 {
+    color: #fff7ed;
+    text-shadow: 0 2px 18px rgba(249, 115, 22, 0.45);
+  }
+  [data-terminal-theme="halloween"] .text-gray-800,
+  [data-terminal-theme="halloween"] .text-gray-700 {
+    color: #fed7aa;
+  }
+  [data-terminal-theme="halloween"] .text-gray-600,
+  [data-terminal-theme="halloween"] .text-gray-500,
+  [data-terminal-theme="halloween"] .text-gray-400,
+  [data-terminal-theme="halloween"] .text-slate-600 {
+    color: #e9d5ff;
+  }
+  [data-terminal-theme="halloween"] .text-blue-600,
+  [data-terminal-theme="halloween"] .text-blue-900 {
+    color: #fdba74;
+  }
+
+  /* Tarjetas de servicio / confirmación / DNI. */
+  [data-terminal-theme="halloween"] [data-slot="card"] {
+    border-color: rgba(249, 115, 22, 0.55);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow:
+      0 0 0 1px rgba(249, 115, 22, 0.12),
+      0 18px 44px rgba(0, 0, 0, 0.5),
+      0 0 26px rgba(249, 115, 22, 0.16);
+  }
+  [data-terminal-theme="halloween"] [data-slot="card"]:hover {
+    border-color: #fb923c;
+    box-shadow:
+      0 0 0 1px rgba(251, 146, 60, 0.4),
+      0 22px 54px rgba(0, 0, 0, 0.55),
+      0 0 40px rgba(249, 115, 22, 0.38);
+  }
+  [data-terminal-theme="halloween"] [data-slot="card"].ring-2 {
+    --tw-ring-color: #fb923c;
+  }
+
+  /* Ícono del servicio: del azul/violeta original al naranja/violeta Halloween. */
+  [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500 {
+    background-image: linear-gradient(135deg, #fb923c 0%, #ea580c 55%, #a855f7 130%);
+    box-shadow: 0 0 26px rgba(249, 115, 22, 0.55);
+  }
+
+  /* Botón principal "Obtener Número". */
+  [data-terminal-theme="halloween"] button.from-sky-500 {
+    background-image: linear-gradient(90deg, #fb923c 0%, #f97316 45%, #a855f7 140%);
+    color: #170a24;
+    box-shadow:
+      0 18px 45px -15px rgba(249, 115, 22, 0.8),
+      0 0 30px rgba(249, 115, 22, 0.3);
+  }
+  [data-terminal-theme="halloween"] button.from-sky-500:hover {
+    filter: brightness(1.1);
+  }
+
+  /* Avisos azules (impresión / envío al servicio local). */
+  [data-terminal-theme="halloween"] .bg-blue-50,
+  [data-terminal-theme="halloween"] .bg-gray-50,
+  [data-terminal-theme="halloween"] .bg-gray-100 {
+    background-color: rgba(249, 115, 22, 0.12);
+  }
+  [data-terminal-theme="halloween"] .border-blue-200,
+  [data-terminal-theme="halloween"] .border-gray-200 {
+    border-color: rgba(251, 146, 60, 0.5);
+  }
+  [data-terminal-theme="halloween"] .bg-blue-600 {
+    background-color: #f97316;
+    color: #170a24;
+  }
+  [data-terminal-theme="halloween"] .text-blue-800 {
+    color: #fed7aa;
+  }
+
+  /* Overlay "Generando turno…". */
+  [data-terminal-theme="halloween"] .bg-white\/80 {
+    background-color: rgba(20, 11, 34, 0.8);
+  }
+
+  /* Campo de DNI. */
+  [data-terminal-theme="halloween"] input {
+    background-color: rgba(20, 11, 34, 0.85);
+    color: #fff7ed;
+    border-color: rgba(251, 146, 60, 0.55);
+  }
+  [data-terminal-theme="halloween"] input::placeholder {
+    color: #c4b5fd;
+  }
+
+  /* Mensajes de estado legibles sobre fondo oscuro. */
+  [data-terminal-theme="halloween"] .text-green-700 {
+    color: #86efac;
+  }
+  [data-terminal-theme="halloween"] .text-yellow-700 {
+    color: #fde68a;
+  }
+  [data-terminal-theme="halloween"] .text-red-600 {
+    color: #fca5a5;
+  }
+}
