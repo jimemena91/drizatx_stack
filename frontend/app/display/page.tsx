@@ -20,7 +20,6 @@ import type { TicketWithRelations } from "@/lib/types"
 import { normalizePriorityLevel } from "@/lib/priority"
 import { resolveDisplayTheme, type DisplayThemeEmblem } from "@/lib/display-themes"
 import { HalloweenDecorations } from "@/components/halloween-decorations"
-import { HalloweenSpiderEffects } from "@/components/halloween-spider-effects"
 
 /** Tipos locales mínimos para no romper el build si el tipo real no está importado */
 type NeutralPromotion = {
@@ -765,13 +764,6 @@ export default function DisplayPage() {
       onClick={handleScreenClick}
     >
       {displayTheme.id === "halloween" && <HalloweenDecorations />}
-      <HalloweenSpiderEffects
-        enabled={displayTheme.id === "halloween"}
-        isNewTicket={isNewTicket}
-        secondaryTicketIds={calledTickets
-          .filter((ticket) => String(ticket.id) !== String(activeCalledTicket?.id ?? ""))
-          .map((ticket) => String(ticket.id))}
-      />
       <div className="relative z-[1] grid h-full w-full grid-rows-[auto_1fr] gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-5 xl:px-10 xl:py-7 2xl:gap-5 2xl:px-14 2xl:py-8">
         <header className="min-h-0">
           <DisplayBrandingHeader
@@ -809,6 +801,7 @@ export default function DisplayPage() {
                 isNewTicket={isNewTicket}
                 audioEnabled={audioConfig.enabled}
                 ticketStyles={displayTheme.tickets}
+                halloween={displayTheme.id === "halloween"}
               />
             </div>
           </section>
