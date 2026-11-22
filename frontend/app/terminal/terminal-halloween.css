@@ -129,7 +129,8 @@
   }
 
   /* Ícono del servicio: círculo violeta → naranja con aro luminoso. */
-  [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500 {
+  [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500,
+  [data-terminal-theme="halloween"] .bg-gradient-to-r[class*="from-[#55A38B]"] {
     width: 8.25rem;
     height: 8.25rem;
     border: 3px solid transparent;
@@ -141,7 +142,8 @@
       0 0 38px rgba(249, 115, 22, 0.45),
       0 0 60px rgba(168, 85, 247, 0.35);
   }
-  [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500 svg {
+  [data-terminal-theme="halloween"] .bg-gradient-to-r.from-blue-500 svg,
+  [data-terminal-theme="halloween"] .bg-gradient-to-r[class*="from-[#55A38B]"] svg {
     width: 4rem;
     height: 4rem;
   }
