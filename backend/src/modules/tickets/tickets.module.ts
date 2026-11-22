@@ -25,6 +25,10 @@ import { AttentionAlertLog } from '../../entities/attention-alert-log.entity';
 import { AttentionAlertLogService } from './attention-alert-log.service';
 import { AttentionAlertLogScheduler } from './attention-alert-log.scheduler';
 import { AttentionAlertLogController } from './attention-alert-log.controller';
+import { TicketEvent } from '../../entities/ticket-event.entity';
+import { TicketEventsService } from './ticket-events.service';
+import { TicketEventsSubscriber } from './ticket-events.subscriber';
+import { TicketRouteController } from './ticket-route.controller';
 
 @Module({
   imports: [
@@ -40,6 +44,7 @@ import { AttentionAlertLogController } from './attention-alert-log.controller';
       OperatorService,   // ✅ movido adentro de forFeature
       AuditLog,
       AttentionAlertLog,
+      TicketEvent,
     ]),
 
     // Otros módulos (servicios de dominio)
@@ -53,8 +58,10 @@ import { AttentionAlertLogController } from './attention-alert-log.controller';
     CalledAutoStartScheduler,
     AttentionAlertLogService,
     AttentionAlertLogScheduler,
+    TicketEventsService,
+    TicketEventsSubscriber,
   ],
-  controllers: [TicketsController, AttentionAlertLogController],
+  controllers: [TicketsController, AttentionAlertLogController, TicketRouteController],
   exports: [TicketsService, TypeOrmModule],
 })
 export class TicketsModule {}

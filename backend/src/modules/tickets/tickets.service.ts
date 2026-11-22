@@ -5,6 +5,7 @@ import {
   ForbiddenException,
   ConflictException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, EntityManager } from 'typeorm';
@@ -21,6 +22,7 @@ import { QueueEventsService } from '../queue-events/queue-events.service';
 import { AuditLog, type AuditLogActorSnapshot } from '../../entities/audit-log.entity';
 import { Status } from '../../common/enums/status.enum'; // ⬅️ enum fuente de verdad (incluye ABSENT)
 import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
+import { TicketEventsService } from './ticket-events.service';
 
 const isTruthyBoolean = (value: unknown): boolean => value === true || value === 1 || value === '1';
 
@@ -72,6 +74,8 @@ export class TicketsService {
     private readonly auditRepo: Repository<AuditLog>,
     private readonly queueEvents: QueueEventsService,
     private readonly metricsPolicy: MetricsPolicyService,
+    // Opcional: el historial de eventos nunca debe ser requisito para operar tickets.
+    @Optional() private readonly ticketEvents?: TicketEventsService,
   ) {}
 
   private readonly logger = new Logger(TicketsService.name);
@@ -632,6 +636,8 @@ export class TicketsService {
       });
 
       await qr.commitTransaction();
+      // UPDATE masivo: no pasa por el suscriptor, el historial se registra acá.
+      if (full) await this.ticketEvents?.recordQueueCall(full, operatorId, now);
       this.queueEvents.emitTicketCalled({ ticketId, operatorId, serviceId });
       return full!;
     } catch (e) {

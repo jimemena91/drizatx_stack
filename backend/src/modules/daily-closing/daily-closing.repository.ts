@@ -3,6 +3,7 @@ import { DataSource, EntityManager, In, LessThan } from 'typeorm';
 
 import { Status } from '../../common/enums/status.enum';
 import { Ticket } from '../../entities/ticket.entity';
+import { recordTicketEvents } from '../tickets/ticket-events.recorder';
 
 export type DailyClosingCounts = {
   ticketsClosed: number;
@@ -55,6 +56,19 @@ export class DailyClosingRepository {
     closureDate: string,
     executedBy: string,
   ): Promise<void> {
+    // El UPDATE masivo no pasa por el suscriptor del historial: se anotan antes
+    // los tickets que se van a cerrar (con su operador) y se registra después.
+    const toClose = await manager
+      .getRepository(Ticket)
+      .find({
+        where: {
+          status: In([Status.WAITING, Status.CALLED, Status.IN_PROGRESS]),
+          issuedForDate: LessThan(closureDate as any),
+        } as any,
+        select: ['id', 'number', 'serviceId', 'status', 'operatorId'],
+      })
+      .catch(() => [] as Ticket[]);
+
     await manager
       .getRepository(Ticket)
       .createQueryBuilder()
@@ -71,6 +85,22 @@ export class DailyClosingRepository {
       })
       .andWhere('issued_for_date < :closureDate', { closureDate })
       .execute();
+
+    const closedAt = new Date();
+    await recordTicketEvents(
+      manager,
+      toClose.map((ticket) => ({
+        ticketId: ticket.id,
+        ticketNumber: ticket.number,
+        serviceId: ticket.serviceId,
+        eventType: 'DAILY_CLOSED' as const,
+        previousStatus: ticket.status,
+        newStatus: Status.DAILY_CLOSED,
+        operatorId: ticket.operatorId ?? null,
+        occurredAt: closedAt,
+        source: 'SYSTEM',
+      })),
+    );
   }
 
   async createClosureLog(
