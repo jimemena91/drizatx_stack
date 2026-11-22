@@ -21,6 +21,7 @@ import { OperatorShift } from '../entities/operator-shift.entity';
 import { OperatorAvailability } from '../entities/operator-availability.entity';
 import { RolePermission } from '../entities/role-permission.entity';
 import { AttentionAlertLog } from '../entities/attention-alert-log.entity';
+import { TicketEvent } from '../entities/ticket-event.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { PrintJob } from '../modules/print/print.entity';
 
@@ -53,6 +54,7 @@ export class DatabaseConfig implements TypeOrmOptionsFactory {
         AuditLog,
         PrintJob,
         AttentionAlertLog,
+        TicketEvent,
       ],
       // Nunca autogenerar schema en staging/prod
       synchronize: false,
