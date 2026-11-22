@@ -21,6 +21,10 @@ import { QueueEventsModule } from '../queue-events/queue-events.module';
 import { MetricsPolicyModule } from '../metrics-policy/metrics-policy.module';
 import { BusinessDateModule } from '../business-date/business-date.module';
 import { CalledAutoStartScheduler } from './called-auto-start.scheduler';
+import { AttentionAlertLog } from '../../entities/attention-alert-log.entity';
+import { AttentionAlertLogService } from './attention-alert-log.service';
+import { AttentionAlertLogScheduler } from './attention-alert-log.scheduler';
+import { AttentionAlertLogController } from './attention-alert-log.controller';
 
 @Module({
   imports: [
@@ -35,6 +39,7 @@ import { CalledAutoStartScheduler } from './called-auto-start.scheduler';
       Operator,          // ✅ movido adentro de forFeature
       OperatorService,   // ✅ movido adentro de forFeature
       AuditLog,
+      AttentionAlertLog,
     ]),
 
     // Otros módulos (servicios de dominio)
@@ -42,8 +47,14 @@ import { CalledAutoStartScheduler } from './called-auto-start.scheduler';
     ClientsModule,
     SystemSettingsModule,
   ],
-  providers: [TicketsService, PermissionsGuard, CalledAutoStartScheduler],
-  controllers: [TicketsController],
+  providers: [
+    TicketsService,
+    PermissionsGuard,
+    CalledAutoStartScheduler,
+    AttentionAlertLogService,
+    AttentionAlertLogScheduler,
+  ],
+  controllers: [TicketsController, AttentionAlertLogController],
   exports: [TicketsService, TypeOrmModule],
 })
 export class TicketsModule {}
