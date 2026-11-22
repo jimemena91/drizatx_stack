@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 
 import { DashboardHeader } from "@/components/dashboard-header";
@@ -12,9 +12,8 @@ import { useQueueStatus } from "@/hooks/use-queue-status";
 import { useTickets } from "@/hooks/use-tickets";
 import { useOperators } from "@/hooks/use-operators";
 import { useAttentionAlerts } from "@/hooks/use-attention-alerts";
-import { useToast } from "@/components/toast-provider";
 import { Status, type Service } from "@/lib/types";
-import { apiClient, ApiError, type OperatorWithStatus, type AttentionAlert } from "@/lib/api-client";
+import { apiClient, ApiError, type OperatorWithStatus } from "@/lib/api-client";
 import { DashboardTopControls } from "./components/dashboard-top-controls";
 import { QueueStatusCard } from "./components/queue-status-card";
 import { OperatorsCard, type DashboardOperator } from "./components/operators-card";
@@ -53,25 +52,11 @@ export default function DashboardPage() {
   const [loadingOperatorId, setLoadingOperatorId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [infoMsg, setInfoMsg] = useState<string | null>(null);
-  const { addToast } = useToast();
-
-  const handleNewAlert = useCallback(
-    (alert: AttentionAlert) => {
-      addToast({
-        type: "warning",
-        title: `Tiempo excedido en ${alert.serviceName}`,
-        description: `Turno ${alert.ticketNumber} lleva ${formatDuration(alert.elapsedSeconds)} en atención`,
-        duration: 8000,
-      });
-    },
-    [addToast],
-  );
 
   const {
     alerts: attentionAlerts,
     refresh: refreshAttentionAlerts,
   } = useAttentionAlerts({
-    onNewAlert: handleNewAlert,
     autoStart: false,
     notifyOnInitialLoad: false,
   });
@@ -87,7 +72,6 @@ export default function DashboardPage() {
   // Refresh centralizado y antisolapamiento
   // =========================================
   const refreshingRef = useRef(false);
-  const alertsSectionRef = useRef<HTMLDivElement | null>(null);
 
   const loadOperatorsNow = async () => {
     try {
@@ -497,10 +481,6 @@ console.log(
 
   const historicalAbsentCount = Math.max(absentTicketsAll.length - absentTickets.length, 0);
 
-  const handleAlertsClick = () => {
-    alertsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   return (
     <>
       <DashboardHeader>
@@ -509,7 +489,6 @@ console.log(
           isDarkTheme={isDark}
           onThemeToggle={toggleTheme}
           onRefresh={refreshNow}
-          onAlertsClick={handleAlertsClick}
         />
       </DashboardHeader>
 
@@ -586,7 +565,7 @@ console.log(
 
         <CurrentTicketCard ticket={filteredCurrentTicket} />
 
-        <div ref={alertsSectionRef}>
+        <div>
           <SystemAlertsCard />
         </div>
       </div>

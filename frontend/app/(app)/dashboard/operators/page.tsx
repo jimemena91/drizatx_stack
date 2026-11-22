@@ -1,7 +1,7 @@
 // app/(app)/dashboard/operators/page.tsx
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,9 @@ import { Switch } from "@/components/ui/switch";
 import { useOperators } from "@/hooks/use-operators";
 import { useTickets } from "@/hooks/use-tickets";
 import { useAttentionAlerts } from "@/hooks/use-attention-alerts";
-import { useToast } from "@/components/toast-provider";
+import { AttentionAlertsButton } from "@/components/attention-alerts/attention-alerts-button";
 import { Status } from "@/lib/types";
-import { apiClient, ApiError, type OperatorWithStatus, type AttentionAlert } from "@/lib/api-client";
+import { apiClient, ApiError, type OperatorWithStatus } from "@/lib/api-client";
 import {
   Users,
   Search,
@@ -87,28 +87,13 @@ export default function OperatorsIndexPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [loadingOpId, setLoadingOpId] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const { addToast } = useToast();
   const refreshing = useRef(false);
-
-  const handleNewAlert = useCallback(
-    (alert: AttentionAlert) => {
-      addToast({
-        type: "warning",
-        title: `Tiempo excedido en ${alert.serviceName}`,
-        description: `Turno ${alert.ticketNumber} lleva ${formatDuration(alert.elapsedSeconds)} en atención`,
-        duration: 8000,
-      });
-    },
-    [addToast],
-  );
 
   const {
     alerts: attentionAlerts,
     alertsByTicketId,
     refresh: refreshAttentionAlerts,
-  } = useAttentionAlerts({ onNewAlert: handleNewAlert });
-
-  const topAlert = attentionAlerts[0] ?? null;
+  } = useAttentionAlerts({ notifyOnInitialLoad: false });
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -257,17 +242,6 @@ export default function OperatorsIndexPage() {
 
   return (
     <div className="space-y-6">
-      {topAlert && (
-        <div className="flex items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <span>
-            Tiempo excedido en turno <span className="font-semibold">{topAlert.ticketNumber}</span>
-            {topAlert.operatorName ? ` (${topAlert.operatorName})` : ""} · {formatDuration(topAlert.elapsedSeconds)}
-            {topAlert.maxAttentionTime ? ` / ${topAlert.maxAttentionTime}m` : ""}
-          </span>
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold tracking-tight">Operadores</h1>
@@ -275,15 +249,18 @@ export default function OperatorsIndexPage() {
             Gestioná el estado y las acciones principales de cada operador en tiempo real.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-full border border-border/80 bg-input-background/80 px-3 py-1.5 shadow-sm">
-          <Sun className="size-4 opacity-60" />
-          <Switch
-            aria-label="Cambiar tema"
-            checked={isDark}
-            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-            className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-switch-background"
-          />
-          <Moon className="size-4 opacity-60" />
+        <div className="flex items-center gap-3">
+          <AttentionAlertsButton />
+          <div className="flex items-center gap-2 rounded-full border border-border/80 bg-input-background/80 px-3 py-1.5 shadow-sm">
+            <Sun className="size-4 opacity-60" />
+            <Switch
+              aria-label="Cambiar tema"
+              checked={isDark}
+              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+              className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-switch-background"
+            />
+            <Moon className="size-4 opacity-60" />
+          </div>
         </div>
       </div>
 

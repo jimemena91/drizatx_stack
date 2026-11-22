@@ -1,9 +1,10 @@
 "use client";
 
-import { Activity, AlertTriangle, Moon, Sun } from "lucide-react";
+import { Activity, Moon, Sun } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { AttentionAlertsButton } from "@/components/attention-alerts/attention-alerts-button";
 import { cn } from "@/lib/utils";
 
 type DashboardTopControlsProps = {
@@ -11,7 +12,6 @@ type DashboardTopControlsProps = {
   isDarkTheme: boolean;
   onThemeToggle: (checked: boolean) => void;
   onRefresh: () => void;
-  onAlertsClick?: () => void;
   className?: string;
 };
 
@@ -20,7 +20,6 @@ export function DashboardTopControls({
   isDarkTheme,
   onThemeToggle,
   onRefresh,
-  onAlertsClick,
   className,
 }: DashboardTopControlsProps) {
   return (
@@ -54,10 +53,7 @@ export function DashboardTopControls({
           <Activity className="mr-2 h-4 w-4" />
           Actualizar
         </Button>
-        <Button className="btn-premium relative w-full sm:w-auto" onClick={onAlertsClick}>
-          <AlertTriangle className="mr-2 h-4 w-4" />
-          Alertas
-        </Button>
+        <AttentionAlertsButton />
       </div>
     </div>
   );
