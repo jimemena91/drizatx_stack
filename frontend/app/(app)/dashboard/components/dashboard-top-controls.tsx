@@ -5,6 +5,7 @@ import { Activity, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { AttentionAlertsButton } from "@/components/attention-alerts/attention-alerts-button";
+import { TicketRouteButton } from "@/components/ticket-route/ticket-route-button";
 import { cn } from "@/lib/utils";
 
 type DashboardTopControlsProps = {
@@ -53,6 +54,7 @@ export function DashboardTopControls({
           <Activity className="mr-2 h-4 w-4" />
           Actualizar
         </Button>
+        <TicketRouteButton />
         <AttentionAlertsButton />
       </div>
     </div>

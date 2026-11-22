@@ -169,6 +169,75 @@ export type AttentionAlertHistory = AttentionAlertSummary & {
   days: AttentionAlertDay[];
 };
 
+/** Ruta de un ticket: cada paso (emisión, llamado, ausente, reingreso, atención) con su hora y operador. */
+export type TicketRouteEventType =
+  | "CREATED"
+  | "CALLED"
+  | "TAKEN_FROM_ABSENT"
+  | "STARTED"
+  | "ABSENT"
+  | "REQUEUED"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "DAILY_CLOSED"
+  | "STATUS_CHANGE";
+
+export type TicketRouteEvent = {
+  id: number | null;
+  type: TicketRouteEventType;
+  occurredAt: string;
+  operatorId: number | null;
+  operatorName: string | null;
+  operatorPosition: string | null;
+  source: string | null;
+  previousStatus: string | null;
+  newStatus: string | null;
+  /** Segundos hasta el paso siguiente (o hasta ahora si el ticket sigue abierto). */
+  secondsUntilNext: number | null;
+  /** Llamado posterior a una ausencia: alguien lo retomó. */
+  afterAbsent: boolean;
+};
+
+export type TicketRouteAbsence = {
+  markedAt: string;
+  markedByName: string | null;
+  markedByPosition: string | null;
+  absentSeconds: number | null;
+  backInQueueSeconds: number | null;
+  takenAt: string | null;
+  takenByName: string | null;
+  takenByPosition: string | null;
+};
+
+export type TicketRouteSummary = {
+  waitUntilAttentionSeconds: number | null;
+  waitBeforeFirstCallSeconds: number | null;
+  waitingSeconds: number;
+  absentSeconds: number;
+  calledSeconds: number;
+  attentionSeconds: number;
+  totalSeconds: number;
+  callCount: number;
+  absentCount: number;
+  absences: TicketRouteAbsence[];
+};
+
+export type TicketRoute = {
+  ticket: {
+    id: number;
+    number: string;
+    serviceId: number;
+    serviceName: string | null;
+    status: string;
+    issuedForDate: string;
+  };
+  events: TicketRouteEvent[];
+  summary: TicketRouteSummary;
+  ongoing: boolean;
+  /** Ticket anterior al historial: ruta armada con lo que quedó guardado, puede estar incompleta. */
+  reconstructed: boolean;
+};
+
 export type OperatorAttentionHistoryItem = {
   ticketId: number;
   ticketNumber: string;
@@ -1836,6 +1905,18 @@ class ApiClient {
       }
       throw err;
     }
+  }
+
+  /** Ruta completa de un ticket por número y fecha comercial (AAAA-MM-DD, por defecto hoy). */
+  async getTicketRoute(number: string, date?: string): Promise<TicketRoute[]> {
+    const params = new URLSearchParams({ number: number.trim() });
+    if (date) params.set("date", date);
+    return this.request<TicketRoute[]>(
+      "GET",
+      `/api/tickets/route/lookup?${params.toString()}`,
+      undefined,
+      { expectedOk: [200] },
+    );
   }
 
   // En tu backend no existe GET /api/tickets → devolvemos [] sin llamar
