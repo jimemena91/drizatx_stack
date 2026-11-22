@@ -134,6 +134,41 @@ export type AttentionAlert = {
   completedAt: string | null;
 };
 
+export type AttentionAlertLogEntry = {
+  id: number;
+  ticketId: number;
+  ticketNumber: string;
+  serviceId: number;
+  serviceName: string;
+  operatorId: number | null;
+  operatorName: string | null;
+  maxAttentionMinutes: number;
+  elapsedSeconds: number;
+  exceededSeconds: number;
+  /** Día comercial (YYYY-MM-DD) en que se superó el límite. */
+  businessDate: string;
+  exceededAt: string;
+  resolvedAt: string | null;
+  finalStatus: string | null;
+  /** true mientras el ticket sigue en atención. */
+  ongoing: boolean;
+};
+
+export type AttentionAlertSummary = {
+  businessDate: string;
+  todayCount: number;
+};
+
+export type AttentionAlertDay = {
+  businessDate: string;
+  count: number;
+  alerts: AttentionAlertLogEntry[];
+};
+
+export type AttentionAlertHistory = AttentionAlertSummary & {
+  days: AttentionAlertDay[];
+};
+
 export type OperatorAttentionHistoryItem = {
   ticketId: number;
   ticketNumber: string;
@@ -1763,6 +1798,41 @@ class ApiClient {
           clients: [],
           errors: [],
         };
+      }
+      throw err;
+    }
+  }
+
+  /** Contador liviano del día para el ícono de alertas. */
+  async getAttentionAlertSummary(): Promise<AttentionAlertSummary> {
+    try {
+      return await this.request<AttentionAlertSummary>(
+        "GET",
+        "/api/tickets/alerts/attention/summary",
+        undefined,
+        { expectedOk: [200] },
+      );
+    } catch (err) {
+      // Backend todavía sin el endpoint: no rompemos la pantalla.
+      if (err instanceof ApiError && err.status === 404) {
+        return { businessDate: "", todayCount: 0 };
+      }
+      throw err;
+    }
+  }
+
+  /** Historial de alertas agrupado por día comercial (más reciente primero). */
+  async getAttentionAlertHistory(days = 30): Promise<AttentionAlertHistory> {
+    try {
+      return await this.request<AttentionAlertHistory>(
+        "GET",
+        `/api/tickets/alerts/attention/history?days=${encodeURIComponent(String(days))}`,
+        undefined,
+        { expectedOk: [200] },
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) {
+        return { businessDate: "", todayCount: 0, days: [] };
       }
       throw err;
     }
