@@ -283,6 +283,26 @@ export class TicketEventsService {
     const type = eventTypeForTransition(prev, next);
     const pick = (value: unknown): Date | null => validDate(value);
 
+    // Si el ticket se guardó con la relación `operator` cargada (en null), TypeORM
+    // deja `operatorId` vacío en la entidad aunque la fila sí quede con el operador.
+    // Por eso, cuando el paso lo necesita y no viene, se lee de la base.
+    const needsOperator =
+      type === 'CALLED' || type === 'TAKEN_FROM_ABSENT' || type === 'STARTED' || type === 'COMPLETED';
+    const savedOperatorId = async (): Promise<number | null> => {
+      if (entity.operatorId) return entity.operatorId;
+      if (entity.operator?.id) return entity.operator.id;
+      if (!needsOperator) return null;
+      try {
+        const row = await manager.getRepository(Ticket).findOne({
+          where: { id: entity.id ?? previous.id },
+          select: { id: true, operatorId: true },
+        });
+        return row?.operatorId ?? null;
+      } catch {
+        return null;
+      }
+    };
+
     let operatorId: number | null;
     let occurredAt: Date | null;
     switch (type) {
@@ -297,15 +317,15 @@ export class TicketEventsService {
         break;
       case 'CALLED':
       case 'TAKEN_FROM_ABSENT':
-        operatorId = entity.operatorId ?? previous.operatorId ?? null;
+        operatorId = (await savedOperatorId()) ?? previous.operatorId ?? null;
         occurredAt = pick(entity.calledAt);
         break;
       case 'STARTED':
-        operatorId = entity.operatorId ?? previous.operatorId ?? null;
+        operatorId = (await savedOperatorId()) ?? previous.operatorId ?? null;
         occurredAt = pick(entity.startedAt);
         break;
       case 'COMPLETED':
-        operatorId = entity.operatorId ?? previous.operatorId ?? null;
+        operatorId = (await savedOperatorId()) ?? previous.operatorId ?? null;
         occurredAt = pick(entity.completedAt);
         break;
       default:
