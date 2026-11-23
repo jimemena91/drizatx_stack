@@ -4,7 +4,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Permission } from '../../common/enums/permission.enum';
-import { TicketEventsService, type TicketRoute } from './ticket-events.service';
+import { TicketEventsService, type TicketRoute, type TicketRouteListItem } from './ticket-events.service';
 
 /**
  * Ruta de un ticket: cuándo se sacó, quién y desde qué puesto lo llamó, quién lo
@@ -23,5 +23,13 @@ export class TicketRouteController {
   @Permissions(Permission.SERVE_TICKETS)
   lookup(@Query('number') number?: string, @Query('date') date?: string): Promise<TicketRoute[]> {
     return this.events.getRoutes(number ?? '', date);
+  }
+
+  /** GET /tickets/route/day?date=2026-11-20 — turnos del día con su estado actual. */
+  @UseGuards(AuthGuard('jwt'), PermissionsGuard)
+  @Get('day')
+  @Permissions(Permission.SERVE_TICKETS)
+  day(@Query('date') date?: string): Promise<TicketRouteListItem[]> {
+    return this.events.listDay(date);
   }
 }

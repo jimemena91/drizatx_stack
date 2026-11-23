@@ -21,6 +21,8 @@ export function TicketRouteButton({ className }: TicketRouteButtonProps) {
 
   const search = useCallback((number: string, date: string) => apiClient.getTicketRoute(number, date), []);
 
+  const list = useCallback((date: string) => apiClient.getTicketRouteDay(date), []);
+
   return (
     <div className={cn("w-full sm:w-auto", className)}>
       <Button
@@ -33,7 +35,7 @@ export function TicketRouteButton({ className }: TicketRouteButtonProps) {
         Ruta de ticket
       </Button>
 
-      <TicketRoutePanel open={open} onOpenChange={setOpen} onSearch={search} />
+      <TicketRoutePanel open={open} onOpenChange={setOpen} onSearch={search} onList={list} />
     </div>
   );
 }
