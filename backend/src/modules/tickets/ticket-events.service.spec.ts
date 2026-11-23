@@ -58,6 +58,24 @@ const T0 = new Date('2026-11-20T13:00:00Z'); // 10:00 en Mendoza
 const at = (min: number) => new Date(T0.getTime() + minutes(min));
 
 describe('buildRouteTimings (cálculo de tiempos)', () => {
+  it('si falta el paso "llamado", quien empezó la atención cuenta como quien lo retomó', () => {
+    const raw = [
+      { id: 1, type: 'CREATED', at: at(0), occurredAt: '', operatorId: null, operatorName: null, operatorPosition: null, source: null, previousStatus: null, newStatus: 'WAITING' },
+      { id: 2, type: 'ABSENT', at: at(10), occurredAt: '', operatorId: 1, operatorName: 'Ana', operatorPosition: 'Caja 1', source: null, previousStatus: 'CALLED', newStatus: 'ABSENT' },
+      { id: 3, type: 'REQUEUED', at: at(15), occurredAt: '', operatorId: null, operatorName: null, operatorPosition: null, source: null, previousStatus: 'ABSENT', newStatus: 'WAITING' },
+      { id: 4, type: 'STARTED', at: at(30), occurredAt: '', operatorId: 2, operatorName: 'Beto', operatorPosition: 'Caja 2', source: 'MANUAL', previousStatus: 'CALLED', newStatus: 'IN_PROGRESS' },
+      { id: 5, type: 'COMPLETED', at: at(40), occurredAt: '', operatorId: 2, operatorName: 'Beto', operatorPosition: 'Caja 2', source: null, previousStatus: 'IN_PROGRESS', newStatus: 'COMPLETED' },
+    ] as any;
+    const { summary } = buildRouteTimings(raw, at(60));
+    expect(summary.absences[0]).toMatchObject({
+      markedByName: 'Ana',
+      takenByName: 'Beto',
+      takenByPosition: 'Caja 2',
+      absentSeconds: 5 * 60,
+      backInQueueSeconds: 15 * 60,
+    });
+  });
+
   const ev = (type: any, min: number, extra: any = {}) => ({
     id: null,
     type,

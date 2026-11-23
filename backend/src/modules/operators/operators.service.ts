@@ -26,6 +26,7 @@ import {
   OperatorAvailabilityState,
 } from '../../entities/operator-availability.entity';
 import { QueueEventsService } from '../queue-events/queue-events.service';
+import { recordQueueCallEvent, validDate } from '../tickets/ticket-events.recorder';
 
 type MutationActor = {
   id?: number | string | null;
@@ -1242,6 +1243,8 @@ export class OperatorsService {
 
       const ticket = await runner.manager.findOneByOrFail(Ticket, { id: ticketId as any });
       await runner.commitTransaction();
+      // UPDATE directo: no pasa por el suscriptor, el historial se registra acá.
+      await recordQueueCallEvent(this.dataSource.manager, ticket, operatorId, validDate(ticket.calledAt) ?? new Date());
       this.queueEvents.emitTicketCalled({ ticketId, operatorId, serviceId: Number((ticket as any).serviceId ?? normalizedServiceId) });
       return ticket;
     } catch (e) {
@@ -1320,6 +1323,8 @@ export class OperatorsService {
 
       const ticket = await runner.manager.findOneByOrFail(Ticket, { id: ticketId as any });
       await runner.commitTransaction();
+      // UPDATE directo: no pasa por el suscriptor, el historial se registra acá.
+      await recordQueueCallEvent(this.dataSource.manager, ticket, operatorId, validDate(ticket.calledAt) ?? new Date());
       this.queueEvents.emitTicketCalled({ ticketId, operatorId, serviceId: Number((ticket as any).serviceId ?? rows[0]?.service_id ?? null) });
       return ticket;
     } catch (e) {
