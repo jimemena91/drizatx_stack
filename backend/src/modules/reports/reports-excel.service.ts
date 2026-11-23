@@ -5,6 +5,7 @@ import { Operator } from '../../entities/operator.entity';
 import { Service } from '../../entities/service.entity';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsService } from './reports.service';
+import { ReportsAbsencesService } from './reports-absences.service';
 import { rankOperators } from './reports-ranking.util';
 import {
   dateTokenInTimeZone,
@@ -15,6 +16,7 @@ import {
 export class ReportsExcelService {
   constructor(
     private readonly reports: ReportsService,
+    private readonly absences: ReportsAbsencesService,
     @InjectRepository(Service)
     private readonly servicesRepo: Repository<Service>,
     @InjectRepository(Operator)
@@ -103,13 +105,15 @@ export class ReportsExcelService {
 
   async build(q: ReportsQueryDto) {
     const Excel = (await import('exceljs')).default;
-    const [summary, throughput, serviceMetrics, attentionDetails, labels] =
+    const [summary, throughput, serviceMetrics, attentionDetails, labels, absenceReport] =
       await Promise.all([
         this.reports.summary(q),
         this.reports.throughput(q),
         this.reports.serviceMetrics(q),
         this.reports.attentionDetails(q),
         this.resolveFilterLabels(q),
+        // Es un extra del Excel: si falla, el resto del reporte se entrega igual.
+        this.absences.build(q, 500).catch(() => null),
       ]);
 
     const clientName = this.getClientName();
@@ -361,6 +365,106 @@ export class ReportsExcelService {
     });
     activitySheet.autoFilter = { from: 'A1', to: 'C1' };
     this.autosize(activitySheet, 16, 28);
+
+    if (absenceReport) {
+      const tz = reportTimeZone;
+      const clock = (iso: string | null) => (iso ? formatDateTimeInTimeZone(iso, tz) ?? iso : null);
+      const who = (name: string | null, position: string | null) =>
+        name ? (position ? `${name} · ${position}` : name) : null;
+
+      const absentSheet = workbook.addWorksheet('Ausentes por operador');
+      absentSheet.views = [{ state: 'frozen', ySplit: 1 }];
+      this.styleHeaderRow(
+        absentSheet.addRow([
+          'Operador',
+          'Puesto',
+          'Ausentes que marcó',
+          'Ausentes que retomó',
+          'Ausencia promedio (min)',
+          'Marcados sin retomar',
+        ]),
+      );
+      absenceReport.byOperator.forEach((row) => {
+        absentSheet.addRow([
+          row.name,
+          row.position,
+          row.markedAbsent,
+          row.retaken,
+          this.duration(row.avgAbsentSeconds),
+          row.notRetaken,
+        ]);
+      });
+      absentSheet.addRow([]);
+      absentSheet.addRow([
+        'Total del período',
+        null,
+        absenceReport.absences.total,
+        null,
+        this.duration(absenceReport.absences.avgAbsentSeconds),
+        absenceReport.absences.notRetaken,
+      ]);
+      absentSheet.addRow([
+        'Sólo incluye turnos desde que se activó el historial de la ruta del ticket.',
+      ]);
+      absentSheet.autoFilter = { from: 'A1', to: 'F1' };
+      this.autosize(absentSheet, 14, 34);
+
+      const detailSheet = workbook.addWorksheet('Ausencias (detalle)');
+      detailSheet.views = [{ state: 'frozen', ySplit: 1 }];
+      this.styleHeaderRow(
+        detailSheet.addRow([
+          'Ticket',
+          'Hora en que se marcó ausente',
+          'Lo marcó',
+          'Ausente durante (min)',
+          'Lo retomó',
+          'Hora en que lo retomó',
+        ]),
+      );
+      absenceReport.details.forEach((d) => {
+        detailSheet.addRow([
+          d.ticketNumber,
+          clock(d.markedAt),
+          who(d.markedByName, d.markedByPosition) ?? 'No registrado',
+          this.duration(d.absentSeconds),
+          who(d.takenByName, d.takenByPosition) ?? 'Nadie todavía',
+          clock(d.takenAt),
+        ]);
+      });
+      detailSheet.autoFilter = { from: 'A1', to: 'F1' };
+      this.autosize(detailSheet, 14, 36);
+
+      const waitsSheet = workbook.addWorksheet('Esperas largas');
+      waitsSheet.views = [{ state: 'frozen', ySplit: 1 }];
+      this.styleHeaderRow(
+        waitsSheet.addRow([
+          'Ticket',
+          'Servicio',
+          'Hora en que sacó el turno',
+          `Espera (min) · más de ${absenceReport.thresholdMin} min`,
+          'Estado',
+          'Veces ausente',
+          'Sigue esperando',
+        ]),
+      );
+      absenceReport.longWaits.rows.forEach((w) => {
+        waitsSheet.addRow([
+          w.ticketNumber,
+          w.serviceName,
+          clock(w.createdAt),
+          this.duration(w.waitSeconds),
+          ({ WAITING: 'En espera', CALLED: 'Llamado', IN_PROGRESS: 'En atención', COMPLETED: 'Completado', ABSENT: 'Ausente', DAILY_CLOSED: 'Cierre diario' } as Record<string, string>)[w.status] ?? w.status,
+          w.absentCount,
+          w.ongoing ? 'Sí' : 'No',
+        ]);
+      });
+      waitsSheet.addRow([]);
+      waitsSheet.addRow([
+        `${absenceReport.longWaits.overThreshold} de ${absenceReport.longWaits.totalTickets} turnos esperaron más de ${absenceReport.thresholdMin} min`,
+      ]);
+      waitsSheet.autoFilter = { from: 'A1', to: 'G1' };
+      this.autosize(waitsSheet, 14, 36);
+    }
 
     const filtersSheet = workbook.addWorksheet('Filtros y metodología');
     const filtersHeader = filtersSheet.addRow(['Campo', 'Valor']);

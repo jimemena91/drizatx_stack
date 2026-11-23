@@ -14,6 +14,7 @@ import {
 import type { Response } from 'express';
 import { ReportsService } from './reports.service';
 import { ReportsExcelService } from './reports-excel.service';
+import { ReportsAbsencesService } from './reports-absences.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { CreateSnapshotDto, ListSnapshotsQueryDto } from './dto/create-snapshot.dto';
 
@@ -28,6 +29,7 @@ export class ReportsController {
   constructor(
     private readonly reports: ReportsService,
     private readonly reportsExcel: ReportsExcelService,
+    private readonly absences: ReportsAbsencesService,
   ) {}
 
   // ===============================
@@ -45,6 +47,14 @@ export class ReportsController {
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   getThroughput(@Query() q: ReportsQueryDto) {
     return this.reports.throughput(q);
+  }
+
+  /** Ausentes por operador, tiempos de ausencia y turnos con espera larga. */
+  @Get('absences')
+  @Permissions(Permission.VIEW_REPORTS)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  getAbsences(@Query() q: ReportsQueryDto) {
+    return this.absences.build(q);
   }
 
   // ===============================
