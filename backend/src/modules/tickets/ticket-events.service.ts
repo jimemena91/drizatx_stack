@@ -9,6 +9,7 @@ import { Status } from '../../common/enums/status.enum';
 import { BusinessDateService } from '../business-date/business-date.service';
 import {
   eventTypeForTransition,
+  recordQueueCallEvent,
   recordTicketEvent,
   validDate,
 } from './ticket-events.recorder';
@@ -189,7 +190,11 @@ export function buildRouteTimings(
     const nextAbsentIdx = rest.findIndex((e) => e.type === 'ABSENT');
     const window = nextAbsentIdx === -1 ? rest : rest.slice(0, nextAbsentIdx);
     const requeue = window.find((e) => e.type === 'REQUEUED');
-    const taken = window.find((e) => e.type === 'CALLED' || e.type === 'TAKEN_FROM_ABSENT');
+    // Si falta el paso "llamado" (historial anterior al arreglo del llamado directo),
+    // quien empezó la atención es quien lo retomó.
+    const taken =
+      window.find((e) => e.type === 'CALLED' || e.type === 'TAKEN_FROM_ABSENT') ??
+      window.find((e) => e.type === 'STARTED');
     const closing = window.find((e) => TERMINAL.has(e.type));
     const endOfAbsent = requeue ?? taken ?? closing;
 
@@ -348,16 +353,7 @@ export class TicketEventsService {
 
   /** Llamado hecho con UPDATE masivo (siguiente en la fila): no pasa por `save()`. */
   async recordQueueCall(ticket: Ticket, operatorId: number, calledAt: Date): Promise<void> {
-    await recordTicketEvent(this.eventRepo.manager, {
-      ticketId: ticket.id,
-      ticketNumber: ticket.number,
-      serviceId: ticket.serviceId,
-      eventType: 'CALLED',
-      previousStatus: Status.WAITING,
-      newStatus: Status.CALLED,
-      operatorId,
-      occurredAt: calledAt,
-    });
+    await recordQueueCallEvent(this.eventRepo.manager, ticket, operatorId, calledAt);
   }
 
   // -------------------------------------------------------------------------
