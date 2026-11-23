@@ -123,3 +123,24 @@ export async function recordTicketEvents(
 
 export const recordTicketEvent = (manager: EntityManager, input: TicketEventInput) =>
   recordTicketEvents(manager, [input]);
+
+/**
+ * Llamado desde la fila hecho con un UPDATE directo (sin pasar por `save()`), por
+ * lo que el suscriptor no lo ve: quien llama al ticket deja el evento acá.
+ */
+export const recordQueueCallEvent = (
+  manager: EntityManager,
+  ticket: { id: number; number: string; serviceId: number },
+  operatorId: number,
+  calledAt: Date,
+) =>
+  recordTicketEvent(manager, {
+    ticketId: ticket.id,
+    ticketNumber: ticket.number,
+    serviceId: ticket.serviceId,
+    eventType: 'CALLED',
+    previousStatus: Status.WAITING,
+    newStatus: Status.CALLED,
+    operatorId,
+    occurredAt: calledAt,
+  });
