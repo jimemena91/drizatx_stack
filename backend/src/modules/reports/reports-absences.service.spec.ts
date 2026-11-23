@@ -263,6 +263,8 @@ const at = (min: number) => new Date(T0.getTime() + minutes(min));
     const beto = r.byOperator.find((o) => o.name === 'Beto')!;
     expect(beto.retaken).toBe(2);
     expect(beto.retakenCompleted).toBe(1);
+    expect(beto.retakenProductive).toBe(1);
+    expect(beto.retakenExcludedShort).toBe(0);
     expect(beto.avgRetakenAttentionSeconds).toBe(12 * 60);
     expect(beto.totalRetakenAttentionSeconds).toBe(12 * 60);
     expect(beto.maxRetakenAttentionSeconds).toBe(12 * 60);
@@ -303,5 +305,41 @@ const at = (min: number) => new Date(T0.getTime() + minutes(min));
     expect(r.details[0].retakenAttentionSeconds).toBe(8 * 60);
     expect(r.absences.notRetaken).toBe(0);
     expect(r.byOperator.find((o) => o.name === 'Beto')).toMatchObject({ retaken: 1, retakenCompleted: 1 });
+  });
+
+  it('un retomado que se atendió menos de 1 minuto no cuenta como productivo (misma regla que las métricas)', async () => {
+    const productive = await issue(at(0));
+    const short = await issue(at(1));
+    for (const [ticket, startMin, endMin, absentMin, takenMin] of [
+      [productive, 32, 40, 15, 30],
+      [short, 33, 33.5, 16, 31],
+    ] as const) {
+      await patch(ticket.id, { status: Status.CALLED, operatorId: anaId, calledAt: at(10) });
+      await patch(ticket.id, { status: Status.ABSENT, operatorId: null, absentAt: at(absentMin) });
+      const full = (await tickets().findOne({ where: { id: ticket.id }, relations: ['service', 'operator', 'client'] }))!;
+      full.status = Status.CALLED;
+      full.operatorId = betoId;
+      full.calledAt = at(takenMin);
+      await tickets().save(full);
+      const called = (await tickets().findOne({ where: { id: ticket.id }, relations: ['operator'] }))!;
+      called.status = Status.IN_PROGRESS;
+      called.startedAt = at(startMin);
+      await tickets().save(called);
+      const running = (await tickets().findOne({ where: { id: ticket.id }, relations: ['operator'] }))!;
+      running.status = Status.COMPLETED;
+      running.completedAt = at(endMin);
+      await tickets().save(running);
+    }
+
+    const r = await report.build(range, 50, at(60));
+    const beto = r.byOperator.find((o) => o.name === 'Beto')!;
+    expect(beto).toMatchObject({ retaken: 2, retakenCompleted: 2, retakenProductive: 1, retakenExcludedShort: 1 });
+    // promedio y total sólo con el productivo (8 min)
+    expect(beto.avgRetakenAttentionSeconds).toBe(8 * 60);
+    expect(beto.totalRetakenAttentionSeconds).toBe(8 * 60);
+    expect(r.details.find((d) => d.ticketId === short.id)).toMatchObject({
+      retakenCompleted: true,
+      retakenCountsForMetrics: false,
+    });
   });
 });

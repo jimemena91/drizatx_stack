@@ -167,7 +167,8 @@ export function AbsencesReport({ report, loading, error, threshold: currentThres
                         <th className="py-2 pr-4 text-right">Retomó</th>
                         <th className="py-2 pr-4 text-right">Ausencia promedio</th>
                         <th className="py-2 pr-4 text-right">Sin retomar</th>
-                        <th className="py-2 pr-4 text-right">Retomados atendidos</th>
+                        <th className="py-2 pr-4 text-right">Retomados productivos</th>
+                        <th className="py-2 pr-4 text-right">Breves excluidos</th>
                         <th className="py-2 pr-4 text-right">Atención prom. retomados</th>
                         <th className="py-2 text-right">Atención total retomados</th>
                       </tr>
@@ -183,9 +184,10 @@ export function AbsencesReport({ report, loading, error, threshold: currentThres
                           <td className="py-2 pr-4 text-right">{row.retaken}</td>
                           <td className="py-2 pr-4 text-right">{dur(row.avgAbsentSeconds)}</td>
                           <td className="py-2 pr-4 text-right">{row.notRetaken}</td>
-                          <td className="py-2 pr-4 text-right">{row.retakenCompleted}</td>
+                          <td className="py-2 pr-4 text-right">{row.retakenProductive}</td>
+                          <td className="py-2 pr-4 text-right">{row.retakenExcludedShort}</td>
                           <td className="py-2 pr-4 text-right">{dur(row.avgRetakenAttentionSeconds)}</td>
-                          <td className="py-2 text-right">{row.retakenCompleted ? dur(row.totalRetakenAttentionSeconds) : "—"}</td>
+                          <td className="py-2 text-right">{row.retakenProductive ? dur(row.totalRetakenAttentionSeconds) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -275,7 +277,7 @@ export function AbsencesReport({ report, loading, error, threshold: currentThres
                           </td>
                           <td className="py-2 text-right">
                             {d.retakenCompleted
-                              ? dur(d.retakenAttentionSeconds)
+                              ? `${dur(d.retakenAttentionSeconds)}${d.retakenCountsForMetrics ? "" : " (breve, no cuenta)"}`
                               : d.takenAt
                                 ? "En curso / sin atender"
                                 : "—"}
