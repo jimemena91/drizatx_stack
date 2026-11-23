@@ -222,6 +222,54 @@ export type TicketRouteSummary = {
   absences: TicketRouteAbsence[];
 };
 
+export type AbsenceReport = {
+  thresholdMin: number;
+  absences: {
+    total: number;
+    ticketsWithAbsence: number;
+    avgAbsentSeconds: number | null;
+    maxAbsentSeconds: number | null;
+    notRetaken: number;
+  };
+  byOperator: Array<{
+    operatorId: number | null;
+    name: string;
+    position: string | null;
+    markedAbsent: number;
+    retaken: number;
+    avgAbsentSeconds: number | null;
+    notRetaken: number;
+  }>;
+  details: Array<{
+    ticketId: number;
+    ticketNumber: string;
+    markedAt: string;
+    markedByName: string | null;
+    markedByPosition: string | null;
+    absentSeconds: number | null;
+    takenAt: string | null;
+    takenByName: string | null;
+    takenByPosition: string | null;
+  }>;
+  longWaits: {
+    totalTickets: number;
+    overThreshold: number;
+    overThresholdPct: number | null;
+    avgWaitSeconds: number | null;
+    maxWaitSeconds: number | null;
+    rows: Array<{
+      ticketId: number;
+      ticketNumber: string;
+      serviceName: string | null;
+      status: string;
+      createdAt: string;
+      waitSeconds: number;
+      ongoing: boolean;
+      absentCount: number;
+    }>;
+  };
+};
+
 export type TicketRouteListItem = {
   id: number;
   number: string;
@@ -2460,6 +2508,15 @@ class ApiClient {
     ).toString();
   }
 
+  async getReportAbsences(filters: {
+    from?: string; to?: string;
+    serviceId?: number; operatorId?: number;
+    waitThresholdMin?: number;
+  }): Promise<AbsenceReport> {
+    const query = this.qs(filters);
+    return this.request<AbsenceReport>("GET", `/api/reports/absences?${query}`, undefined, { expectedOk: [200] });
+  }
+
   async getReportSummary(filters: {
     from?: string; to?: string;
     serviceId?: number; operatorId?: number;
@@ -2545,6 +2602,7 @@ class ApiClient {
     serviceId?: number; operatorId?: number;
     ticketNumberFrom?: number; ticketNumberTo?: number;
     granularity?: "hour"|"day";
+    waitThresholdMin?: number;
   }) {
     const base = this.normalizeBase();
     const query = this.qs(filters);
@@ -2556,6 +2614,7 @@ class ApiClient {
     serviceId?: number; operatorId?: number;
     ticketNumberFrom?: number; ticketNumberTo?: number;
     granularity?: "hour"|"day";
+    waitThresholdMin?: number;
   }) {
     const base = this.normalizeBase();
     const query = this.qs(filters);

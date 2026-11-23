@@ -10,6 +10,8 @@ export type ReportsFilters = {
   ticketNumberTo?: number;
   granularity?: "hour" | "day";
   tz?: "UTC" | "America/Argentina/Mendoza";
+  /** Minutos desde los cuales una espera cuenta como larga (por defecto 30). */
+  waitThresholdMin?: number;
 };
 
 export function useReports() {
@@ -19,6 +21,10 @@ export function useReports() {
 
   const getThroughput = useCallback(async (f: ReportsFilters) => {
     return apiClient.getReportThroughput(f);
+  }, []);
+
+  const getAbsences = useCallback(async (f: ReportsFilters) => {
+    return apiClient.getReportAbsences(f);
   }, []);
 
   const exportCsv = useCallback((f: ReportsFilters) => {
@@ -37,5 +43,5 @@ export function useReports() {
     return apiClient.listReportSnapshots(f);
   }, []);
 
-  return { getSummary, getThroughput, exportCsv, exportXlsx, createSnapshot, listSnapshots };
+  return { getSummary, getThroughput, getAbsences, exportCsv, exportXlsx, createSnapshot, listSnapshots };
 }
