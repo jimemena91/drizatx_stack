@@ -165,7 +165,9 @@ function AbsenceRow({ absence, index }: { absence: TicketRouteAbsence; index: nu
       <p className="text-muted-foreground">
         Lo retomó:{" "}
         <span className="text-foreground">
-          {takenBy ? `${takenBy} (${absence.takenAt ? formatClock(absence.takenAt) : ""})` : "nadie todavía"}
+          {absence.takenAt
+            ? `${takenBy ?? "operador no registrado"} (${formatClock(absence.takenAt)})`
+            : "nadie todavía"}
         </span>
       </p>
     </li>

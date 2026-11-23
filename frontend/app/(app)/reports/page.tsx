@@ -90,6 +90,8 @@ export default function ReportsPage() {
   const { getSummary, getThroughput, getAbsences, exportCsv, exportXlsx } = useReports();
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof getSummary>> | null>(null);
   const [throughput, setThroughput] = useState<Awaited<ReturnType<typeof getThroughput>>>([]);
+  const [absences, setAbsences] = useState<Awaited<ReturnType<typeof getAbsences>> | null>(null);
+  const [absencesError, setAbsencesError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -130,10 +132,20 @@ export default function ReportsPage() {
       try {
         setLoading(true);
         setError(null);
-        const [s, t] = await Promise.all([getSummary(filters), getThroughput(filters)]);
+        const [s, t, a] = await Promise.all([
+          getSummary(filters),
+          getThroughput(filters),
+          // Es un extra: si falla, el resto del reporte se muestra igual.
+          getAbsences(filters).then(
+            (data) => ({ data, error: null as string | null }),
+            (err: any) => ({ data: null, error: (err?.message as string) ?? "No se pudo cargar ausentes y esperas." }),
+          ),
+        ]);
         if (!aborted) {
           setSummary(s);
           setThroughput(t);
+          setAbsences(a.data);
+          setAbsencesError(a.error);
         }
       } catch (e: any) {
         if (!aborted) setError(e?.message ?? "Error al cargar reportes");
@@ -144,7 +156,7 @@ export default function ReportsPage() {
     return () => {
       aborted = true;
     };
-  }, [getSummary, getThroughput, filters]);
+  }, [getSummary, getThroughput, getAbsences, filters]);
 
   const chartData = useMemo(() => {
     return throughput.map((row) => {
@@ -311,6 +323,10 @@ export default function ReportsPage() {
     return dateTimeFormatter.format(parsed);
   };
   const hasOperatorMetrics = operatorMetrics.length > 0;
+  const absenceByOperator = useMemo(
+    () => new Map((absences?.byOperator ?? []).filter((row) => row.operatorId !== null).map((row) => [row.operatorId as number, row])),
+    [absences],
+  );
 
   // ===== Export (usa los mismos filtros visibles)
   const handleExportCsv = () => exportCsv(filters);
@@ -1022,8 +1038,10 @@ export default function ReportsPage() {
 
           <TabsContent value="absences" className="space-y-6">
             <AbsencesReport
-              filters={filters}
-              getAbsences={getAbsences}
+              report={absences}
+              loading={loading}
+              error={absencesError}
+              threshold={filters.waitThresholdMin ?? 30}
               onThresholdChange={(minutes) => setFilters((prev) => ({ ...prev, waitThresholdMin: minutes }))}
             />
           </TabsContent>
@@ -1158,6 +1176,39 @@ export default function ReportsPage() {
                               <div className="text-xs text-gray-600">Ocupación</div>
                             </div>
                           </div>
+
+                          {(() => {
+                            const abs = absenceByOperator.get(operator.operatorId);
+                            return (
+                              <div
+                                className="grid grid-cols-2 gap-4 rounded-md bg-muted/40 p-3 text-center md:grid-cols-5"
+                                data-testid="operator-absences"
+                              >
+                                <div>
+                                  <div className="font-bold">{numberFormatter.format(abs?.markedAbsent ?? 0)}</div>
+                                  <div className="text-xs text-gray-600">Ausentes que marcó</div>
+                                </div>
+                                <div>
+                                  <div className="font-bold">{numberFormatter.format(abs?.retaken ?? 0)}</div>
+                                  <div className="text-xs text-gray-600">Ausentes que retomó</div>
+                                </div>
+                                <div>
+                                  <div className="font-bold">{numberFormatter.format(abs?.retakenCompleted ?? 0)}</div>
+                                  <div className="text-xs text-gray-600">Retomados ya atendidos</div>
+                                </div>
+                                <div>
+                                  <div className="font-bold">{formatSecondsAsDuration(abs?.avgRetakenAttentionSeconds)}</div>
+                                  <div className="text-xs text-gray-600">Atención prom. de retomados</div>
+                                </div>
+                                <div>
+                                  <div className="font-bold">
+                                    {abs?.retakenCompleted ? formatSecondsAsDuration(abs.totalRetakenAttentionSeconds) : "N/D"}
+                                  </div>
+                                  <div className="text-xs text-gray-600">Atención total de retomados</div>
+                                </div>
+                              </div>
+                            );
+                          })()}
 
                           <div className="flex flex-col gap-1 text-xs text-muted-foreground md:flex-row md:items-center md:justify-between">
                             <span>Período: {periodLabel}</span>
