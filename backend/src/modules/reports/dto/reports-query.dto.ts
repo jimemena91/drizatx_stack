@@ -11,6 +11,9 @@ export class ReportsQueryDto {
   @IsOptional() @Type(() => Number) @IsInt() ticketNumberFrom?: number;
   @IsOptional() @Type(() => Number) @IsInt() ticketNumberTo?: number;
 
+  // minutos de espera a partir de los cuales un turno cuenta como "espera larga"
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(1440) waitThresholdMin?: number;
+
   @IsOptional() @IsIn(['hour','day']) granularity: 'hour'|'day' = 'day';
 
   // opcional (por defecto AR para reportes)

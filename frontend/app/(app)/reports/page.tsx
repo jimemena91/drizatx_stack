@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 
 // === NUEVO: hook conectado a backend /reports
 import { useReports, type ReportsFilters } from "@/hooks/use-reports";
+import { AbsencesReport } from "@/components/reports/absences-report";
 
 // Conservamos tus hooks actuales para otras tabs (los cableamos en el próximo paso)
 import { useQueueStatus } from "@/hooks/use-queue-status";
@@ -86,7 +87,7 @@ export default function ReportsPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   // ===== API real de reportes
-  const { getSummary, getThroughput, exportCsv, exportXlsx } = useReports();
+  const { getSummary, getThroughput, getAbsences, exportCsv, exportXlsx } = useReports();
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof getSummary>> | null>(null);
   const [throughput, setThroughput] = useState<Awaited<ReturnType<typeof getThroughput>>>([]);
   const [loading, setLoading] = useState(false);
@@ -685,6 +686,7 @@ export default function ReportsPage() {
             <TabsTrigger value="weekly">Análisis Semanal</TabsTrigger>
             <TabsTrigger value="services">Por Servicios</TabsTrigger>
             <TabsTrigger value="operators">Operadores</TabsTrigger>
+            <TabsTrigger value="absences">Ausentes y esperas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="daily" className="space-y-6">
@@ -1016,6 +1018,14 @@ export default function ReportsPage() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="absences" className="space-y-6">
+            <AbsencesReport
+              filters={filters}
+              getAbsences={getAbsences}
+              onThresholdChange={(minutes) => setFilters((prev) => ({ ...prev, waitThresholdMin: minutes }))}
+            />
           </TabsContent>
 
           <TabsContent value="operators" className="space-y-6">

@@ -36,6 +36,7 @@ export type TicketRouteEvent = {
 /** Una vuelta como ausente: quién lo marcó, cuánto duró y quién lo retomó. */
 export type TicketRouteAbsence = {
   markedAt: string;
+  markedByOperatorId: number | null;
   markedByName: string | null;
   markedByPosition: string | null;
   /** Segundos como ausente (hasta volver a la fila o hasta ser llamado). */
@@ -43,6 +44,7 @@ export type TicketRouteAbsence = {
   /** Segundos esperando de nuevo en la fila, tras reingresar y hasta ser llamado. */
   backInQueueSeconds: number | null;
   takenAt: string | null;
+  takenByOperatorId: number | null;
   takenByName: string | null;
   takenByPosition: string | null;
 };
@@ -116,7 +118,23 @@ const toDateOnly = (value: unknown): string => {
   return '';
 };
 
-type RawEvent = Omit<TicketRouteEvent, 'secondsUntilNext' | 'afterAbsent'> & { at: Date };
+export type RawEvent = Omit<TicketRouteEvent, 'secondsUntilNext' | 'afterAbsent'> & { at: Date };
+
+/** Evento guardado → forma que entiende `buildRouteTimings`. */
+export function storedEventToRaw(e: TicketEvent): RawEvent {
+  return {
+    id: e.id,
+    type: e.eventType,
+    at: e.occurredAt instanceof Date ? e.occurredAt : new Date(e.occurredAt),
+    occurredAt: '',
+    operatorId: e.operatorId ?? null,
+    operatorName: e.operatorName ?? null,
+    operatorPosition: e.operatorPosition ?? null,
+    source: e.source ?? null,
+    previousStatus: e.previousStatus ?? null,
+    newStatus: e.newStatus ?? null,
+  };
+}
 
 /**
  * Calcula duraciones y resumen a partir de la lista ordenada de eventos.
@@ -177,6 +195,7 @@ export function buildRouteTimings(
 
     summary.absences.push({
       markedAt: event.at.toISOString(),
+      markedByOperatorId: event.operatorId ?? null,
       markedByName: event.operatorName,
       markedByPosition: event.operatorPosition,
       absentSeconds: endOfAbsent
@@ -191,6 +210,7 @@ export function buildRouteTimings(
             ? secondsBetween(requeue.at, now)
             : null,
       takenAt: taken ? taken.at.toISOString() : null,
+      takenByOperatorId: taken?.operatorId ?? null,
       takenByName: taken?.operatorName ?? null,
       takenByPosition: taken?.operatorPosition ?? null,
     });
@@ -406,18 +426,7 @@ export class TicketEventsService {
     const reconstructed = stored.length === 0;
     const raw: RawEvent[] = reconstructed
       ? await this.reconstruct(ticket)
-      : stored.map((e) => ({
-          id: e.id,
-          type: e.eventType,
-          at: e.occurredAt instanceof Date ? e.occurredAt : new Date(e.occurredAt),
-          occurredAt: '',
-          operatorId: e.operatorId ?? null,
-          operatorName: e.operatorName ?? null,
-          operatorPosition: e.operatorPosition ?? null,
-          source: e.source ?? null,
-          previousStatus: e.previousStatus ?? null,
-          newStatus: e.newStatus ?? null,
-        }));
+      : stored.map(storedEventToRaw);
 
     const { events, summary, ongoing } = buildRouteTimings(raw, now);
 
