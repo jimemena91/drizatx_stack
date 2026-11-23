@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 
 import { TicketEventsService } from '@/modules/tickets/ticket-events.service';
+import { recordQueueCallEvent } from '@/modules/tickets/ticket-events.recorder';
 import { ReportsAbsencesService } from '@/modules/reports/reports-absences.service';
 import { TicketEventsSubscriber } from '@/modules/tickets/ticket-events.subscriber';
 import { BusinessDateService } from '@/modules/business-date/business-date.service';
@@ -270,5 +271,37 @@ const at = (min: number) => new Date(T0.getTime() + minutes(min));
     expect(done).toMatchObject({ retakenCompleted: true, retakenAttentionSeconds: 12 * 60 });
     const pending = r.details.find((d) => d.ticketId === u.id)!;
     expect(pending).toMatchObject({ retakenCompleted: false, retakenAttentionSeconds: null });
+  });
+
+  it('ausente que vuelve a la fila y lo llama otro por "llamar siguiente" (UPDATE directo) queda como retomado', async () => {
+    const t = await issue(at(0));
+    await patch(t.id, { status: Status.CALLED, operatorId: anaId, calledAt: at(10) });
+    await patch(t.id, { status: Status.ABSENT, operatorId: null, absentAt: at(15) });
+    // reintegrar: vuelve a la fila
+    await patch(t.id, { status: Status.WAITING, operatorId: null, calledAt: null, requeuedAt: at(20) });
+
+    // OperatorsService.callNext: UPDATE por SQL directo + evento explícito
+    await dataSource.query(`UPDATE tickets SET status = 'CALLED', operator_id = ?, called_at = ? WHERE id = ?`, [
+      betoId,
+      at(30).toISOString().replace('T', ' ').replace('Z', ''),
+      t.id,
+    ]);
+    const after = (await tickets().findOneBy({ id: t.id }))!;
+    await recordQueueCallEvent(dataSource.manager, after, betoId, at(30));
+
+    const started = (await tickets().findOne({ where: { id: t.id }, relations: ['operator'] }))!;
+    started.status = Status.IN_PROGRESS;
+    started.startedAt = at(32);
+    await tickets().save(started);
+    const inProgress = (await tickets().findOne({ where: { id: t.id }, relations: ['operator'] }))!;
+    inProgress.status = Status.COMPLETED;
+    inProgress.completedAt = at(40);
+    await tickets().save(inProgress);
+
+    const r = await report.build(range, 50, at(60));
+    expect(r.details[0]).toMatchObject({ markedByName: 'Ana', takenByName: 'Beto', retakenCompleted: true });
+    expect(r.details[0].retakenAttentionSeconds).toBe(8 * 60);
+    expect(r.absences.notRetaken).toBe(0);
+    expect(r.byOperator.find((o) => o.name === 'Beto')).toMatchObject({ retaken: 1, retakenCompleted: 1 });
   });
 });
