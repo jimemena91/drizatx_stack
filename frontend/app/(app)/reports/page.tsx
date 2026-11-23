@@ -1193,8 +1193,13 @@ export default function ReportsPage() {
                                   <div className="text-xs text-gray-600">Ausentes que retomó</div>
                                 </div>
                                 <div>
-                                  <div className="font-bold">{numberFormatter.format(abs?.retakenCompleted ?? 0)}</div>
-                                  <div className="text-xs text-gray-600">Retomados ya atendidos</div>
+                                  <div className="font-bold">
+                                    {numberFormatter.format(abs?.retakenProductive ?? 0)}
+                                    <span className="ml-1 text-xs font-normal text-amber-700">
+                                      +{numberFormatter.format(abs?.retakenExcludedShort ?? 0)} breves
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-gray-600">Retomados atendidos (productivos)</div>
                                 </div>
                                 <div>
                                   <div className="font-bold">{formatSecondsAsDuration(abs?.avgRetakenAttentionSeconds)}</div>
@@ -1202,7 +1207,7 @@ export default function ReportsPage() {
                                 </div>
                                 <div>
                                   <div className="font-bold">
-                                    {abs?.retakenCompleted ? formatSecondsAsDuration(abs.totalRetakenAttentionSeconds) : "N/D"}
+                                    {abs?.retakenProductive ? formatSecondsAsDuration(abs.totalRetakenAttentionSeconds) : "N/D"}
                                   </div>
                                   <div className="text-xs text-gray-600">Atención total de retomados</div>
                                 </div>

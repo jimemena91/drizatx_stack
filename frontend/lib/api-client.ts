@@ -240,6 +240,8 @@ export type AbsenceReport = {
     avgAbsentSeconds: number | null;
     notRetaken: number;
     retakenCompleted: number;
+    retakenProductive: number;
+    retakenExcludedShort: number;
     avgRetakenAttentionSeconds: number | null;
     totalRetakenAttentionSeconds: number;
     maxRetakenAttentionSeconds: number | null;
@@ -256,6 +258,7 @@ export type AbsenceReport = {
     takenByPosition: string | null;
     retakenAttentionSeconds: number | null;
     retakenCompleted: boolean;
+    retakenCountsForMetrics: boolean;
   }>;
   longWaits: {
     totalTickets: number;
