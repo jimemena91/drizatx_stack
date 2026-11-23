@@ -222,6 +222,17 @@ export type TicketRouteSummary = {
   absences: TicketRouteAbsence[];
 };
 
+export type TicketRouteListItem = {
+  id: number;
+  number: string;
+  serviceName: string | null;
+  status: string;
+  createdAt: string;
+  operatorName: string | null;
+  operatorPosition: string | null;
+  absentCount: number;
+};
+
 export type TicketRoute = {
   ticket: {
     id: number;
@@ -1914,6 +1925,19 @@ class ApiClient {
     return this.request<TicketRoute[]>(
       "GET",
       `/api/tickets/route/lookup?${params.toString()}`,
+      undefined,
+      { expectedOk: [200] },
+    );
+  }
+
+  /** Turnos de una fecha comercial (por defecto hoy) con su estado actual. */
+  async getTicketRouteDay(date?: string): Promise<TicketRouteListItem[]> {
+    const params = new URLSearchParams();
+    if (date) params.set("date", date);
+    const query = params.toString();
+    return this.request<TicketRouteListItem[]>(
+      "GET",
+      `/api/tickets/route/day${query ? `?${query}` : ""}`,
       undefined,
       { expectedOk: [200] },
     );

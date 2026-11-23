@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Ban,
   CheckCircle2,
@@ -11,6 +11,7 @@ import {
   Megaphone,
   Moon,
   PlayCircle,
+  RefreshCw,
   Route as RouteIcon,
   Search,
   Ticket as TicketIcon,
@@ -34,6 +35,7 @@ import type {
   TicketRouteAbsence,
   TicketRouteEvent,
   TicketRouteEventType,
+  TicketRouteListItem,
 } from "@/lib/api-client";
 
 const BUSINESS_TZ = "America/Argentina/Mendoza";
@@ -284,18 +286,146 @@ function RouteCard({ route }: { route: TicketRoute }) {
   );
 }
 
+const STATUS_FILTERS: { key: string; label: string; statuses: string[] }[] = [
+  { key: "ALL", label: "Todos", statuses: [] },
+  { key: "WAITING", label: "En espera", statuses: ["WAITING"] },
+  { key: "ACTIVE", label: "En atención", statuses: ["CALLED", "IN_PROGRESS"] },
+  { key: "ABSENT", label: "Ausentes", statuses: ["ABSENT"] },
+  { key: "COMPLETED", label: "Completados", statuses: ["COMPLETED"] },
+];
+
+const LIST_STATUS_LABELS: Record<string, string> = {
+  ...STATUS_LABELS,
+  WAITING: "En espera",
+  COMPLETED: "Completado",
+};
+
+const LIST_STATUS_TONES: Record<string, string> = {
+  WAITING: "bg-sky-500/15 text-sky-600 dark:text-sky-300",
+  CALLED: "bg-indigo-500/15 text-indigo-600 dark:text-indigo-300",
+  IN_PROGRESS: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300",
+  ABSENT: "bg-amber-500/15 text-amber-600 dark:text-amber-300",
+  COMPLETED: "bg-green-500/15 text-green-600 dark:text-green-300",
+  CANCELLED: "bg-destructive/10 text-destructive",
+  DAILY_CLOSED: "bg-muted text-muted-foreground",
+};
+
+function DayListRow({
+  item,
+  selected,
+  onSelect,
+}: {
+  item: TicketRouteListItem;
+  selected: boolean;
+  onSelect: (item: TicketRouteListItem) => void;
+}) {
+  const who = item.operatorName
+    ? item.operatorPosition
+      ? `${item.operatorName} · ${item.operatorPosition}`
+      : item.operatorName
+    : null;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(item)}
+        className={cn(
+          "flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent",
+          selected ? "border-primary bg-accent" : "border-border bg-card",
+        )}
+        data-testid="ticket-route-day-row"
+      >
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-foreground">
+            {item.number}
+            {item.serviceName && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">{item.serviceName}</span>
+            )}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            Sacó turno {formatClock(item.createdAt)}
+            {who ? ` · ${who}` : ""}
+            {item.absentCount > 0 ? ` · ausente ${item.absentCount} ${item.absentCount === 1 ? "vez" : "veces"}` : ""}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+            LIST_STATUS_TONES[item.status] ?? "bg-muted text-muted-foreground",
+          )}
+        >
+          {LIST_STATUS_LABELS[item.status] ?? item.status}
+        </span>
+      </button>
+    </li>
+  );
+}
+
 type TicketRoutePanelProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSearch: (number: string, date: string) => Promise<TicketRoute[]>;
+  onList: (date: string) => Promise<TicketRouteListItem[]>;
 };
 
-export function TicketRoutePanel({ open, onOpenChange, onSearch }: TicketRoutePanelProps) {
+export function TicketRoutePanel({ open, onOpenChange, onSearch, onList }: TicketRoutePanelProps) {
   const [number, setNumber] = useState("");
   const [date, setDate] = useState(() => todayBusinessDate());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [routes, setRoutes] = useState<TicketRoute[] | null>(null);
+  const [dayList, setDayList] = useState<TicketRouteListItem[] | null>(null);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [filter, setFilter] = useState("ALL");
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+
+  const loadList = useCallback(async () => {
+    setListLoading(true);
+    setListError(null);
+    try {
+      setDayList(await onList(date));
+    } catch (err) {
+      setDayList(null);
+      setListError(err instanceof Error && err.message ? err.message : "No se pudo cargar el listado del día.");
+    } finally {
+      setListLoading(false);
+    }
+  }, [onList, date]);
+
+  // Al abrir el panel (o cambiar la fecha) se lista el día.
+  useEffect(() => {
+    if (open && /^\d{4}-\d{2}-\d{2}$/.test(date)) void loadList();
+  }, [open, date, loadList]);
+
+  const filteredList = useMemo(() => {
+    const statuses = STATUS_FILTERS.find((f) => f.key === filter)?.statuses ?? [];
+    if (!dayList) return [];
+    return statuses.length === 0 ? dayList : dayList.filter((t) => statuses.includes(t.status));
+  }, [dayList, filter]);
+
+  const countFor = (statuses: string[]) =>
+    !dayList ? 0 : statuses.length === 0 ? dayList.length : dayList.filter((t) => statuses.includes(t.status)).length;
+
+  const runSearch = async (value: string, onlyTicketId: number | null) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const found = await onSearch(value, date);
+      setRoutes(onlyTicketId === null ? found : found.filter((r) => r.ticket.id === onlyTicketId));
+    } catch (err) {
+      setRoutes(null);
+      setError(err instanceof Error && err.message ? err.message : "No se pudo consultar el turno.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const selectFromList = (item: TicketRouteListItem) => {
+    setNumber(item.number);
+    setSelectedId(item.id);
+    void runSearch(item.number, item.id);
+  };
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -304,6 +434,7 @@ export function TicketRoutePanel({ open, onOpenChange, onSearch }: TicketRoutePa
       setError("Escribí el número de turno.");
       return;
     }
+    setSelectedId(null);
     setLoading(true);
     setError(null);
     try {
@@ -382,6 +513,58 @@ export function TicketRoutePanel({ open, onOpenChange, onSearch }: TicketRoutePa
           )}
 
           {routes?.map((route) => <RouteCard key={route.ticket.id} route={route} />)}
+
+          <section className="space-y-2" data-testid="ticket-route-day">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-sm font-semibold text-foreground">
+                Turnos del día{dayList ? ` (${dayList.length})` : ""}
+              </h4>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => void loadList()}
+                disabled={listLoading}
+                data-testid="ticket-route-day-refresh"
+              >
+                <RefreshCw className={cn("mr-1 h-3.5 w-3.5", listLoading && "animate-spin")} />
+                Actualizar
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => setFilter(f.key)}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                    filter === f.key
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-background text-muted-foreground hover:bg-accent",
+                  )}
+                  data-testid={`ticket-route-filter-${f.key}`}
+                >
+                  {f.label} ({countFor(f.statuses)})
+                </button>
+              ))}
+            </div>
+
+            {listError && <p className="text-xs text-destructive">{listError}</p>}
+
+            {dayList !== null && filteredList.length === 0 && !listError && (
+              <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-xs text-muted-foreground">
+                No hay turnos para mostrar en esta fecha con ese filtro.
+              </p>
+            )}
+
+            <ul className="space-y-1.5">
+              {filteredList.map((item) => (
+                <DayListRow key={item.id} item={item} selected={item.id === selectedId} onSelect={selectFromList} />
+              ))}
+            </ul>
+          </section>
         </div>
       </SheetContent>
     </Sheet>

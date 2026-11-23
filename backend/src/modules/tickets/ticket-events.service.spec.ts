@@ -474,4 +474,35 @@ describe('buildRouteTimings (cálculo de tiempos)', () => {
     await expect(service.getRoutes('C-1', '20-11-2026')).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.getRoutes('NO-EXISTE', '2026-11-20')).resolves.toEqual([]);
   });
+
+  it('lista los turnos del día con su estado actual, operador y veces ausente', async () => {
+    const waiting = await issue();
+    const done = await issue();
+    const absent = await issue();
+
+    await tickets().save({ ...done, status: Status.CALLED, operatorId: anaId, calledAt: at(10) } as any);
+    const calledDone = (await tickets().findOneBy({ id: done.id }))!;
+    await tickets().save({ ...calledDone, status: Status.COMPLETED, completedAt: at(30) } as any);
+
+    await tickets().save({ ...absent, status: Status.CALLED, operatorId: betoId, calledAt: at(12) } as any);
+    const calledAbsent = (await tickets().findOneBy({ id: absent.id }))!;
+    await tickets().save({ ...calledAbsent, status: Status.ABSENT, operatorId: null } as any);
+
+    const list = await service.listDay('2026-11-20');
+    expect(list).toHaveLength(3);
+
+    const byId = new Map(list.map((i) => [i.id, i]));
+    expect(byId.get(waiting.id)).toMatchObject({ status: 'WAITING', operatorName: null, absentCount: 0 });
+    expect(byId.get(done.id)).toMatchObject({
+      status: 'COMPLETED',
+      operatorName: 'Ana',
+      operatorPosition: 'Caja 1',
+      serviceName: 'Caja',
+    });
+    expect(byId.get(absent.id)).toMatchObject({ status: 'ABSENT', absentCount: 1 });
+
+    // otro día: vacío; fecha inválida: error
+    await expect(service.listDay('2026-11-19')).resolves.toEqual([]);
+    await expect(service.listDay('19/11/2026')).rejects.toBeInstanceOf(BadRequestException);
+  });
 });

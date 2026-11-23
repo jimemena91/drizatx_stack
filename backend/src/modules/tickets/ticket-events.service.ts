@@ -87,6 +87,20 @@ export type TicketRoute = {
   reconstructed: boolean;
 };
 
+/** Fila del listado de turnos del día (estado actual, sin recorrido). */
+export type TicketRouteListItem = {
+  id: number;
+  number: string;
+  serviceName: string | null;
+  status: string;
+  createdAt: string;
+  /** Operador asignado hoy (el que lo tiene o lo atendió); puede ser null si sigue en fila. */
+  operatorName: string | null;
+  operatorPosition: string | null;
+  /** Veces que fue marcado ausente. */
+  absentCount: number;
+};
+
 const TERMINAL: ReadonlySet<TicketEventType> = new Set<TicketEventType>([
   'COMPLETED',
   'CANCELLED',
@@ -309,6 +323,51 @@ export class TicketEventsService {
   // -------------------------------------------------------------------------
   // Consulta
   // -------------------------------------------------------------------------
+
+  /**
+   * Turnos de una fecha comercial (por defecto, hoy) con su estado actual, del más
+   * reciente al más antiguo. Es el listado que se muestra debajo del buscador.
+   */
+  async listDay(date?: string, now: Date = new Date()): Promise<TicketRouteListItem[]> {
+    const businessDate = (date ?? '').trim() || this.businessDate.getBusinessDate(now);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(businessDate)) {
+      throw new BadRequestException('La fecha debe tener el formato AAAA-MM-DD.');
+    }
+
+    const tickets = await this.ticketRepo.find({
+      where: { issuedForDate: businessDate as any },
+      relations: { service: true, operator: true },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      take: 1000,
+    });
+    if (tickets.length === 0) return [];
+
+    const absentByTicket = new Map<number, number>();
+    try {
+      const rows = await this.eventRepo
+        .createQueryBuilder('e')
+        .select('e.ticketId', 'ticketId')
+        .addSelect('COUNT(*)', 'total')
+        .where('e.ticketId IN (:...ids)', { ids: tickets.map((t) => t.id) })
+        .andWhere('e.eventType = :type', { type: 'ABSENT' })
+        .groupBy('e.ticketId')
+        .getRawMany<{ ticketId: number | string; total: number | string }>();
+      for (const row of rows) absentByTicket.set(Number(row.ticketId), Number(row.total));
+    } catch {
+      // El conteo de ausentes es un extra: si falla, el listado sigue funcionando.
+    }
+
+    return tickets.map((ticket) => ({
+      id: ticket.id,
+      number: ticket.number,
+      serviceName: ticket.service?.name ?? null,
+      status: ticket.status,
+      createdAt: (validDate(ticket.createdAt) ?? new Date(0)).toISOString(),
+      operatorName: ticket.operator?.name ?? null,
+      operatorPosition: ticket.operator?.position ?? null,
+      absentCount: absentByTicket.get(ticket.id) ?? 0,
+    }));
+  }
 
   /**
    * Ruta de un ticket por número y fecha comercial (por defecto, hoy). Puede
