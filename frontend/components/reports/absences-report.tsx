@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatAlertDuration } from "@/components/attention-alerts/attention-alerts-panel";
 import type { AbsenceReport } from "@/lib/api-client";
-import type { ReportsFilters } from "@/hooks/use-reports";
 
 const BUSINESS_TZ = "America/Argentina/Mendoza";
 
@@ -43,46 +42,26 @@ const withPosition = (name: string | null, position: string | null) =>
   name ? (position ? `${name} · ${position}` : name) : null;
 
 type Props = {
-  filters: ReportsFilters;
-  getAbsences: (filters: ReportsFilters) => Promise<AbsenceReport>;
+  report: AbsenceReport | null;
+  loading: boolean;
+  error: string | null;
+  threshold: number;
   onThresholdChange: (minutes: number) => void;
 };
 
-export function AbsencesReport({ filters, getAbsences, onThresholdChange }: Props) {
-  const [report, setReport] = useState<AbsenceReport | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState(String(filters.waitThresholdMin ?? 30));
-
-  useEffect(() => {
-    let aborted = false;
-    (async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await getAbsences(filters);
-        if (!aborted) setReport(data);
-      } catch (err) {
-        if (!aborted) setError(err instanceof Error && err.message ? err.message : "No se pudo cargar el reporte.");
-      } finally {
-        if (!aborted) setLoading(false);
-      }
-    })();
-    return () => {
-      aborted = true;
-    };
-  }, [getAbsences, filters]);
+export function AbsencesReport({ report, loading, error, threshold: currentThreshold, onThresholdChange }: Props) {
+  const [draft, setDraft] = useState(String(currentThreshold));
 
   const commitThreshold = () => {
     const value = Math.round(Number(draft));
     if (Number.isFinite(value) && value >= 1 && value <= 1440) {
-      if (value !== (filters.waitThresholdMin ?? 30)) onThresholdChange(value);
+      if (value !== currentThreshold) onThresholdChange(value);
     } else {
-      setDraft(String(filters.waitThresholdMin ?? 30));
+      setDraft(String(currentThreshold));
     }
   };
 
-  const threshold = report?.thresholdMin ?? filters.waitThresholdMin ?? 30;
+  const threshold = report?.thresholdMin ?? currentThreshold;
 
   return (
     <div className="space-y-6" data-testid="absences-report">
@@ -118,7 +97,7 @@ export function AbsencesReport({ filters, getAbsences, onThresholdChange }: Prop
       </Card>
 
       {error && <p className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-      {loading && !report && (
+      {loading && !report && !error && (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
         </p>
@@ -187,7 +166,10 @@ export function AbsencesReport({ filters, getAbsences, onThresholdChange }: Prop
                         <th className="py-2 pr-4 text-right">Marcó ausente</th>
                         <th className="py-2 pr-4 text-right">Retomó</th>
                         <th className="py-2 pr-4 text-right">Ausencia promedio</th>
-                        <th className="py-2 text-right">Sin retomar</th>
+                        <th className="py-2 pr-4 text-right">Sin retomar</th>
+                        <th className="py-2 pr-4 text-right">Retomados atendidos</th>
+                        <th className="py-2 pr-4 text-right">Atención prom. retomados</th>
+                        <th className="py-2 text-right">Atención total retomados</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -200,7 +182,10 @@ export function AbsencesReport({ filters, getAbsences, onThresholdChange }: Prop
                           <td className="py-2 pr-4 text-right">{row.markedAbsent}</td>
                           <td className="py-2 pr-4 text-right">{row.retaken}</td>
                           <td className="py-2 pr-4 text-right">{dur(row.avgAbsentSeconds)}</td>
-                          <td className="py-2 text-right">{row.notRetaken}</td>
+                          <td className="py-2 pr-4 text-right">{row.notRetaken}</td>
+                          <td className="py-2 pr-4 text-right">{row.retakenCompleted}</td>
+                          <td className="py-2 pr-4 text-right">{dur(row.avgRetakenAttentionSeconds)}</td>
+                          <td className="py-2 text-right">{row.retakenCompleted ? dur(row.totalRetakenAttentionSeconds) : "—"}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -272,7 +257,8 @@ export function AbsencesReport({ filters, getAbsences, onThresholdChange }: Prop
                         <th className="py-2 pr-4">Se marcó</th>
                         <th className="py-2 pr-4">Lo marcó</th>
                         <th className="py-2 pr-4 text-right">Ausente</th>
-                        <th className="py-2">Lo retomó</th>
+                        <th className="py-2 pr-4">Lo retomó</th>
+                        <th className="py-2 text-right">Atención tras retomar</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -282,10 +268,17 @@ export function AbsencesReport({ filters, getAbsences, onThresholdChange }: Prop
                           <td className="py-2 pr-4">{clock(d.markedAt)}</td>
                           <td className="py-2 pr-4">{withPosition(d.markedByName, d.markedByPosition) ?? "No registrado"}</td>
                           <td className="py-2 pr-4 text-right">{dur(d.absentSeconds)}</td>
-                          <td className="py-2">
-                            {withPosition(d.takenByName, d.takenByPosition)
-                              ? `${withPosition(d.takenByName, d.takenByPosition)} (${clock(d.takenAt)})`
+                          <td className="py-2 pr-4">
+                            {d.takenAt
+                              ? `${withPosition(d.takenByName, d.takenByPosition) ?? "Operador no registrado"} (${clock(d.takenAt)})`
                               : "Nadie todavía"}
+                          </td>
+                          <td className="py-2 text-right">
+                            {d.retakenCompleted
+                              ? dur(d.retakenAttentionSeconds)
+                              : d.takenAt
+                                ? "En curso / sin atender"
+                                : "—"}
                           </td>
                         </tr>
                       ))}

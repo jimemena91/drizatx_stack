@@ -5,7 +5,7 @@ import { Operator } from '../../entities/operator.entity';
 import { Service } from '../../entities/service.entity';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 import { ReportsService } from './reports.service';
-import { ReportsAbsencesService } from './reports-absences.service';
+import { ReportsAbsencesService, type AbsenceOperatorRow } from './reports-absences.service';
 import { rankOperators } from './reports-ranking.util';
 import {
   dateTokenInTimeZone,
@@ -245,8 +245,17 @@ export class ReportsExcelService {
       'Ocupación',
       'Inactividad promedio (min)',
       'Índice de desempeño',
+      'Ausentes que marcó',
+      'Ausentes que retomó',
+      'Retomados ya atendidos',
+      'Atención promedio de retomados (min)',
+      'Atención total de retomados (min)',
     ]);
     this.styleHeaderRow(operatorsHeader);
+    const absenceByOperator = new Map<number, AbsenceOperatorRow>();
+    for (const row of absenceReport?.byOperator ?? []) {
+      if (row.operatorId !== null) absenceByOperator.set(row.operatorId, row);
+    }
 
     rankedOperators.forEach((operator) => {
       const row = operatorsSheet.addRow([
@@ -263,12 +272,21 @@ export class ReportsExcelService {
         this.percent(operator.occupancyPct),
         this.duration(operator.avgIdleBetweenTicketsSec),
         operator.performanceScore,
+        absenceByOperator.get(operator.operatorId)?.markedAbsent ?? 0,
+        absenceByOperator.get(operator.operatorId)?.retaken ?? 0,
+        absenceByOperator.get(operator.operatorId)?.retakenCompleted ?? 0,
+        this.duration(absenceByOperator.get(operator.operatorId)?.avgRetakenAttentionSeconds),
+        this.duration(
+          absenceByOperator.get(operator.operatorId)?.retakenCompleted
+            ? absenceByOperator.get(operator.operatorId)?.totalRetakenAttentionSeconds
+            : null,
+        ),
       ]);
       row.getCell(7).numFmt = '0.0%';
       row.getCell(11).numFmt = '0.0%';
       row.getCell(13).numFmt = '0.0';
     });
-    operatorsSheet.autoFilter = { from: 'A1', to: 'M1' };
+    operatorsSheet.autoFilter = { from: 'A1', to: 'R1' };
     this.autosize(operatorsSheet, 12, 30);
 
     const servicesSheet = workbook.addWorksheet('Servicios');
@@ -384,6 +402,10 @@ export class ReportsExcelService {
           'Ausentes que retomó',
           'Ausencia promedio (min)',
           'Marcados sin retomar',
+          'Retomados ya atendidos',
+          'Atención promedio de retomados (min)',
+          'Atención total de retomados (min)',
+          'Atención más larga de retomados (min)',
         ]),
       );
       absenceReport.byOperator.forEach((row) => {
@@ -394,6 +416,10 @@ export class ReportsExcelService {
           row.retaken,
           this.duration(row.avgAbsentSeconds),
           row.notRetaken,
+          row.retakenCompleted,
+          this.duration(row.avgRetakenAttentionSeconds),
+          row.retakenCompleted ? this.duration(row.totalRetakenAttentionSeconds) : null,
+          this.duration(row.maxRetakenAttentionSeconds),
         ]);
       });
       absentSheet.addRow([]);
@@ -408,7 +434,7 @@ export class ReportsExcelService {
       absentSheet.addRow([
         'Sólo incluye turnos desde que se activó el historial de la ruta del ticket.',
       ]);
-      absentSheet.autoFilter = { from: 'A1', to: 'F1' };
+      absentSheet.autoFilter = { from: 'A1', to: 'J1' };
       this.autosize(absentSheet, 14, 34);
 
       const detailSheet = workbook.addWorksheet('Ausencias (detalle)');
@@ -421,6 +447,7 @@ export class ReportsExcelService {
           'Ausente durante (min)',
           'Lo retomó',
           'Hora en que lo retomó',
+          'Atención tras retomarlo (min)',
         ]),
       );
       absenceReport.details.forEach((d) => {
@@ -429,11 +456,12 @@ export class ReportsExcelService {
           clock(d.markedAt),
           who(d.markedByName, d.markedByPosition) ?? 'No registrado',
           this.duration(d.absentSeconds),
-          who(d.takenByName, d.takenByPosition) ?? 'Nadie todavía',
+          who(d.takenByName, d.takenByPosition) ?? (d.takenAt ? 'Operador no registrado' : 'Nadie todavía'),
           clock(d.takenAt),
+          d.retakenCompleted ? this.duration(d.retakenAttentionSeconds) : d.takenAt ? 'En curso o sin atender' : null,
         ]);
       });
-      detailSheet.autoFilter = { from: 'A1', to: 'F1' };
+      detailSheet.autoFilter = { from: 'A1', to: 'G1' };
       this.autosize(detailSheet, 14, 36);
 
       const waitsSheet = workbook.addWorksheet('Esperas largas');

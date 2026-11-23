@@ -206,4 +206,69 @@ const at = (min: number) => new Date(T0.getTime() + minutes(min));
     expect(r.byOperator).toEqual([]);
     expect(r.longWaits).toMatchObject({ totalTickets: 0, overThreshold: 0, overThresholdPct: null, rows: [] });
   });
+
+  it('retomar con la relación `operator` cargada igual deja al operador en el evento', async () => {
+    const t = await issue(at(0));
+    await patch(t.id, { status: Status.CALLED, operatorId: anaId, calledAt: at(10) });
+    await patch(t.id, { status: Status.ABSENT, operatorId: null, absentAt: at(15) });
+
+    // igual que TicketsService.callTicket: se carga con relaciones y se guarda
+    const full = (await tickets().findOne({ where: { id: t.id }, relations: ['service', 'operator', 'client'] }))!;
+    full.status = Status.CALLED;
+    full.operatorId = betoId;
+    full.calledAt = at(30);
+    await tickets().save(full);
+
+    const r = await report.build(range, 50, at(60));
+    expect(r.details[0]).toMatchObject({
+      markedByName: 'Ana',
+      takenByName: 'Beto',
+      takenByPosition: 'Caja 2',
+    });
+    expect(r.byOperator.find((o) => o.name === 'Beto')).toMatchObject({ retaken: 1 });
+    expect(r.absences.notRetaken).toBe(0);
+  });
+
+  it('mide la atención de los tickets retomados por cada operador', async () => {
+    const t = await issue(at(0));
+    await patch(t.id, { status: Status.CALLED, operatorId: anaId, calledAt: at(10) });
+    await patch(t.id, { status: Status.ABSENT, operatorId: null, absentAt: at(15) });
+    const full = (await tickets().findOne({ where: { id: t.id }, relations: ['service', 'operator', 'client'] }))!;
+    full.status = Status.CALLED;
+    full.operatorId = betoId;
+    full.calledAt = at(30);
+    await tickets().save(full);
+    // Beto empieza y termina (con relaciones cargadas, como en la app)
+    const called = (await tickets().findOne({ where: { id: t.id }, relations: ['operator'] }))!;
+    called.status = Status.IN_PROGRESS;
+    called.startedAt = at(32);
+    await tickets().save(called);
+    const inProgress = (await tickets().findOne({ where: { id: t.id }, relations: ['operator'] }))!;
+    inProgress.status = Status.COMPLETED;
+    inProgress.completedAt = at(44);
+    await tickets().save(inProgress);
+
+    // otro ticket retomado que todavía no se atendió
+    const u = await issue(at(1));
+    await patch(u.id, { status: Status.CALLED, operatorId: anaId, calledAt: at(11) });
+    await patch(u.id, { status: Status.ABSENT, operatorId: null, absentAt: at(16) });
+    const fullU = (await tickets().findOne({ where: { id: u.id }, relations: ['service', 'operator', 'client'] }))!;
+    fullU.status = Status.CALLED;
+    fullU.operatorId = betoId;
+    fullU.calledAt = at(31);
+    await tickets().save(fullU);
+
+    const r = await report.build(range, 50, at(60));
+    const beto = r.byOperator.find((o) => o.name === 'Beto')!;
+    expect(beto.retaken).toBe(2);
+    expect(beto.retakenCompleted).toBe(1);
+    expect(beto.avgRetakenAttentionSeconds).toBe(12 * 60);
+    expect(beto.totalRetakenAttentionSeconds).toBe(12 * 60);
+    expect(beto.maxRetakenAttentionSeconds).toBe(12 * 60);
+
+    const done = r.details.find((d) => d.ticketId === t.id)!;
+    expect(done).toMatchObject({ retakenCompleted: true, retakenAttentionSeconds: 12 * 60 });
+    const pending = r.details.find((d) => d.ticketId === u.id)!;
+    expect(pending).toMatchObject({ retakenCompleted: false, retakenAttentionSeconds: null });
+  });
 });

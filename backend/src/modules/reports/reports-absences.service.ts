@@ -27,6 +27,10 @@ export type AbsenceDetail = {
   takenByOperatorId: number | null;
   takenByName: string | null;
   takenByPosition: string | null;
+  /** Tiempo en atención de este ticket después de retomarlo; null si todavía no empezó. */
+  retakenAttentionSeconds: number | null;
+  /** El ticket retomado terminó de atenderse. */
+  retakenCompleted: boolean;
 };
 
 export type AbsenceOperatorRow = {
@@ -41,6 +45,12 @@ export type AbsenceOperatorRow = {
   avgAbsentSeconds: number | null;
   /** Ausentes que marcó y nadie retomó. */
   notRetaken: number;
+  /** De los que retomó: cuántos terminó de atender. */
+  retakenCompleted: number;
+  /** Atención de los tickets que retomó (sólo los ya finalizados). */
+  avgRetakenAttentionSeconds: number | null;
+  totalRetakenAttentionSeconds: number;
+  maxRetakenAttentionSeconds: number | null;
 };
 
 export type LongWaitRow = {
@@ -155,12 +165,13 @@ export class ReportsAbsencesService {
       }
 
       for (const [ticketId, list] of byTicket) {
-        const { summary } = buildRouteTimings(list.map(storedEventToRaw), now);
+        const { summary, events: route } = buildRouteTimings(list.map(storedEventToRaw), now);
         for (const absence of summary.absences) {
           const markedAt = new Date(absence.markedAt);
           if (from && markedAt < from) continue;
           if (to && markedAt > to) continue;
           if (q.operatorId && absence.markedByOperatorId !== q.operatorId) continue;
+          const retake = this.retakeAttention(route, absence.markedAt, absence.takenAt);
           details.push({
             ticketId,
             ticketNumber: list[0].ticketNumber,
@@ -174,6 +185,8 @@ export class ReportsAbsencesService {
             takenByOperatorId: absence.takenByOperatorId,
             takenByName: absence.takenByName,
             takenByPosition: absence.takenByPosition,
+            retakenAttentionSeconds: retake.seconds,
+            retakenCompleted: retake.completed,
           });
         }
       }
@@ -181,7 +194,7 @@ export class ReportsAbsencesService {
 
     details.sort((a, b) => a.markedAt.localeCompare(b.markedAt));
 
-    const rows = new Map<string, AbsenceOperatorRow & { durations: number[] }>();
+    const rows = new Map<string, AbsenceOperatorRow & { durations: number[]; attentions: number[] }>();
     const rowFor = (id: number | null, name: string | null, position: string | null) => {
       const key = id !== null ? `id:${id}` : `name:${name ?? ''}`;
       let row = rows.get(key);
@@ -194,7 +207,12 @@ export class ReportsAbsencesService {
           retaken: 0,
           avgAbsentSeconds: null,
           notRetaken: 0,
+          retakenCompleted: 0,
+          avgRetakenAttentionSeconds: null,
+          totalRetakenAttentionSeconds: 0,
+          maxRetakenAttentionSeconds: null,
           durations: [],
+          attentions: [],
         };
         rows.set(key, row);
       }
@@ -209,11 +227,21 @@ export class ReportsAbsencesService {
       if (d.takenAt) {
         const taker = rowFor(d.takenByOperatorId, d.takenByName, d.takenByPosition);
         taker.retaken += 1;
+        if (d.retakenCompleted && d.retakenAttentionSeconds !== null) {
+          taker.retakenCompleted += 1;
+          taker.attentions.push(d.retakenAttentionSeconds);
+        }
       }
     }
 
     const byOperator = [...rows.values()]
-      .map(({ durations, ...row }) => ({ ...row, avgAbsentSeconds: average(durations) }))
+      .map(({ durations, attentions, ...row }) => ({
+        ...row,
+        avgAbsentSeconds: average(durations),
+        avgRetakenAttentionSeconds: average(attentions),
+        totalRetakenAttentionSeconds: attentions.reduce((a, b) => a + b, 0),
+        maxRetakenAttentionSeconds: attentions.length ? Math.max(...attentions) : null,
+      }))
       .sort((a, b) => b.markedAbsent - a.markedAbsent || b.retaken - a.retaken || a.name.localeCompare(b.name));
 
     const allDurations = details.map((d) => d.absentSeconds).filter((v): v is number => v !== null);
@@ -228,6 +256,34 @@ export class ReportsAbsencesService {
       byOperator,
       details,
     };
+  }
+
+  /**
+   * Atención de un ticket después de que lo retomaron: desde que empezó la atención
+   * hasta que terminó (o hasta que volvió a quedar ausente). Sólo cuenta como
+   * "terminada" si hay un cierre (finalizado); si sigue en curso queda sin cerrar.
+   */
+  private retakeAttention(
+    route: ReturnType<typeof buildRouteTimings>['events'],
+    markedAt: string,
+    takenAt: string | null,
+  ): { seconds: number | null; completed: boolean } {
+    if (!takenAt) return { seconds: null, completed: false };
+    const start = route.findIndex((e) => e.type === 'ABSENT' && e.occurredAt === markedAt);
+    if (start === -1) return { seconds: null, completed: false };
+
+    for (let i = start + 1; i < route.length; i += 1) {
+      const event = route[i];
+      if (event.type === 'ABSENT') break;
+      if (event.type === 'STARTED' && event.occurredAt >= takenAt) {
+        const next = route[i + 1];
+        return {
+          seconds: event.secondsUntilNext,
+          completed: next?.type === 'COMPLETED',
+        };
+      }
+    }
+    return { seconds: null, completed: false };
   }
 
   // ---------------------------------------------------------------------------

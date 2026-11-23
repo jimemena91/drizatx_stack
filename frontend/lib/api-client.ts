@@ -239,6 +239,10 @@ export type AbsenceReport = {
     retaken: number;
     avgAbsentSeconds: number | null;
     notRetaken: number;
+    retakenCompleted: number;
+    avgRetakenAttentionSeconds: number | null;
+    totalRetakenAttentionSeconds: number;
+    maxRetakenAttentionSeconds: number | null;
   }>;
   details: Array<{
     ticketId: number;
@@ -250,6 +254,8 @@ export type AbsenceReport = {
     takenAt: string | null;
     takenByName: string | null;
     takenByPosition: string | null;
+    retakenAttentionSeconds: number | null;
+    retakenCompleted: boolean;
   }>;
   longWaits: {
     totalTickets: number;
