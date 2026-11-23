@@ -6,6 +6,7 @@ import { Ticket } from '../../entities/ticket.entity';
 import { TicketEvent } from '../../entities/ticket-event.entity';
 import { Status } from '../../common/enums/status.enum';
 import { buildRouteTimings, storedEventToRaw } from '../tickets/ticket-events.service';
+import { MetricsPolicyService } from '../metrics-policy/metrics-policy.service';
 import { ReportsQueryDto } from './dto/reports-query.dto';
 
 export const DEFAULT_WAIT_THRESHOLD_MIN = 30;
@@ -31,6 +32,11 @@ export type AbsenceDetail = {
   retakenAttentionSeconds: number | null;
   /** El ticket retomado terminó de atenderse. */
   retakenCompleted: boolean;
+  /**
+   * Cuenta para las métricas del operador: terminó y duró lo mínimo que exige la
+   * política (hoy 1 minuto), igual que cualquier otra atención.
+   */
+  retakenCountsForMetrics: boolean;
 };
 
 export type AbsenceOperatorRow = {
@@ -47,7 +53,11 @@ export type AbsenceOperatorRow = {
   notRetaken: number;
   /** De los que retomó: cuántos terminó de atender. */
   retakenCompleted: number;
-  /** Atención de los tickets que retomó (sólo los ya finalizados). */
+  /** De los terminados: cuántos cuentan como atención productiva (1 minuto o más). */
+  retakenProductive: number;
+  /** De los terminados: cuántos fueron breves y no cuentan en las métricas. */
+  retakenExcludedShort: number;
+  /** Atención de los retomados productivos (promedio, total y máxima). */
   avgRetakenAttentionSeconds: number | null;
   totalRetakenAttentionSeconds: number;
   maxRetakenAttentionSeconds: number | null;
@@ -107,6 +117,8 @@ const OPEN_STATUSES: ReadonlySet<string> = new Set([Status.WAITING, Status.CALLE
 
 @Injectable()
 export class ReportsAbsencesService {
+  private readonly metricsPolicy = new MetricsPolicyService();
+
   constructor(
     @InjectRepository(Ticket) private readonly ticketsRepo: Repository<Ticket>,
     @InjectRepository(TicketEvent) private readonly eventsRepo: Repository<TicketEvent>,
@@ -187,6 +199,13 @@ export class ReportsAbsencesService {
             takenByPosition: absence.takenByPosition,
             retakenAttentionSeconds: retake.seconds,
             retakenCompleted: retake.completed,
+            retakenCountsForMetrics:
+              retake.completed &&
+              this.metricsPolicy.evaluate({
+                attentionDurationSeconds: retake.seconds,
+                serviceId: list[0].serviceId,
+                operatorId: absence.takenByOperatorId,
+              }).countsForMetrics,
           });
         }
       }
@@ -208,6 +227,8 @@ export class ReportsAbsencesService {
           avgAbsentSeconds: null,
           notRetaken: 0,
           retakenCompleted: 0,
+          retakenProductive: 0,
+          retakenExcludedShort: 0,
           avgRetakenAttentionSeconds: null,
           totalRetakenAttentionSeconds: 0,
           maxRetakenAttentionSeconds: null,
@@ -229,7 +250,12 @@ export class ReportsAbsencesService {
         taker.retaken += 1;
         if (d.retakenCompleted && d.retakenAttentionSeconds !== null) {
           taker.retakenCompleted += 1;
-          taker.attentions.push(d.retakenAttentionSeconds);
+          if (d.retakenCountsForMetrics) {
+            taker.retakenProductive += 1;
+            taker.attentions.push(d.retakenAttentionSeconds);
+          } else {
+            taker.retakenExcludedShort += 1;
+          }
         }
       }
     }

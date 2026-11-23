@@ -157,6 +157,16 @@ export class ReportsExcelService {
     summarySheet.addRow(['Tickets del conjunto', summary.totals.total, 'tickets']);
     summarySheet.addRow(['Atenciones productivas', summary.totals.productiveAttentions, 'atenciones']);
     summarySheet.addRow(['Atenciones completadas', summary.totals.completedTotal, 'atenciones']);
+    if (absenceReport) {
+      summarySheet.addRow(['Ausentes marcados (historial)', absenceReport.absences.total, 'veces']);
+      summarySheet.addRow(['Ausentes sin retomar', absenceReport.absences.notRetaken, 'veces']);
+      summarySheet.addRow(['Ausencia promedio', this.duration(absenceReport.absences.avgAbsentSeconds), 'min']);
+      summarySheet.addRow([
+        `Turnos con espera de más de ${absenceReport.thresholdMin} min`,
+        absenceReport.longWaits.overThreshold,
+        'tickets',
+      ]);
+    }
     summarySheet.addRow(['Atenciones excluidas', summary.totals.excludedShortAttentions, 'atenciones']);
     const exclusionRow = summarySheet.addRow(['Tasa de exclusión', this.percent(summary.totals.exclusionRate), '%']);
     exclusionRow.getCell(2).numFmt = '0.0%';
@@ -183,15 +193,24 @@ export class ReportsExcelService {
         'Efectividad',
         'Ocupación',
         'Índice de desempeño',
+        'Ausentes que marcó',
+        'Ausentes que retomó',
+        'Retomados productivos',
+        'Atención promedio de retomados (min)',
       ]);
       this.styleHeaderRow(header);
       if (selected) {
+        const abs = absenceReport?.byOperator.find((row) => row.operatorId === selected.operatorId);
         const row = summarySheet.addRow([
           selected.name,
           selected.productiveAttentions ?? selected.completedTickets,
           this.percent(selected.attendanceRatePct),
           this.percent(selected.occupancyPct),
           selected.performanceScore,
+          abs?.markedAbsent ?? 0,
+          abs?.retaken ?? 0,
+          abs?.retakenProductive ?? 0,
+          this.duration(abs?.avgRetakenAttentionSeconds),
         ]);
         row.getCell(3).numFmt = '0.0%';
         row.getCell(4).numFmt = '0.0%';
@@ -244,10 +263,15 @@ export class ReportsExcelService {
       'Inactividad promedio (min)',
       'Índice de desempeño',
       'Ausentes que marcó',
+      'Ausencia promedio de los que marcó (min)',
+      'Marcados sin retomar',
       'Ausentes que retomó',
-      'Retomados ya atendidos',
+      'Retomados atendidos',
+      'Retomados productivos (1 min o más)',
+      'Retomados breves excluidos',
       'Atención promedio de retomados (min)',
       'Atención total de retomados (min)',
+      'Atención más larga de retomados (min)',
     ]);
     this.styleHeaderRow(operatorsHeader);
     const absenceByOperator = new Map<number, AbsenceOperatorRow>();
@@ -271,20 +295,25 @@ export class ReportsExcelService {
         this.duration(operator.avgIdleBetweenTicketsSec),
         operator.performanceScore,
         absenceByOperator.get(operator.operatorId)?.markedAbsent ?? 0,
+        this.duration(absenceByOperator.get(operator.operatorId)?.avgAbsentSeconds),
+        absenceByOperator.get(operator.operatorId)?.notRetaken ?? 0,
         absenceByOperator.get(operator.operatorId)?.retaken ?? 0,
         absenceByOperator.get(operator.operatorId)?.retakenCompleted ?? 0,
+        absenceByOperator.get(operator.operatorId)?.retakenProductive ?? 0,
+        absenceByOperator.get(operator.operatorId)?.retakenExcludedShort ?? 0,
         this.duration(absenceByOperator.get(operator.operatorId)?.avgRetakenAttentionSeconds),
         this.duration(
-          absenceByOperator.get(operator.operatorId)?.retakenCompleted
+          absenceByOperator.get(operator.operatorId)?.retakenProductive
             ? absenceByOperator.get(operator.operatorId)?.totalRetakenAttentionSeconds
             : null,
         ),
+        this.duration(absenceByOperator.get(operator.operatorId)?.maxRetakenAttentionSeconds),
       ]);
       row.getCell(7).numFmt = '0.0%';
       row.getCell(11).numFmt = '0.0%';
       row.getCell(13).numFmt = '0.0';
     });
-    operatorsSheet.autoFilter = { from: 'A1', to: 'R1' };
+    operatorsSheet.autoFilter = { from: 'A1', to: 'W1' };
     this.autosize(operatorsSheet, 12, 30);
 
     const servicesSheet = workbook.addWorksheet('Servicios');
@@ -400,7 +429,9 @@ export class ReportsExcelService {
           'Ausentes que retomó',
           'Ausencia promedio (min)',
           'Marcados sin retomar',
-          'Retomados ya atendidos',
+          'Retomados atendidos',
+          'Retomados productivos (1 min o más)',
+          'Retomados breves excluidos',
           'Atención promedio de retomados (min)',
           'Atención total de retomados (min)',
           'Atención más larga de retomados (min)',
@@ -415,8 +446,10 @@ export class ReportsExcelService {
           this.duration(row.avgAbsentSeconds),
           row.notRetaken,
           row.retakenCompleted,
+          row.retakenProductive,
+          row.retakenExcludedShort,
           this.duration(row.avgRetakenAttentionSeconds),
-          row.retakenCompleted ? this.duration(row.totalRetakenAttentionSeconds) : null,
+          row.retakenProductive ? this.duration(row.totalRetakenAttentionSeconds) : null,
           this.duration(row.maxRetakenAttentionSeconds),
         ]);
       });
@@ -432,7 +465,7 @@ export class ReportsExcelService {
       absentSheet.addRow([
         'Sólo incluye turnos desde que se activó el historial de la ruta del ticket.',
       ]);
-      absentSheet.autoFilter = { from: 'A1', to: 'J1' };
+      absentSheet.autoFilter = { from: 'A1', to: 'L1' };
       this.autosize(absentSheet, 14, 34);
 
       const detailSheet = workbook.addWorksheet('Ausencias (detalle)');
@@ -456,7 +489,13 @@ export class ReportsExcelService {
           this.duration(d.absentSeconds),
           who(d.takenByName, d.takenByPosition) ?? (d.takenAt ? 'Operador no registrado' : 'Nadie todavía'),
           clock(d.takenAt),
-          d.retakenCompleted ? this.duration(d.retakenAttentionSeconds) : d.takenAt ? 'En curso o sin atender' : null,
+          d.retakenCompleted
+            ? d.retakenCountsForMetrics
+              ? this.duration(d.retakenAttentionSeconds)
+              : `${this.duration(d.retakenAttentionSeconds)} (breve, no cuenta)`
+            : d.takenAt
+              ? 'En curso o sin atender'
+              : null,
         ]);
       });
       detailSheet.autoFilter = { from: 'A1', to: 'G1' };
